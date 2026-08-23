@@ -3,5 +3,15 @@
     "path": "/home/kairav/mytestfile.txt",
     "category": "custom",
     "description": "Custom backup: mytestfile.txt"
+  },
+  {
+    "path": "/home/kairav/.bashrc",
+    "category": "custom",
+    "description": "Custom backup: .bashrc"
+  },
+  {
+    "path": "/home/kairav/another_test.txt",
+    "category": "custom",
+    "description": "Custom backup: another_test.txt"
   }
 ]
