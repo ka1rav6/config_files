@@ -1,0 +1,13 @@
+[font]
+normal = ["JetBrainsMono Nerd Font"]
+
+[renderer]
+max_fps = 120
+
+[cursor]
+animation_length = 0.13
+animate_in_insert_mode = true
+smooth_motion = true
+cursor_trail_size = 0.8
+cursor_animation_length = 0.15
+frame = "none"

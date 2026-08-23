@@ -1,0 +1,50 @@
+#include "board.h"
+#include "piece.h"
+#include "point.h"
+
+Board* initBoard(){
+    Board* board = (Board*)malloc(sizeof(Board));
+
+    board->state = DEFAULT;
+    for (int i = 0; i < 8; i++){
+        for (int j = 0; j < 8; j ++){
+            board->arr[i][j].p = createPoint(i + 1, (char) ('a' + j));
+        }
+    }
+    for (int i = 0; i < 8; i++){
+        for (int j = 0; j < 8; j ++){
+            Point sq_pnt = board->arr[i][j].p;
+            if (sq_pnt.row == 1 || sq_pnt.row == 8){
+                Color col = sq_pnt.row == 1 ? WHITE : BLACK;
+                switch(sq_pnt.col){
+                    case 'a':
+                    case 'h':
+                        board->arr[i][j].piecePtr = initPiece(ROOK, col);
+                        board->arr[i][j].type = ROOK;
+                        break;
+                    case 'b':
+                    case 'g':
+                        board->arr[i][j].piecePtr = initPiece(KNIGHT, col);
+                        board->arr[i][j].type = KNIGHT;
+                        break;
+                    case 'c':
+                    case 'f':
+                        board->arr[i][j].piecePtr = initPiece(BISHOP, col);
+                        board->arr[i][j].type = BISHOP;
+                        break;
+                    case 'd':
+                        board->arr[i][j].piecePtr = initPiece(QUEEN, col);
+                        board->arr[i][j].type = QUEEN;
+                        break;
+                    case 'e':
+                        board->arr[i][j].piecePtr = initPiece(KING, col);
+                        board->arr[i][j].type = KING;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+    return board;
+}

@@ -1,0 +1,14 @@
+#!bin/bash/
+
+echo "starting build"
+
+cd build
+cmake ..
+make
+cd ..
+echo "ending build"
+sleep 1
+
+echo "starting running"
+
+./build/venterpreter

@@ -1,0 +1,134 @@
+#include "board.h"
+#include "piece.h"
+#include "point.h"
+#include "debugger.h"
+#include <cstdlib>
+
+Board* initBoard(){
+    // the whole board is initialized and every position is made. All pieces are made and fixed
+    Board* board = (Board*)malloc(sizeof(Board));
+    if (!board){
+        logg("Initialization of board pointer failed\n");
+        exit(EXIT_FAILURE);
+    }
+    logg("Board pointer initialized\n");
+
+    board->state = DEFAULT;
+    // assigning points to all the squares
+
+    for (int i = 0; i < 8; i++){
+        for (int j = 0; j < 8; j ++){
+            board->arr[i][j].p = createPoint(i + 1, (char) ('a' + j));
+        }
+    }
+    logg("Points assigned to each sqaure");
+
+    // Creating and placing pieces there
+    for (int i = 0; i < 8; i++){
+        for (int j = 0; j < 8; j ++){
+            Point sq_pnt = board->arr[i][j].p;
+            if (sq_pnt.row == 1 || sq_pnt.row == 8){
+                Color col = sq_pnt.row == 1 ? WHITE : BLACK;
+                board->arr[i][j].color = col;
+                switch(sq_pnt.col){
+                    case 'a':
+                    case 'h':
+                        board->arr[i][j].piecePtr = initPiece(ROOK, col);
+                        board->arr[i][j].type = ROOK;
+                        break;
+                    case 'b':
+                    case 'g':
+                        board->arr[i][j].piecePtr = initPiece(KNIGHT, col);
+                        board->arr[i][j].type = KNIGHT;
+                        break;
+                    case 'c':
+                    case 'f':
+                        board->arr[i][j].piecePtr = initPiece(BISHOP, col);
+                        board->arr[i][j].type = BISHOP;
+                        break;
+                    case 'd':
+                        board->arr[i][j].piecePtr = initPiece(QUEEN, col);
+                        board->arr[i][j].type = QUEEN;
+                        break;
+                    case 'e':
+                        board->arr[i][j].piecePtr = initPiece(KING, col);
+                        board->arr[i][j].type = KING;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else if (sq_pnt.row == 2 || sq_pnt.row == 7){
+                Color col = sq_pnt.row == 2 ? WHITE : BLACK;
+                board->arr[i][j].color = col;
+                board->arr[i][j].piecePtr = initPiece(PAWN, col);
+                board->arr[i][j].type = PAWN;
+            }
+            else{
+                board->arr[i][j].color = WHITE; // added white arbitrarily
+                board->arr[i][j].piecePtr = initPiece(EMPTY, WHITE);
+                board->arr[i][j].type = EMPTY;
+            }
+        }
+    }
+    logg("All pieces placed on the board correctly\n");
+    return board;
+}
+
+
+void* getPossiblePieces(Board* b, PieceType type, Move* m){
+    logg("Getting possible pieces");
+
+    Color col;
+    if (b->state == WHITE_PLAY)
+        col = WHITE;
+    else if (b->state == BLACK_PLAY)
+        col = BLACK;
+    else{
+        printf("Not a valid printable state");
+        logg("Unable to find a state for finding possible pieces");
+        exit(EXIT_FAILURE);
+    }
+    
+    Square* possible = (Square*)malloc(2 * sizeof(Square));
+    int k = 0;
+    for (int i = 0; i < 8; i++){
+        for (int j = 0; j < 8; j ++){
+            Square s = b->arr[i][j];
+                if (s.type == type && s.color == col)
+                    possible[k++] = s;
+            }
+    }
+    for (int i = 0; i < 1; i ++){
+        switch(type){
+            case KING: {
+                King* piece = (King*) possible[i].piecePtr;
+                break;
+            }
+            case QUEEN: {
+                Queen* piece = (Queen*) possible[i].piecePtr;
+                break;
+            }
+            case PAWN: {
+                Pawn* piece = (Pawn*) possible[i].piecePtr;
+                break;
+            }
+            case BISHOP: {
+                Bishop* piece = (Bishop*) possible[i].piecePtr;
+                break;
+            }
+            case KNIGHT: {
+                Knight* piece = (Knight*) possible[i].piecePtr;
+                break;
+            }
+            case ROOK: {
+                Rook* piece = (Rook*) possible[i].piecePtr;
+                break;
+            }
+            case EMPTY:
+                logg("Asked possible pieces for empty piece. Should not have been possible");
+                exit(EXIT_FAILURE);
+        }
+    }
+    piece. 
+}

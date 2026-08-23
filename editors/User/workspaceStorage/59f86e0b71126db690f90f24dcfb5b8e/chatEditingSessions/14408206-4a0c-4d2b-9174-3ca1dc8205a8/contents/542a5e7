@@ -1,0 +1,29 @@
+general {
+    hide_cursor = true
+    immediate_render = true
+}
+
+background {
+    monitor =
+    path = screenshot
+    blur_passes = 2
+    blur_size = 7
+}
+
+input-field {
+    monitor =
+    size = 300, 60
+    outline_thickness = 3
+    dots_size = 0.25
+    dots_spacing = 0.15
+    dots_center = true
+    outer_color = rgba(255, 255, 255, 0.3)
+    inner_color = rgba(30, 30, 30, 0.7)
+    font_color = rgba(255, 255, 255, 1.0)
+    fade_on_empty = false
+    placeholder_text = <i>Enter Password...</i>
+    rounding = 15
+    position = 0, -20
+    halign = center
+    valign = center
+}

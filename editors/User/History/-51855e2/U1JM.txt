@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(vent LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Collect source files
+set(CORE_SRCS
+    src/chunk.cpp
+)
+
+# Create static library
+add_library(vent STATIC ${CORE_SRCS})
+
+# Include headers
+target_include_directories(vent PUBLIC include)
+
+# Main executable
+add_executable(app
+    src/main.cpp
+)
+
+# Link library
+target_link_libraries(app PRIVATE vent)

@@ -1,0 +1,24 @@
+
+
+
+async function getCourses(){
+    const response = await fetch('/api/courses');
+    const courses = await response.json();
+    return courses;
+};
+
+export default async function SideBar() {
+    const courses = await getCourses();
+    return (
+        <div className="w-64 h-screen bg-gray-800 text-white p-4">
+            <h2 className="text-xl font-bold mb-4">Courses</h2>
+            <ul>
+                {courses.map((course: any) => (
+                    <li key={course.id} className="mb-2">
+                        {course.name}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}

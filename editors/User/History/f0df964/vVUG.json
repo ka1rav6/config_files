@@ -1,0 +1,21 @@
+{
+    "facts": {
+        "isAdmin": true,
+        "canAccessDashboard": true,
+        "age": 25
+    },
+    "rules": [
+        {
+            "name": "canAccessDashboard",
+            "action": "ALLOW_DASHBOARD",
+            "if": {
+                "and": [
+                    "isAdmin",
+                    {
+                        ">": ["age", 18]
+                    }
+                ]
+            }
+        }
+    ]
+}

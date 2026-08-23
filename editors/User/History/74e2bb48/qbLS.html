@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>IIITD|Course Directory Table</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
+    <link rel="icon" href="{{ url_for( 'static' , filename='icon.png') }}" type="image/gif" sizes="32x32">
+    <style>
+    html {
+        position: relative;
+        min-height: 100%;
+      }
+    body{
+          padding-top: 0px;
+          padding-bottom: 0px;
+          margin-bottom: 40px;
+      }
+    .header{
+          width: 100%;
+          background: #ffffff;
+          padding: 10px 10px;
+          color: #ffffff;
+          top: 0;
+      }
+    .footer{
+          position: absolute;
+          height: 40px;
+          width: 100%;
+          background: #808080;
+          padding: 10px 10px;
+          color: #ffffff;
+          bottom: 0;
+      }
+      .footer a {
+        float: right;
+        color: #ffffff;
+        text-align: center;
+        padding: 2px 40px;
+        text-decoration: none;
+      }
+      ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #3FADA8;
+      }
+
+      li {
+        float: left;
+      }
+
+      li a {
+        display: block;
+        color: white;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+      }
+
+      li a:hover {
+        background-color: #808080;
+        color: #FFFFFF;
+        text-decoration: none;
+      }
+
+      .active {
+        background-color: #808080;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+         <div class="container">
+                <a href="https://iiitd.ac.in/"><img src={{ url_for( 'static' , filename='IIITDLogo.png') }} alt="Home" align="left"></a>
+                <a href="{{ url_for('tech_table') }}"><img src = {{ url_for( 'static' , filename='cdt.png') }} alt="CourseDirectoryTable" width="210" height="105" align="right"></a>
+                <a href="{{ url_for('tech_tree') }}" target="_blank"><img src = {{ url_for( 'static' , filename='techtree.gif') }} alt="TechTree" width="190" height="95" align="right"></a>
+        </div>
+    </div>
+    <ul>
+      <li><a href="https://iiitd.ac.in/">Home</a></li>
+      <li><a href="{{ url_for('tech_table') }}">Course Directory</a></li>
+      <li><a href="{{ url_for('tech_tree') }}" target="_blank">TechTree</a></li>
+      <li><a href="{{ url_for('timetable') }}">Time Table</a></li>
+      <li><a href="{{ url_for('calendar') }}">Calendar</a></li>
+      <li><a href="https://iiitd.ac.in/academics/resources"> Academic Regulations</a></li>
+      <li><a href="{{ url_for('contact_us') }}">Contact</a></li>
+	  <li><a href="{{ url_for('render_credits') }}">Credits</a></li>
+      <!-- <li style="float:right"><a class="active" href="{{ url_for('about') }}">About</a></li> -->
+    </ul>
+    <div class="container">
+     <h2 align="center">Credits</h2>
+     <br />
+      <h4><b> Developers:</b></h4>
+     <p>
+     <h5><a href="https://github.com/BhavyaC16"> Bhavya Chopra </a><p><p> <a href="https://github.com/ruhmamehek"> Ruhma Mehek Khan </a></h5>
+     <br>
+     <h4><b> Supervisor: </b></h4>
+     <p>
+     <h5> Ms Sheetu Ahuja </h5>
+    <br>
+    <h4><b> Mentors: </b></h4>
+     <p>
+     <h5> Palash Aggrawal <p><p> Peeyush Kushwaha </h5>
+      <br>
+     <h4><b> Data Preparation: </b></h4>
+     <p>
+     <h5> Adwit Singh Kochar <p><p> Bhavya Chopra <p> Chhavi Kirtani <p> Dipanshu Aggarwal <p> Ritwik Gupta <p> Ruhma Mehek Khan <p> Vanshika Goel </h5>
+	<br>
+	<h4><b> Maintainers: </b></h4>
+	<p>
+	<h5>
+		<a href="https://github.com/ajaystark">Ajay Prakash</a> [May, 2021 - June, 2022]
+		<p><p>
+		<a href="https://github.com/0deadLock0">Abhimanyu Gupta</a> [June, 2022 - July, 2023]
+    <p><p>
+      <a href="https://www.linkedin.com/in/pratham-kumar">Pratham Kumar</a> [July, 2023 - August, 2024]
+    <p><p>
+    <a href="https://www.linkedin.com/in/pratham-kumar">Pratham Kumar</a> [July, 2023 - August, 2024]
+	</h5>
+	</div>
+   <div class="footer">
+        <div class="container">
+          Copyright &copy; 2019 IIITD
+        </div>
+   </div>
+ </body>
+</html>

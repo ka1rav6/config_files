@@ -1,0 +1,102 @@
+[gd_scene format=3 uid="uid://b02diyhkn2nly"]
+
+[ext_resource type="PackedScene" path="res://scenes/ui/LevelSelect.tscn" id="2_pridf"]
+[ext_resource type="PackedScene" path="res://scenes/ui/OptionsScene.tscn" id="4_options"]
+[ext_resource type="PackedScene" uid="uid://cwqpxe48ooixl" path="res://scenes/ui/HowToPlayOverlay.tscn" id="howtoplay_overlay"]
+[ext_resource type="Script" uid="uid://71ek2iu26fu4" path="res://scenes/ui/start_menu.gd" id="start_menu_script"]
+
+[node name="StartMenu" type="CanvasLayer" unique_id=90173304]
+process_mode = 3
+layer = 100
+script = ExtResource("start_menu_script")
+next_scene = ExtResource("2_pridf")
+options_scene = ExtResource("4_options")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=652741435]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.02, 0.12, 0.95)
+
+[node name="TitleLabel" type="Label" parent="ColorRect" unique_id=1154709175]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 64
+text = "GMTK 2026"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="ColorRect" unique_id=2015177940]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 200.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.7, 0.6, 0.85, 0.8)
+theme_override_font_sizes/font_size = 20
+text = "Game Jam Entry"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StartButton" type="Button" parent="ColorRect" unique_id=1263010921]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 300.0
+offset_right = 120.0
+offset_bottom = 355.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 22
+text = "▶  Start Game"
+
+[node name="HowToPlayButton" type="Button" parent="ColorRect" unique_id=958599263]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 367.0
+offset_right = 120.0
+offset_bottom = 412.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = "?  How to Play"
+
+[node name="OptionsButton" type="Button" parent="ColorRect" unique_id=476175923]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 424.0
+offset_right = 120.0
+offset_bottom = 469.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = "⚙  Options"
+
+[node name="QuitButton" type="Button" parent="ColorRect" unique_id=1374755895]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 481.0
+offset_right = 120.0
+offset_bottom = 526.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = "✕  Quit"
+
+[node name="HowToPlayOverlay" parent="." unique_id=1517836480 instance=ExtResource("howtoplay_overlay")]

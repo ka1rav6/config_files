@@ -1,0 +1,10 @@
+local home = os.getenv("HOME")
+
+hl.on("hyprland.start", function()
+    hl.exec_cmd("hyprpaper")
+    hl.exec_cmd("waybar")
+    hl.exec_cmd(home .. "/.config/hypr/scripts/start-dock.sh")
+    hl.exec_cmd("systemctl --user start hyprpolkitagent.service 2>/dev/null || true")
+    hl.exec_cmd("nm-applet --indicator")
+    hl.exec_cmd("blueman-applet")
+end)

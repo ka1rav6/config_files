@@ -1,0 +1,133 @@
+"""Application configuration, loaded from environment variables / `.env`.
+
+This module centralises every tunable setting for the backend so that code
+never reads secrets or hostnames directly from the environment. Values can be
+provided either as environment variables or via a `.env` file in the backend
+directory (see `.env.example`).
+"""
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Strongly-typed settings for the whole backend application.
+
+    Inheriting from `BaseSettings` (from the `pydantic-settings` package) gives
+    us automatic validation and lets us override every default below through an
+    environment variable of the same name (case-insensitive). For example,
+    setting `DATABASE_URL=...` in the shell overrides the default below.
+    """
+
+    # Instruct pydantic-settings to also look for values in a `.env` file in the
+    # current working directory (the `backend/` folder when running locally).
+    # `extra="ignore"` means unknown variables in the file are ignored instead
+    # of raising an error, which keeps `.env` files forward-compatible.
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # --- General ---
+    # Human-friendly name of the application; shown in the OpenAPI docs title.
+    app_name: str = "blog-backend"
+
+    # Which environment we are running in (development / test / production).
+    environment: str = "development"
+
+    # Toggles extra debug behaviour (e.g. SQL echo) — always false in prod.
+    debug: bool = False
+
+    # Origins allowed to call the API from a browser (CORS). The Vite dev
+    # server runs on port 5173 by default, so we allow it for local
+    # development. In production this should be the real deployed domain.
+    cors_origins: list[str] = ["http://localhost:5173"]
+
+    # Public base URL used to build absolute links in emails (e.g. the email
+    # verification link) — the URL clients can actually reach this backend at.
+    public_base_url: str = "http://localhost:8000"
+
+    # Public base URL of the FRONTEND SPA. Email links (post page, code page,
+    # unsubscribe) point here, not at the API. Defaults to the Vite dev server.
+    public_site_url: str = "http://localhost:5173"
+
+    # --- Database (PostgreSQL, async driver) ---
+    database_url: str = "postgresql+asyncpg://blog:blog@localhost:5433/blog"
+
+    # Echo every SQL statement to the console — handy when learning.
+    db_echo: bool = False
+
+    # --- Auth ---
+    # Secret used to sign JWTs. MUST be a long random value in production,
+    # injected via env var / secrets manager, never committed.
+    jwt_secret: str = "dev-secret-change-me-to-a-long-random-value-32b"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 30
+    # Name of the httpOnly cookie that carries the refresh token.
+    refresh_cookie_name: str = "refresh_token"
+    # Usernames that are promoted to ADMIN automatically on registration. There
+    # is only ever one blogger in this project (the owner), so this is how that
+    # account gets its power without a manual database edit. Empty by default.
+    admin_usernames: list[str] = Field(default_factory=list)
+    # Login brute-force protection: how many failed attempts per IP per window
+    # are allowed before the endpoint starts answering 429 for a while.
+    login_rate_limit_attempts: int = 10
+    login_rate_limit_window_seconds: int = 60
+    # Comment creation rate limiting: how many comments a user may post per
+    # `comment_rate_limit_window_seconds` before being throttled.
+    comment_rate_limit_attempts: int = 3
+    comment_rate_limit_window_seconds: int = 60
+    # Token lifespans for emailed links (verification / password reset).
+    email_token_expire_minutes: int = 60
+
+    # --- Email (SMTP) ---
+    # Defaults target the local Mailpit container (infra/docker-compose.yml),
+    # which acts as a stand-in for AWS SES during development.
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    smtp_from: str = "no-reply@blog.local"
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = False
+    # Master switch: when false the app logs emails instead of sending them
+    # (handy in tests and early development where no SMTP server is running).
+    emails_enabled: bool = True
+
+    # --- Object storage (S3-compatible: AWS S3 in prod, MinIO locally) ---
+    # Where images (cover photos, avatar uploads) are stored and served from.
+    # `s3_endpoint_url` is what the backend talks to; `s3_public_base_url` is
+    # the URL prefix embedded in returned links so the BROWSER can load them.
+    s3_endpoint_url: str | None = None  # e.g. http://localhost:9000 for MinIO
+    s3_region: str = "us-east-1"
+    s3_access_key: str | None = None
+    s3_secret_key: str | None = None
+    s3_bucket: str = "blog-images"
+    s3_public_base_url: str | None = None
+
+    # --- Validation limits ---
+    max_posts_per_page: int = 100
+    # Largest image an author may upload (5 MiB is plenty for a cover photo).
+    max_image_upload_bytes: int = 5 * 1024 * 1024
+    # Code projects: a post can hold up to this many files, each up to this many
+    # bytes, with a whole-project cap so one upload can never blow up the DB.
+    max_code_files_per_project: int = 200
+    max_code_file_size_bytes: int = 1_000_000  # 1 MiB per file
+    max_code_project_total_size_bytes: int = 5_000_000  # 5 MiB per project
+
+    # --- Distribution (publishing → email / social) ---
+    # How many times a distribution job is attempted before it is marked FAILED
+    # (the worker retries with exponential backoff in between).
+    distribution_max_attempts: int = 5
+    # Base delay (seconds) for the exponential backoff: attempt N waits
+    # `backoff * 2**N` before running again. Small locally so retries are quick
+    # to exercise in tests.
+    distribution_backoff_seconds: int = 60
+    # Secret used to derive the Fernet key that encrypts third-party integration
+    # tokens (Instagram, X, ...) at rest. MUST be a long random value in prod.
+    integration_token_secret: str = "dev-integration-token-secret-change-me-32b"
+
+
+# A single shared instance, imported anywhere the app needs its configuration.
+# Creating exactly one instance here means every module reads the same values.
+settings = Settings()

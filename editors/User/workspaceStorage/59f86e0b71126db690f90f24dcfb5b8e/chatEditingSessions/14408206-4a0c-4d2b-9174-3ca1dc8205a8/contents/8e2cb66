@@ -1,0 +1,75 @@
+* {
+    font-family: "Inter", "Ubuntu", sans-serif;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(18, 18, 20, 0.82);
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+
+    color: rgba(255, 255, 255, 0.92);
+}
+
+#custom-apple {
+    padding: 0 13px;
+    font-size: 17px;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+#workspaces {
+    margin: 4px 0;
+}
+
+#workspaces button {
+    padding: 2px 9px;
+    margin: 0 2px;
+
+    border-radius: 8px;
+
+    background: transparent;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+#workspaces button.active {
+    background: rgba(255, 255, 255, 0.14);
+    color: white;
+}
+
+#workspaces button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+#tray,
+#pulseaudio,
+#battery,
+#clock,
+#custom-power {
+    margin: 4px 2px;
+    padding: 0 9px;
+
+    border-radius: 8px;
+
+    background: rgba(255, 255, 255, 0.055);
+}
+
+#custom-power {
+    padding: 0 11px;
+    font-size: 15px;
+}
+
+#custom-power:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+tooltip {
+    background: rgba(20, 20, 22, 0.96);
+
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+
+    color: white;
+}

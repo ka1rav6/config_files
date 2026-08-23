@@ -1,0 +1,13 @@
+#!bin/bash/
+
+echo "starting build"
+
+cd build
+cmake ..
+make
+
+echo "ending build"
+sleep 1
+echo "starting running"
+
+./

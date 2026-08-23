@@ -1,0 +1,13 @@
+platform=1786083797370
+cluster.ide=1786083795069
+cluster.extide=1786083793733
+cluster.webcommon=1786083798088
+cluster.java=1786083796504
+cluster.extra=1786083794055
+cluster.nbcode=1786083796566
+user=1786194098540
+crc=39
+locale=en
+branding=nbcode
+java.version=21.0.11
+java.vm.version=21.0.11+10-1-24.04.2-Ubuntu

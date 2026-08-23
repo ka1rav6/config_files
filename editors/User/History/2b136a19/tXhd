@@ -1,0 +1,16 @@
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.out
+logs.txt
+*.dSYM/
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.gch
+build/

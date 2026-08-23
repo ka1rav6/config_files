@@ -1,0 +1,125 @@
+@define-color bar-bg rgba(18, 20, 24, 0.94);
+@define-color panel-bg rgba(255, 255, 255, 0.07);
+@define-color panel-hover rgba(255, 255, 255, 0.13);
+@define-color text rgba(244, 247, 250, 0.92);
+@define-color muted rgba(190, 199, 208, 0.62);
+@define-color mint #8ee3c1;
+@define-color amber #f4c47b;
+@define-color coral #ff9b85;
+
+* {
+    font-family: "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    min-height: 0;
+}
+
+window#waybar {
+    background: @bar-bg;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 11px;
+    color: @text;
+}
+
+#custom-launcher {
+    padding: 0 15px;
+    font-size: 17px;
+    color: @mint;
+}
+
+#workspaces {
+    margin: 5px 4px;
+}
+
+#workspaces button {
+    min-width: 20px;
+    padding: 0 7px;
+    margin: 0 1px;
+    border-radius: 6px;
+    background: transparent;
+    color: @muted;
+}
+
+#workspaces button.active {
+    background: @mint;
+    color: #14211f;
+}
+
+#workspaces button:hover {
+    background: @panel-hover;
+    color: @text;
+}
+
+#clock,
+#cpu,
+#memory,
+#network,
+#temperature,
+#tray,
+#pulseaudio,
+#battery,
+#custom-power {
+    margin: 5px 2px;
+    padding: 0 10px;
+    border-radius: 6px;
+    background: @panel-bg;
+}
+
+#clock {
+    padding: 0 16px;
+    color: @amber;
+    background: transparent;
+}
+
+#cpu,
+#memory,
+#temperature {
+    color: @muted;
+}
+
+#network {
+    color: @mint;
+}
+
+#pulseaudio {
+    color: #a9c7ff;
+}
+
+#pulseaudio.microphone {
+    color: #c5b4ff;
+}
+
+#pulseaudio.microphone.source-muted {
+    color: @coral;
+}
+
+#battery {
+    color: @amber;
+}
+
+#battery.charging {
+    color: @mint;
+}
+
+#battery.critical:not(.charging) {
+    color: @coral;
+}
+
+#custom-power {
+    padding: 0 13px;
+    font-size: 15px;
+    color: @coral;
+}
+
+#custom-power:hover,
+#pulseaudio:hover,
+#network:hover {
+    background: @panel-hover;
+}
+
+tooltip {
+    background: #181b20;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 7px;
+    color: @text;
+}

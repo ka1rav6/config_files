@@ -1,0 +1,65 @@
+#include "board.h"
+#include "piece.h"
+#include "point.h"
+
+Board* initBoard(){
+    Board* board = (Board*)malloc(sizeof(Board));
+
+    board->state = DEFAULT;
+    for (int i = 0; i < 8; i++){
+        for (int j = 0; j < 8; j ++){
+            board->arr[i][j].p = createPoint(i + 1, (char) ('a' + i));
+        }
+    }
+    for (int i = 0; i < 8; i++){
+        for (int j = 0; j < 8; j ++){
+            Point sq_pnt = board->arr[i][j].p;
+            if (sq_pnt.row == 1 || sq_pnt.row == 8){
+                switch(sq_pnt.col){
+                    Color col;
+                    case 'a' || 'g':
+                        col = sq_pnt.row == 1 ? WHITE : BLACK;
+                        board->arr[i][j].piecePtr = initPiece(ROOK, col);
+                        board->arr[i][j].type = ROOK;
+                        break;
+                    case 'b':
+                        col = sq_pnt.row == 1 ? WHITE : BLACK;
+                        board->arr[i][j].piecePtr = initPiece(KNIGHT, col);
+                        board->arr[i][j].type = KNIGHT;
+                        break;
+                    case 'c':
+                        col = sq_pnt.row == 1 ? WHITE : BLACK;
+                        board->arr[i][j].piecePtr = initPiece(BISHOP, col);
+                        board->arr[i][j].type = BISHOP;
+                        break;
+                    case 'b':
+                        col = sq_pnt.row == 1 ? WHITE : BLACK;
+                        board->arr[i][j].piecePtr = initPiece(KNIGHT, col);
+                        board->arr[i][j].type = KNIGHT;
+                        break;
+                    case 'b':
+                        col = sq_pnt.row == 1 ? WHITE : BLACK;
+                        board->arr[i][j].piecePtr = initPiece(KNIGHT, col);
+                        board->arr[i][j].type = KNIGHT;
+                        break;
+                    case 'b':
+                        col = sq_pnt.row == 1 ? WHITE : BLACK;
+                        board->arr[i][j].piecePtr = initPiece(KNIGHT, col);
+                        board->arr[i][j].type = KNIGHT;
+                        break;
+                    case 'b':
+                        col = sq_pnt.row == 1 ? WHITE : BLACK;
+                        board->arr[i][j].piecePtr = initPiece(KNIGHT, col);
+                        board->arr[i][j].type = KNIGHT;
+                        break;
+                    case 'b':
+                        col = sq_pnt.row == 1 ? WHITE : BLACK;
+                        board->arr[i][j].piecePtr = initPiece(KNIGHT, col);
+                        board->arr[i][j].type = KNIGHT;
+                        break;
+                }
+            }
+        }
+    }
+    return board;
+}

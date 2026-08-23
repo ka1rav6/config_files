@@ -1,0 +1,138 @@
+[gd_scene format=3 uid="uid://iu7l6yjy2u4v"]
+
+[ext_resource type="Script" uid="uid://e0q2beou6msw" path="res://scenes/ui/options_scene.gd" id="1_script"]
+
+[node name="OptionsScene" type="Control" unique_id=11597928]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=801504026]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.02, 0.12, 0.95)
+
+[node name="TitleLabel" type="Label" parent="ColorRect" unique_id=1177150748]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 30.0
+offset_right = 200.0
+offset_bottom = 90.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 48
+text = "Options"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect" unique_id=1849069336]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -180.0
+offset_right = 200.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="SectionLabel" type="Label" parent="ColorRect/VBoxContainer" unique_id=2092459735]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Audio & Display"
+
+[node name="MasterVolumeRow" type="HBoxContainer" parent="ColorRect/VBoxContainer" unique_id=904847527]
+layout_mode = 2
+
+[node name="MasterVolLabel" type="Label" parent="ColorRect/VBoxContainer/MasterVolumeRow" unique_id=1744497867]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Master Volume"
+vertical_alignment = 1
+
+[node name="MasterSlider" type="HSlider" parent="ColorRect/VBoxContainer/MasterVolumeRow" unique_id=351810009]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+min_value = -60.0
+max_value = 0.0
+
+[node name="MasterLabel" type="Label" parent="ColorRect/VBoxContainer/MasterVolumeRow" unique_id=965346491]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "100%"
+vertical_alignment = 1
+
+[node name="FullscreenRow" type="HBoxContainer" parent="ColorRect/VBoxContainer" unique_id=995880394]
+layout_mode = 2
+
+[node name="FullscreenLabel" type="Label" parent="ColorRect/VBoxContainer/FullscreenRow" unique_id=1605579886]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Fullscreen"
+vertical_alignment = 1
+
+[node name="FullscreenCheck" type="CheckButton" parent="ColorRect/VBoxContainer/FullscreenRow" unique_id=154378805]
+layout_mode = 2
+
+[node name="Separator" type="HSeparator" parent="ColorRect/VBoxContainer" unique_id=1153322960]
+layout_mode = 2
+
+[node name="KeybindsTitle" type="Label" parent="ColorRect/VBoxContainer" unique_id=1034318096]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Keybinds"
+
+[node name="KeybindsContainer" type="VBoxContainer" parent="ColorRect/VBoxContainer" unique_id=1692467214]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BackButton" type="Button" parent="ColorRect" unique_id=2040939461]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -80.0
+offset_right = 100.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 18
+text = "Back"
+
+[node name="RebindPrompt" type="Label" parent="ColorRect" unique_id=247950485]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -120.0
+offset_right = 150.0
+offset_bottom = -85.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 14
+text = "Press a key to bind..."
+horizontal_alignment = 1

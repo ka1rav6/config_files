@@ -1,0 +1,10 @@
+#include "include/chunk.h"
+#include "include/memory.h"
+
+Chunk::Chunk(){
+
+}
+
+void Chunk::write(uint8_t byte){
+    this->code.emplace_back(byte);
+}

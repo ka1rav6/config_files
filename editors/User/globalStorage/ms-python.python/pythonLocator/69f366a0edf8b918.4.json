@@ -1,0 +1,39 @@
+{
+  "environment": {
+    "executable": "/home/kairav/dev/byld/college-lms/mvp/.venv/bin/python",
+    "prefix": "/home/kairav/dev/byld/college-lms/mvp/.venv",
+    "version": "3.12.3.final.0",
+    "is64Bit": true,
+    "symlinks": [
+      "/home/kairav/dev/byld/college-lms/mvp/.venv/bin/python",
+      "/home/kairav/dev/byld/college-lms/mvp/.venv/bin/python3",
+      "/home/kairav/dev/byld/college-lms/mvp/.venv/bin/python3.12"
+    ]
+  },
+  "symlinks": [
+    [
+      "/home/kairav/dev/byld/college-lms/mvp/.venv/bin/python",
+      {
+        "secs_since_epoch": 1774292672,
+        "nanos_since_epoch": 0
+      },
+      null
+    ],
+    [
+      "/home/kairav/dev/byld/college-lms/mvp/.venv/bin/python3",
+      {
+        "secs_since_epoch": 1774292672,
+        "nanos_since_epoch": 0
+      },
+      null
+    ],
+    [
+      "/home/kairav/dev/byld/college-lms/mvp/.venv/bin/python3.12",
+      {
+        "secs_since_epoch": 1774292672,
+        "nanos_since_epoch": 0
+      },
+      null
+    ]
+  ]
+}

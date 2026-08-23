@@ -1,0 +1,466 @@
+Note: The tool simplified the command to ` echo '--- OURS (stage 2) ---' && git show :2:scenes/characters/player/Player.tscn | sed -n '1,220p' && echo '--- THEIRS (stage 3) ---' && git show :3:scenes/characters/player/Player.tscn | sed -n '1,220p'` (terminal ID=f7ff1f4a-5b8c-44f6-8bf7-e86fdc229c35). This is the output of running that command instead:
+--- OURS (stage 2) ---
+[gd_scene format=3 uid="uid://8xvf6qyd5m1m"]
+
+[ext_resource type="Texture2D" uid="uid://17e0yruel2ss" path="res://art/temp fra
+me.png" id="1_db84v"]
+[ext_resource type="PackedScene" uid="uid://b53uc5e68os2d" path="res://scenes/ui
+/PauseMenu.tscn" id="2_pause"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PlayerHUD.tscn" id="3_hud
+"]
+
+[sub_resource type="GDScript" id="GDScript_su4eo"]
+script/source = "extends CharacterBody2D
+
+
+@export var SPEED = 300.0
+@export var JUMP_VELOCITY = -400.0
+@export var MAX_HEALTH := 100
+@export var WALL_JUMP_ANGLE := 45.0
+@export var WALL_JUMP_SPEED := 650.0
+@export var WALL_JUMP_DURATION := 0.7
+@export var MAX_FALL_SPEED := 800.0
+@onready var bgm := $CanvasLayer/bg_display_on_mode
+@onready var actArea := $activeArea
+@onready var currentTimeFactor := 1.0
+@onready var health := MAX_HEALTH
+
+var _isTreePaused := false
+var wall_jump_timer := 0.0
+var wall_jump_direction := 0.0
+var grabbed_enemy: CollisionObject2D = null
+var facing_direction := 1
+
+func _ready() -> void:
+        Global.reset_state()
+        Global.score = 0
+        bgm.visible = Global.powerMode
+
+func _process(_delta: float) -> void:
+        if Input.is_action_just_pressed(\"ability_fast\"):
+                Global.toggle_all()
+        if Input.is_action_just_pressed(\"grab\"):
+                if grabbed_enemy == null:
+                        try_grab()
+                else:
+                        release_grab()
+
+func try_grab() -> void:
+        var enemies = get_tree().get_nodes_in_group(\"selectable\")
+        var closest: CollisionObject2D = null
+        var closest_dist_sq := Global.throwDistance ** 2
+        for enemy in enemies:
+                if not is_instance_valid(enemy) or enemy.get(\"is_grabbed\"):
+                        continue
+                var dist_sq = global_position.distance_squared_to(enemy.global_p
+osition)
+                if dist_sq < closest_dist_sq:
+                        closest_dist_sq = int(dist_sq)
+                        closest = enemy
+        if closest == null:
+                return
+        grabbed_enemy = closest
+        if grabbed_enemy.get(\"is_grabbed\") == null:
+                grabbed_enemy.queue_free()
+                return
+        grabbed_enemy.is_grabbed = true
+        grabbed_enemy.set_physics_process(false)
+        grabbed_enemy.velocity = Vector2.ZERO
+        var col = grabbed_enemy.get_node_or_null(\"CollisionShape2D\")
+        if col:
+                col.set_deferred(\"disabled\", true)
+        grabbed_enemy.reparent(self)
+        grabbed_enemy.global_position = global_position + Vector2(facing_directi
+on * 40, -20)
+
+func release_grab() -> void:
+        if grabbed_enemy == null:
+                return
+        grabbed_enemy.reparent(get_parent())
+        var release_pos = _resolve_release_position(global_position + Vector2(fa
+cing_direction * 40, 0))
+        grabbed_enemy.global_position = release_pos
+        var col = grabbed_enemy.get_node_or_null(\"CollisionShape2D\")
+        if col:
+                col.set_deferred(\"disabled\", false)
+        grabbed_enemy.is_grabbed = false
+        grabbed_enemy.set_physics_process(true)
+        grabbed_enemy.velocity = Vector2.ZERO
+        grabbed_enemy = null
+
+func _resolve_release_position(pos: Vector2) -> Vector2:
+        var space_state = get_world_2d().direct_space_state
+        var col = grabbed_enemy.get_node_or_null(\"CollisionShape2D\")
+        if not col or not col.shape:
+                return pos
+        var resolved = pos
+        for i in range(10):
+                var params = PhysicsShapeQueryParameters2D.new()
+                params.shape = col.shape
+                params.transform = Transform2D(0, resolved)
+                params.exclude = [grabbed_enemy.get_rid()]
+                var result = space_state.intersect_shape(params, 1)
+                if result.is_empty():
+                        return resolved
+                resolved += Vector2.UP * 4.0
+        return resolved
+
+func set_pause(val: bool) -> void:
+        _isTreePaused = val
+        for body in actArea.get_overlapping_bodies():
+                body.set_physics_process(!val)
+
+func set_speed(mult: float) -> void:
+        currentTimeFactor *= mult
+        if mult < 1.0:
+                velocity *= mult
+
+func take_damage(amount: int) -> void:
+        health -= amount
+        if health <= 0:
+                if grabbed_enemy != null:
+                        call_deferred(\"release_grab\")
+                var menu := get_node_or_null(\"PauseMenu\")
+                if menu:
+                        menu.reparent(get_tree().current_scene)
+                        menu.show_death_screen()
+                queue_free()
+
+func _physics_process(delta: float) -> void:
+        var tDelta = delta * currentTimeFactor
+        var tSpeed = SPEED * currentTimeFactor
+        var tJumpVelocity = JUMP_VELOCITY * sqrt(currentTimeFactor)
+        # Add the gravity.
+        if not is_on_floor():
+                velocity += get_gravity() * tDelta
+                velocity.y = minf(velocity.y, MAX_FALL_SPEED * currentTimeFactor
+)
+
+        wall_jump_timer = maxf(wall_jump_timer - tDelta, 0.0)
+        # Handle jump.
+        if Input.is_action_just_pressed(\"jump\"):
+                if is_on_floor():
+                        velocity.y = tJumpVelocity
+                elif is_on_wall():
+                        var angle_rad = deg_to_rad(WALL_JUMP_ANGLE)
+                        var jump_magnitude = WALL_JUMP_SPEED * sqrt(currentTimeF
+actor)
+                        velocity.x = get_wall_normal().x * cos(angle_rad) * jump
+_magnitude
+                        velocity.y = -sin(angle_rad) * jump_magnitude
+                        wall_jump_timer = WALL_JUMP_DURATION
+                        wall_jump_direction = get_wall_normal().x
+
+        if Input.is_action_just_pressed(\"down\") and !is_on_floor():
+                velocity.y -= tJumpVelocity
+
+        var direction := Input.get_axis(\"left\", \"right\")
+        if direction != 0:
+                facing_direction = sign(direction)
+        if wall_jump_timer > 0.0:
+                var toward_wall = sign(direction) == -sign(wall_jump_direction)
+                if direction != 0.0 and toward_wall:
+                        velocity.x = move_toward(velocity.x, 0, tSpeed * (WALL_J
+UMP_DURATION - wall_jump_timer))
+                elif direction:
+                        velocity.x = direction * tSpeed
+                else:
+                        velocity.x = move_toward(velocity.x, 0, tSpeed * 0.07)
+        elif direction:
+                velocity.x = direction * tSpeed
+        else:
+                velocity.x = move_toward(velocity.x, 0, tSpeed)
+
+        move_and_slide()
+
+        if grabbed_enemy and is_instance_valid(grabbed_enemy):
+                grabbed_enemy.global_position = global_position + Vector2(facing
+_direction * 40, -20)
+        elif grabbed_enemy:
+                grabbed_enemy = null
+
+
+func _on_active_area_body_entered(body: Node2D) -> void:
+        if body == grabbed_enemy:
+                return
+        body.set_physics_process(!_isTreePaused)
+
+
+func _on_active_area_body_exited(body: Node2D) -> void:
+        if body == grabbed_enemy:
+                return
+        body.set_physics_process(false)
+"
+
+[sub_resource type="Gradient" id="Gradient_srvkq"]
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_bxxdx"]
+gradient = SubResource("Gradient_srvkq")
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_8njf7"]
+radius = 16.0
+height = 48.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_8njf7"]
+size = Vector2(4800, 2800)
+
+[node name="Player" type="CharacterBody2D" unique_id=687081500 groups=["Player"]
+]
+collision_mask = 47
+script = SubResource("GDScript_su4eo")
+SPEED = 489.0
+JUMP_VELOCITY = -600.0
+WALL_JUMP_ANGLE = 35.0
+WALL_JUMP_SPEED = 1100.0
+WALL_JUMP_DURATION = 0.5
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1371535421]
+z_index = 4
+scale = Vector2(0.5, 0.75)
+texture = SubResource("GradientTexture2D_bxxdx")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=98105
+6087]
+shape = SubResource("CapsuleShape2D_8njf7")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=950777011]
+offset = Vector2(0, -180)
+zoom = Vector2(0.5, 0.5)
+position_smoothing_enabled = true
+rotation_smoothing_enabled = true
+drag_horizontal_enabled = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=527054487]
+layer = 100
+
+--- THEIRS (stage 3) ---
+[gd_scene format=3 uid="uid://8xvf6qyd5m1m"]
+
+[ext_resource type="Texture2D" uid="uid://17e0yruel2ss" path="res://art/temp fra
+me.png" id="1_db84v"]
+[ext_resource type="PackedScene" uid="uid://b53uc5e68os2d" path="res://scenes/ui
+/PauseMenu.tscn" id="2_pause"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PlayerHUD.tscn" id="3_hud
+"]
+[ext_resource type="Texture2D" path="res://art/player_frames/spritesheet.png" id
+="4_sheet"]
+
+[ext_resource type="Script" path="res://scenes/characters/player/player_controll
+er.gd" id="player_script"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkr0"]
+atlas = ExtResource("4_sheet")
+region = Rect2(0, 324, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkr1"]
+atlas = ExtResource("4_sheet")
+region = Rect2(233, 324, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkr2"]
+atlas = ExtResource("4_sheet")
+region = Rect2(466, 324, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkr3"]
+atlas = ExtResource("4_sheet")
+region = Rect2(699, 324, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkl0"]
+atlas = ExtResource("4_sheet")
+region = Rect2(0, 0, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkl1"]
+atlas = ExtResource("4_sheet")
+region = Rect2(233, 0, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkl2"]
+atlas = ExtResource("4_sheet")
+region = Rect2(466, 0, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkl3"]
+atlas = ExtResource("4_sheet")
+region = Rect2(699, 0, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpr0"]
+atlas = ExtResource("4_sheet")
+region = Rect2(0, 648, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpr1"]
+atlas = ExtResource("4_sheet")
+region = Rect2(233, 648, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpr2"]
+atlas = ExtResource("4_sheet")
+region = Rect2(466, 648, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpr3"]
+atlas = ExtResource("4_sheet")
+region = Rect2(699, 648, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpl0"]
+atlas = ExtResource("4_sheet")
+region = Rect2(0, 972, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpl1"]
+atlas = ExtResource("4_sheet")
+region = Rect2(233, 972, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpl2"]
+atlas = ExtResource("4_sheet")
+region = Rect2(466, 972, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpl3"]
+atlas = ExtResource("4_sheet")
+region = Rect2(699, 972, 233, 324)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_player"]
+animations = [{
+"frames": [{
+"texture": SubResource("AtlasTexture_wkr0"),
+"duration": 1.0
+}],
+"loop": false,
+"name": &"idle_right",
+"speed": 5.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_wkl3"),
+"duration": 1.0
+}],
+"loop": false,
+"name": &"idle_left",
+"speed": 5.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_wkr0"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkr1"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkr2"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkr3"),
+"duration": 1.0
+}],
+"loop": true,
+"name": &"walk_right",
+"speed": 8.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_wkl0"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkl1"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkl2"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkl3"),
+"duration": 1.0
+}],
+"loop": true,
+"name": &"walk_left",
+"speed": 8.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_jpr0"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpr1"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpr2"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpr3"),
+"duration": 1.0
+}],
+"loop": false,
+"name": &"jump_right",
+"speed": 6.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_jpl0"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpl1"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpl2"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpl3"),
+"duration": 1.0
+}],
+"loop": false,
+"name": &"jump_left",
+"speed": 6.0
+}]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_8njf7"]
+radius = 16.0
+height = 48.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_8njf7"]
+size = Vector2(4800, 2800)
+
+[node name="Player" type="CharacterBody2D" unique_id=687081500 groups=["Player"]
+]
+collision_mask = 47
+script = ExtResource("player_script")
+SPEED = 500.0
+JUMP_VELOCITY = -600.0
+WALL_SLIDE_GRAVITY_MULT = 0.9
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=13715
+35421]
+z_index = 4
+scale = Vector2(0.15, 0.15)
+sprite_frames = SubResource("SpriteFrames_player")
+animation = &"idle_right"
+speed_scale = 0.25
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=98105
+6087]
+shape = SubResource("CapsuleShape2D_8njf7")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=950777011]
+offset = Vector2(0, -180)
+zoom = Vector2(0.5, 0.5)
+position_smoothing_enabled = true
+rotation_smoothing_enabled = true
+drag_horizontal_enabled = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=527054487]
+layer = 100
+visible = false
+
+[node name="bg_display_on_mode" type="Sprite2D" parent="CanvasLayer" unique_id=1
+490776435]
+texture = ExtResource("1_db84v")
+centered = false
+
+[node name="activeArea" type="Area2D" parent="." unique_id=1438056155]
+position = Vector2(1, 0)
+collision_layer = 0
+collision_mask = 8
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="activeArea" unique
+_id=242807403]
+visible = false
+shape = SubResource("RectangleShape2D_8njf7")
+
+[node name="PauseMenu" parent="." unique_id=1875723097 instance=ExtResource("2_p
+ause")]
+
+[node name="PlayerHUD" parent="." unique_id=1994374791 instance=ExtResource("3_h
+ud")]
+
+[connection signal="body_entered" from="activeArea" to="." method="_on_active_ar
+ea_body_entered"]
+[connection signal="body_exited" from="activeArea" to="." method="_on_active_are
+a_body_exited"]%                                                                
+➜  gtmk-26 git:(544beef) ✗ 

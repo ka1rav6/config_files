@@ -1,0 +1,27 @@
+{
+  "LaTeX Document": {
+    "prefix": "doc",
+    "body": [
+      "\\documentclass[${1:11pt}]{${2:article}}",
+      "",
+      "\\usepackage[utf8]{inputenc}",
+      "\\usepackage{amsmath, amssymb}",
+      "\\usepackage{graphicx}",
+      "\\usepackage{geometry}",
+      "\\geometry{margin=1in}",
+      "",
+      "\\title{${3:Document Title}}",
+      "\\author{${4:Author}}",
+      "\\date{${5:\\today}}",
+      "",
+      "\\begin{document}",
+      "",
+      "\\maketitle",
+      "",
+      "$0",
+      "",
+      "\\end{document}"
+    ],
+    "description": "Basic LaTeX document boilerplate"
+  }
+}

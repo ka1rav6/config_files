@@ -1,0 +1,142 @@
+#include "../include/rule_internal.h"
+#include "../include/arena.h"
+#include "../include/bytecode.h"
+
+
+// ----------- ACTUAL FUNCTIONS -------------//
+
+
+// runs the rule engine and triggers the required action.
+// Thread-safe: locks the engine for the duration of the pass over 'rules'.
+// Note: if action callbacks (cr->func) are slow or themselves call back into
+// this engine (e.g. registering new rules), holding the lock across the
+// callback could deadlock or stall other threads -- see caveat in writeup.
+void runRuleEngine(RuleEngine* e, FactDB* db)
+{
+    printf("=== RUNNING RULE ENGINE ===\n");
+    pthread_mutex_lock(&e->lock);
+    Rule *cr, *tmp;
+    HASH_ITER(hh, e->rules, cr, tmp){
+        // runBytecode does the whole eval process
+        if (runBytecode(db, cr->bc)){ // returns true only if OP_HALT instruction is present at the end.
+            if (cr->func){ // if the current rule has a function assigned to it
+                cr->func(db, cr->ctx);
+                printf("Action Triggered: %s\n", cr->action);
+            }
+            else{
+                printf("As no function is linked, no action was triggered"
+                        ". The action that should have been triggered was : %s\n", cr->action);
+            }
+        }
+    }
+    pthread_mutex_unlock(&e->lock);
+}
+
+// simple rule constructor
+Rule* createRule(RuleEngine* e, Node* n, char* action, char* name, void* ctx)
+{
+    Rule* temp = (Rule*)arena_alloc(e->arena, sizeof(Rule));
+    temp->condition = n;
+    temp->bc = compileNode(e->arena, n);
+    temp->action = arena_strdup(e->arena, action); // Safely allocate action string in the arena
+    strcpy(temp->ruleName, name);
+    temp->ctx = ctx;
+    return temp;
+}
+
+// USED to be a rule destructor
+void deleteRule(Rule* r)
+{
+    (void)r;
+    // Intentionally empty. Managed via RuleEngine teardown (destroy arena function).
+}
+
+// simple rule engine constructor
+RuleEngine* createRuleEngine()
+{
+    RuleEngine* temp = (RuleEngine*)malloc(sizeof(RuleEngine));
+    if (!temp) {
+        printf("COULD NOT ALLOCATE SPACE FOR RULE\n");
+        exit(EXIT_FAILURE);
+    }
+    memset(temp, 0, sizeof(RuleEngine));
+    temp->arena = createArena(RULE_ENGINE_ARENA_SIZE);
+    if (pthread_mutex_init(&temp->lock, NULL) != 0) {
+        FATAL("Could not initialize RuleEngine mutex\n");
+    }
+    return temp;
+}
+
+// simple rule engine destructor : arena is also destroyed here
+void deleteRuleEngine(RuleEngine* RE)
+{
+    if (!RE) return;
+    Rule *current_rule, *tmp;
+    HASH_ITER(hh, RE->rules, current_rule, tmp) { // iterates through all rules
+        HASH_DEL(RE->rules, current_rule);
+    }
+    destroyArena(RE->arena);
+    pthread_mutex_destroy(&RE->lock);
+    free(RE);
+}
+
+// ------------ FUNCTIONS FOR ADDING/ FINDING stuff in the hash tables --------------
+
+
+// adds the rule to the rule engine
+void addRule(RuleEngine* e, Rule* r)
+{
+    pthread_mutex_lock(&e->lock);
+    HASH_ADD_STR(e->rules, ruleName, r);
+    pthread_mutex_unlock(&e->lock);
+}
+
+// searches for and finds the rule in the search engine
+Rule* findRule(RuleEngine* e, const char * name)
+{
+    pthread_mutex_lock(&e->lock);
+    Rule* r;
+    HASH_FIND_STR(e->rules, name, r);
+    pthread_mutex_unlock(&e->lock);
+    return r;
+}
+
+// Binds/rebinds the action function and context for every rule whose
+// 'action' name matches. Replaces direct field-poking from outside this file.
+void rule_engine_bind_action(RuleEngine* e, const char* action_name, Action_f f, void* ctx)
+{
+    pthread_mutex_lock(&e->lock);
+    Rule *r, *tmp;
+    HASH_ITER(hh, e->rules, r, tmp) {
+        if (strcmp(r->action, action_name) == 0) {
+            r->func = f;
+            r->ctx  = ctx;
+        }
+    }
+    pthread_mutex_unlock(&e->lock);
+}
+
+const char* rule_name(const Rule* r) {
+    return r ? r->ruleName : NULL;
+}
+
+const char* rule_action(const Rule* r) {
+    return r ? r->action : NULL;
+}
+
+Node* rule_condition(const Rule* r) {
+    return r ? r->condition : NULL;
+}
+
+// Thread-safe iteration: locks the engine once
+// then calls cb() for every rule.
+void rule_engine_for_each(RuleEngine* e, RuleVisitor cb, void* user_ctx)
+{
+    if (!e || !cb) return;
+    pthread_mutex_lock(&e->lock);
+    Rule *r, *tmp;
+    HASH_ITER(hh, e->rules, r, tmp) {
+        cb(r, user_ctx);
+    }
+    pthread_mutex_unlock(&e->lock);
+}

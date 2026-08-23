@@ -1,0 +1,1031 @@
+rebase-merge
+--- current commit ---
+544beef (HEAD) s/import/include/
+--- upstream ---
+e581a83 (origin/main, origin/HEAD) sdfhslk
+544beef (HEAD) s/import/include/
+aa4068e added trees and grass
+efa61d1 I was wrong...
+1e28aac My bad
+➜  gtmk-26 git:(544beef) ✗  git add -A && git rebase --continue
+[detached HEAD c5c8405] Restore player sprites, controller, and timer-related sc
+ene changes from lost commit
+ 44 files changed, 1203 insertions(+), 705 deletions(-)
+ create mode 100644 art/deco-assets/tiles.png.import
+ create mode 100644 art/player_frames/jump_left_0.png
+ create mode 100644 art/player_frames/jump_left_0.png.import
+ create mode 100644 art/player_frames/jump_left_1.png
+ create mode 100644 art/player_frames/jump_left_1.png.import
+ create mode 100644 art/player_frames/jump_left_2.png
+ create mode 100644 art/player_frames/jump_left_2.png.import
+ create mode 100644 art/player_frames/jump_left_3.png
+ create mode 100644 art/player_frames/jump_left_3.png.import
+ create mode 100644 art/player_frames/jump_right_0.png
+ create mode 100644 art/player_frames/jump_right_0.png.import
+ create mode 100644 art/player_frames/jump_right_1.png
+ create mode 100644 art/player_frames/jump_right_1.png.import
+ create mode 100644 art/player_frames/jump_right_2.png
+ create mode 100644 art/player_frames/jump_right_2.png.import
+ create mode 100644 art/player_frames/jump_right_3.png
+ create mode 100644 art/player_frames/jump_right_3.png.import
+ create mode 100644 art/player_frames/spritesheet.png
+ create mode 100644 art/player_frames/spritesheet.png.import
+ create mode 100644 art/player_frames/walk_left_0.png
+ create mode 100644 art/player_frames/walk_left_0.png.import
+ create mode 100644 art/player_frames/walk_left_1.png
+ create mode 100644 art/player_frames/walk_left_1.png.import
+ create mode 100644 art/player_frames/walk_left_2.png
+ create mode 100644 art/player_frames/walk_left_2.png.import
+ create mode 100644 art/player_frames/walk_left_3.png
+ create mode 100644 art/player_frames/walk_left_3.png.import
+ create mode 100644 art/player_frames/walk_right_0.png
+ create mode 100644 art/player_frames/walk_right_0.png.import
+ create mode 100644 art/player_frames/walk_right_1.png
+ create mode 100644 art/player_frames/walk_right_1.png.import
+ create mode 100644 art/player_frames/walk_right_2.png
+ create mode 100644 art/player_frames/walk_right_2.png.import
+ create mode 100644 art/player_frames/walk_right_3.png
+ create mode 100644 art/player_frames/walk_right_3.png.import
+ create mode 100644 scenes/characters/player/player_controller.gd
+ create mode 100644 scenes/characters/player/player_controller.gd.uid
+ delete mode 100644 temp.patch
+Successfully rebased and updated refs/heads/main.
+➜  gtmk-26 git:(main)  git status --short --branch && echo '---' && godot --head
+less --path . --quit && echo '---' && godot --headless --path . --scene res://sc
+enes/ui/StartMenu.tscn --quit
+## main...origin/main [ahead 1, behind 1]
+---
+Initialize godot-rust (API v4.4.stable.official, runtime v4.7.1.stable.official,
+ safeguards balanced)
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+---
+Initialize godot-rust (API v4.4.stable.official, runtime v4.7.1.stable.official,
+ safeguards balanced)
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+➜  gtmk-26 git:(main)  git pull --rebase origin main
+From github.com:ka1rav6/gtmk-26
+ * branch            main       -> FETCH_HEAD
+Successfully rebased and updated refs/heads/main.
+➜  gtmk-26 git:(main)  git status --short --branch && echo '---' && godot --head
+less --path . --quit && echo '---' && godot --headless --path . --scene res://sc
+enes/ui/StartMenu.tscn --quit
+## main...origin/main [ahead 1]
+---
+Initialize godot-rust (API v4.4.stable.official, runtime v4.7.1.stable.official,
+ safeguards balanced)
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+---
+Initialize godot-rust (API v4.4.stable.official, runtime v4.7.1.stable.official,
+ safeguards balanced)
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+➜  gtmk-26 git:(main)  echo 'Current branch:' && git branch --show-current && ec
+ho '--- remote main tip ---' && git log --oneline --decorate -n 8 origin/main &&
+ echo '--- search death screen references ---' && grep -RIn "death screen\|Death
+Screen\|death_screen\|show_death_screen\|Game Over" . --exclude-dir=.git --exclu
+de-dir=.venv || true
+Current branch:
+main
+--- remote main tip ---
+e581a83 (origin/main, origin/HEAD) sdfhslk
+544beef s/import/include/
+aa4068e added trees and grass
+efa61d1 I was wrong...
+1e28aac My bad
+ddd9133 added death screen
+349c5b6 small fix
+a442e49 Bomber finished
+--- search death screen references ---
+./scenes/ui/pause_menu.gd:13:# slide up by this much so the death screen doesn't
+ have a hole in it.
+./scenes/ui/pause_menu.gd:42:# death screen and the pause screen never drift apa
+rt.
+./scenes/ui/pause_menu.gd:43:func show_death_screen() -> void:
+➜  gtmk-26 git:(main)  echo '--- commit ddd9133 files ---' && git show --stat --
+oneline --name-only ddd9133 | sed -n '1,120p' && echo '--- pause menu from remot
+e commit ---' && git show ddd9133:scenes/ui/pause_menu.gd | sed -n '1,220p' && e
+cho '--- pause menu scene from remote commit ---' && git show ddd9133:scenes/ui/
+PauseMenu.tscn | sed -n '1,240p'
+--- commit ddd9133 files ---
+ddd9133 added death screen
+scenes/characters/player/Player.tscn
+scenes/ui/pause_menu.gd
+--- pause menu from remote commit ---
+extends CanvasLayer
+
+@onready var title_label: Label = $ColorRect/TitleLabel
+@onready var resume_button: Button = $ColorRect/ResumeButton
+@onready var restart_button: Button = $ColorRect/RestartButton
+@onready var how_to_play_button: Button = $ColorRect/HowToPlayButton
+@onready var quit_button: Button = $ColorRect/QuitButton
+@onready var how_to_play_overlay: CanvasLayer = $HowToPlayOverlay
+
+const DEATH_TITLE := "You Died"
+const DEATH_TITLE_COLOR := Color(0.9, 0.16, 0.22)
+# Vertical gap Resume leaves behind when it's hidden; the buttons below it
+# slide up by this much so the death screen doesn't have a hole in it.
+const RESUME_SLOT_HEIGHT := 67.0
+
+# Once the player is dead this menu is the only thing left running, so it
+# stops behaving like a pause screen: no resuming, and Escape can't dismiss it.
+var is_dead := false
+
+func _ready() -> void:
+        visible = false
+        process_mode = Node.PROCESS_MODE_ALWAYS
+        resume_button.pressed.connect(_on_resume_button_pressed)
+        restart_button.pressed.connect(_on_restart_button_pressed)
+        how_to_play_button.pressed.connect(_on_how_to_play_button_pressed)
+        quit_button.pressed.connect(_on_quit_button_pressed)
+        how_to_play_overlay.closed.connect(_on_how_to_play_closed)
+
+func _input(event: InputEvent) -> void:
+        if how_to_play_overlay.visible or is_dead:
+                return
+        if event is InputEventKey and event.pressed and event.keycode == KEY_ESC
+APE:
+                toggle_pause()
+
+func toggle_pause() -> void:
+        if is_dead:
+                return
+        visible = !visible
+        get_tree().paused = visible
+
+# Called by the player when its health hits zero. Reuses this menu so the
+# death screen and the pause screen never drift apart.
+func show_death_screen() -> void:
+        is_dead = true
+        title_label.text = DEATH_TITLE
+        title_label.add_theme_color_override("font_color", DEATH_TITLE_COLOR)
+        resume_button.visible = false
+        for button in [restart_button, how_to_play_button, quit_button]:
+                button.offset_top -= RESUME_SLOT_HEIGHT
+                button.offset_bottom -= RESUME_SLOT_HEIGHT
+        visible = true
+        get_tree().paused = true
+
+func _on_resume_button_pressed() -> void:
+        toggle_pause()
+
+func _on_restart_button_pressed() -> void:
+        Global.restart_current_level()
+
+func _on_how_to_play_button_pressed() -> void:
+        _set_menu_buttons_disabled(true)
+        how_to_play_overlay.open()
+
+func _on_how_to_play_closed() -> void:
+        _set_menu_buttons_disabled(false)
+
+func _set_menu_buttons_disabled(is_disabled: bool) -> void:
+        resume_button.disabled = is_disabled
+        restart_button.disabled = is_disabled
+        how_to_play_button.disabled = is_disabled
+        quit_button.disabled = is_disabled
+
+func _on_quit_button_pressed() -> void:
+        get_tree().quit()
+--- pause menu scene from remote commit ---
+[gd_scene format=3 uid="uid://b53uc5e68os2d"]
+
+[ext_resource type="PackedScene" uid="uid://cwqpxe48ooixl" path="res://scenes/ui
+/HowToPlayOverlay.tscn" id="howtoplay_overlay"]
+[ext_resource type="Script" uid="uid://cqfyj5v82504k" path="res://scenes/ui/paus
+e_menu.gd" id="pause_menu_script"]
+
+[node name="PauseMenu" type="CanvasLayer" unique_id=1165446629]
+process_mode = 3
+layer = 100
+visible = false
+script = ExtResource("pause_menu_script")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1061351389]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.01, 0.1, 0.85)
+
+[node name="TitleLabel" type="Label" parent="ColorRect" unique_id=1269375124]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 150.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 48
+text = "Game Paused"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="ColorRect" unique_id=1963909484]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 300.0
+offset_right = 120.0
+offset_bottom = 355.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 20
+text = "▶  Resume"
+
+[node name="RestartButton" type="Button" parent="ColorRect" unique_id=1768808049
+]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 367.0
+offset_right = 120.0
+offset_bottom = 422.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 20
+text = "⟲  Restart"
+
+[node name="HowToPlayButton" type="Button" parent="ColorRect" unique_id=15839115
+10]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 434.0
+offset_right = 120.0
+offset_bottom = 484.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = "?  How to Play"
+
+[node name="QuitButton" type="Button" parent="ColorRect" unique_id=1231016926]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_top = 496.0
+offset_right = 120.0
+offset_bottom = 546.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = "✕  Quit Game"
+
+[node name="HowToPlayOverlay" parent="." unique_id=1227519802 instance=ExtResour
+ce("howtoplay_overlay")]
+➜  gtmk-26 git:(main)  godot --headless --path . --quit && echo '---' && godot -
+-headless --path . --scene res://scenes/ui/StartMenu.tscn --quit
+Initialize godot-rust (API v4.4.stable.official, runtime v4.7.1.stable.official,
+ safeguards balanced)
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+---
+Initialize godot-rust (API v4.4.stable.official, runtime v4.7.1.stable.official,
+ safeguards balanced)
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+➜  gtmk-26 git:(main) ✗ 
+➜  gtmk-26 git:(main) ✗  echo 'Current branch:' && git branch --show-current && 
+echo '--- Remote history (recent 20) ---' && git log --oneline --decorate --grap
+h -n 20 origin/main
+Current branch:
+main
+--- Remote history (recent 20) ---
+* e581a83 (origin/main, origin/HEAD) sdfhslk
+* 544beef s/import/include/
+* aa4068e added trees and grass
+* efa61d1 I was wrong...
+* 1e28aac My bad
+* ddd9133 added death screen
+* 349c5b6 small fix
+* a442e49 Bomber finished
+* a912921 improved tilemap? 100%
+* 4d3c621 Committing fixes in the dark, seriously, who killed my power!?
+* 1c6e302 improved tilemap?
+* eec7891 updatea
+* f086c7a imporved tilemap
+* d280cc6 yess
+* 5365f1b added stuff
+* 6707dcd I expected something different.
+*   3190777 (agents/fix-game-bugs-and-stability) Merge branch 'main' of github.c
+om:ka1rav6/gmtk-26
+|\  
+| * bac4fc1 thingamathing
+* | b00a53c better tilemap?
+|/  
+* 3605961 fixed background_1
+➜  gtmk-26 git:(main) ✗  echo 'Status:' && git status --short --branch && echo '
+--- Recent history ---' && git log --oneline --decorate -n 10 && echo '--- Remot
+e tip ---' && git log --oneline --decorate -n 5 origin/main
+Status:
+## main...origin/main [ahead 1]
+ M scenes/characters/player/player_controller.gd
+--- Recent history ---
+5f22729 (HEAD -> main) Restore player sprites, controller, and timer-related sce
+ne changes from lost commit
+e581a83 (origin/main, origin/HEAD) sdfhslk
+544beef s/import/include/
+aa4068e added trees and grass
+efa61d1 I was wrong...
+1e28aac My bad
+ddd9133 added death screen
+349c5b6 small fix
+a442e49 Bomber finished
+a912921 improved tilemap? 100%
+--- Remote tip ---
+e581a83 (origin/main, origin/HEAD) sdfhslk
+544beef s/import/include/
+aa4068e added trees and grass
+efa61d1 I was wrong...
+1e28aac My bad
+➜  gtmk-26 git:(main) ✗  cd /home/kairav/dev/gtmk-26 && echo '--- LOCAL Player.t
+scn ---' && sed -n '1,260p' scenes/characters/player/Player.tscn && echo '
+--- REMOTE Player.tscn (origin/main) ---' && git show origin/main:scenes/charact
+ers/player/Player.tscn | sed -n '1,260p'
+--- LOCAL Player.tscn ---
+[gd_scene format=3 uid="uid://8xvf6qyd5m1m"]
+
+[ext_resource type="Texture2D" uid="uid://17e0yruel2ss" path="res://art/temp fra
+me.png" id="1_db84v"]
+[ext_resource type="PackedScene" uid="uid://b53uc5e68os2d" path="res://scenes/ui
+/PauseMenu.tscn" id="2_pause"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PlayerHUD.tscn" id="3_hud
+"]
+[ext_resource type="Texture2D" path="res://art/player_frames/spritesheet.png" id
+="4_sheet"]
+
+[ext_resource type="Script" path="res://scenes/characters/player/player_controll
+er.gd" id="player_script"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkr0"]
+atlas = ExtResource("4_sheet")
+region = Rect2(0, 324, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkr1"]
+atlas = ExtResource("4_sheet")
+region = Rect2(233, 324, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkr2"]
+atlas = ExtResource("4_sheet")
+region = Rect2(466, 324, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkr3"]
+atlas = ExtResource("4_sheet")
+region = Rect2(699, 324, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkl0"]
+atlas = ExtResource("4_sheet")
+region = Rect2(0, 0, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkl1"]
+atlas = ExtResource("4_sheet")
+region = Rect2(233, 0, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkl2"]
+atlas = ExtResource("4_sheet")
+region = Rect2(466, 0, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkl3"]
+atlas = ExtResource("4_sheet")
+region = Rect2(699, 0, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpr0"]
+atlas = ExtResource("4_sheet")
+region = Rect2(0, 648, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpr1"]
+atlas = ExtResource("4_sheet")
+region = Rect2(233, 648, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpr2"]
+atlas = ExtResource("4_sheet")
+region = Rect2(466, 648, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpr3"]
+atlas = ExtResource("4_sheet")
+region = Rect2(699, 648, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpl0"]
+atlas = ExtResource("4_sheet")
+region = Rect2(0, 972, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpl1"]
+atlas = ExtResource("4_sheet")
+region = Rect2(233, 972, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpl2"]
+atlas = ExtResource("4_sheet")
+region = Rect2(466, 972, 233, 324)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jpl3"]
+atlas = ExtResource("4_sheet")
+region = Rect2(699, 972, 233, 324)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_player"]
+animations = [{
+"frames": [{
+"texture": SubResource("AtlasTexture_wkr0"),
+"duration": 1.0
+}],
+"loop": false,
+"name": &"idle_right",
+"speed": 5.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_wkl3"),
+"duration": 1.0
+}],
+"loop": false,
+"name": &"idle_left",
+"speed": 5.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_wkr0"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkr1"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkr2"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkr3"),
+"duration": 1.0
+}],
+"loop": true,
+"name": &"walk_right",
+"speed": 8.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_wkl0"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkl1"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkl2"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_wkl3"),
+"duration": 1.0
+}],
+"loop": true,
+"name": &"walk_left",
+"speed": 8.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_jpr0"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpr1"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpr2"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpr3"),
+"duration": 1.0
+}],
+"loop": false,
+"name": &"jump_right",
+"speed": 6.0
+}, {
+"frames": [{
+"texture": SubResource("AtlasTexture_jpl0"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpl1"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpl2"),
+"duration": 1.0
+}, {
+"texture": SubResource("AtlasTexture_jpl3"),
+"duration": 1.0
+}],
+"loop": false,
+"name": &"jump_left",
+"speed": 6.0
+}]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_8njf7"]
+radius = 16.0
+height = 48.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_8njf7"]
+size = Vector2(4800, 2800)
+
+[node name="Player" type="CharacterBody2D" unique_id=687081500 groups=["Player"]
+]
+collision_mask = 47
+script = ExtResource("player_script")
+SPEED = 500.0
+JUMP_VELOCITY = -600.0
+WALL_SLIDE_GRAVITY_MULT = 0.9
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=13715
+35421]
+z_index = 4
+scale = Vector2(0.15, 0.15)
+sprite_frames = SubResource("SpriteFrames_player")
+animation = &"idle_right"
+speed_scale = 0.25
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=98105
+6087]
+shape = SubResource("CapsuleShape2D_8njf7")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=950777011]
+offset = Vector2(0, -180)
+zoom = Vector2(0.5, 0.5)
+position_smoothing_enabled = true
+rotation_smoothing_enabled = true
+drag_horizontal_enabled = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=527054487]
+layer = 100
+visible = false
+
+[node name="bg_display_on_mode" type="Sprite2D" parent="CanvasLayer" unique_id=1
+490776435]
+texture = ExtResource("1_db84v")
+centered = false
+
+[node name="activeArea" type="Area2D" parent="." unique_id=1438056155]
+position = Vector2(1, 0)
+collision_layer = 0
+collision_mask = 8
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="activeArea" unique
+_id=242807403]
+visible = false
+shape = SubResource("RectangleShape2D_8njf7")
+
+[node name="PauseMenu" parent="." unique_id=1875723097 instance=ExtResource("2_p
+ause")]
+
+[node name="PlayerHUD" parent="." unique_id=1994374791 instance=ExtResource("3_h
+ud")]
+
+[connection signal="body_entered" from="activeArea" to="." method="_on_active_ar
+ea_body_entered"]
+[connection signal="body_exited" from="activeArea" to="." method="_on_active_are
+a_body_exited"]
+--- REMOTE Player.tscn (origin/main) ---
+[gd_scene format=3 uid="uid://8xvf6qyd5m1m"]
+
+[ext_resource type="Texture2D" uid="uid://17e0yruel2ss" path="res://art/temp fra
+me.png" id="1_db84v"]
+[ext_resource type="PackedScene" uid="uid://b53uc5e68os2d" path="res://scenes/ui
+/PauseMenu.tscn" id="2_pause"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PlayerHUD.tscn" id="3_hud
+"]
+
+[sub_resource type="GDScript" id="GDScript_su4eo"]
+script/source = "extends CharacterBody2D
+
+
+@export var SPEED = 300.0
+@export var JUMP_VELOCITY = -400.0
+@export var MAX_HEALTH := 100
+@export var WALL_JUMP_ANGLE := 45.0
+@export var WALL_JUMP_SPEED := 650.0
+@export var WALL_JUMP_DURATION := 0.7
+@export var MAX_FALL_SPEED := 800.0
+@onready var bgm := $CanvasLayer/bg_display_on_mode
+@onready var actArea := $activeArea
+@onready var currentTimeFactor := 1.0
+@onready var health := MAX_HEALTH
+
+var _isTreePaused := false
+var wall_jump_timer := 0.0
+var wall_jump_direction := 0.0
+var grabbed_enemy: CollisionObject2D = null
+var facing_direction := 1
+
+func _ready() -> void:
+        Global.reset_state()
+        Global.score = 0
+        bgm.visible = Global.powerMode
+
+func _process(_delta: float) -> void:
+        if Input.is_action_just_pressed(\"ability_fast\"):
+                Global.toggle_all()
+        if Input.is_action_just_pressed(\"grab\"):
+                if grabbed_enemy == null:
+                        try_grab()
+                else:
+                        release_grab()
+
+func try_grab() -> void:
+        var enemies = get_tree().get_nodes_in_group(\"selectable\")
+        var closest: CollisionObject2D = null
+        var closest_dist_sq := Global.throwDistance ** 2
+        for enemy in enemies:
+                if not is_instance_valid(enemy) or enemy.get(\"is_grabbed\"):
+                        continue
+                var dist_sq = global_position.distance_squared_to(enemy.global_p
+osition)
+                if dist_sq < closest_dist_sq:
+                        closest_dist_sq = int(dist_sq)
+                        closest = enemy
+        if closest == null:
+                return
+        grabbed_enemy = closest
+        if grabbed_enemy.get(\"is_grabbed\") == null:
+                grabbed_enemy.queue_free()
+                return
+        grabbed_enemy.is_grabbed = true
+        grabbed_enemy.set_physics_process(false)
+        grabbed_enemy.velocity = Vector2.ZERO
+        var col = grabbed_enemy.get_node_or_null(\"CollisionShape2D\")
+        if col:
+                col.set_deferred(\"disabled\", true)
+        grabbed_enemy.reparent(self)
+        grabbed_enemy.global_position = global_position + Vector2(facing_directi
+on * 40, -20)
+
+func release_grab() -> void:
+        if grabbed_enemy == null:
+                return
+        grabbed_enemy.reparent(get_parent())
+        var release_pos = _resolve_release_position(global_position + Vector2(fa
+cing_direction * 40, 0))
+        grabbed_enemy.global_position = release_pos
+        var col = grabbed_enemy.get_node_or_null(\"CollisionShape2D\")
+        if col:
+                col.set_deferred(\"disabled\", false)
+        grabbed_enemy.is_grabbed = false
+        grabbed_enemy.set_physics_process(true)
+        grabbed_enemy.velocity = Vector2.ZERO
+        grabbed_enemy = null
+
+func _resolve_release_position(pos: Vector2) -> Vector2:
+        var space_state = get_world_2d().direct_space_state
+        var col = grabbed_enemy.get_node_or_null(\"CollisionShape2D\")
+        if not col or not col.shape:
+                return pos
+        var resolved = pos
+        for i in range(10):
+                var params = PhysicsShapeQueryParameters2D.new()
+                params.shape = col.shape
+                params.transform = Transform2D(0, resolved)
+                params.exclude = [grabbed_enemy.get_rid()]
+                var result = space_state.intersect_shape(params, 1)
+                if result.is_empty():
+                        return resolved
+                resolved += Vector2.UP * 4.0
+        return resolved
+
+func set_pause(val: bool) -> void:
+        _isTreePaused = val
+        for body in actArea.get_overlapping_bodies():
+                body.set_physics_process(!val)
+
+func set_speed(mult: float) -> void:
+        currentTimeFactor *= mult
+        if mult < 1.0:
+                velocity *= mult
+
+func take_damage(amount: int) -> void:
+        health -= amount
+        if health <= 0:
+                if grabbed_enemy != null:
+                        call_deferred(\"release_grab\")
+                var menu := get_node_or_null(\"PauseMenu\")
+                if menu:
+                        menu.reparent(get_tree().current_scene)
+                        menu.show_death_screen()
+                queue_free()
+
+func _physics_process(delta: float) -> void:
+        var tDelta = delta * currentTimeFactor
+        var tSpeed = SPEED * currentTimeFactor
+        var tJumpVelocity = JUMP_VELOCITY * sqrt(currentTimeFactor)
+        # Add the gravity.
+        if not is_on_floor():
+                velocity += get_gravity() * tDelta
+                velocity.y = minf(velocity.y, MAX_FALL_SPEED * currentTimeFactor
+)
+
+        wall_jump_timer = maxf(wall_jump_timer - tDelta, 0.0)
+        # Handle jump.
+        if Input.is_action_just_pressed(\"jump\"):
+                if is_on_floor():
+                        velocity.y = tJumpVelocity
+                elif is_on_wall():
+                        var angle_rad = deg_to_rad(WALL_JUMP_ANGLE)
+                        var jump_magnitude = WALL_JUMP_SPEED * sqrt(currentTimeF
+actor)
+                        velocity.x = get_wall_normal().x * cos(angle_rad) * jump
+_magnitude
+                        velocity.y = -sin(angle_rad) * jump_magnitude
+                        wall_jump_timer = WALL_JUMP_DURATION
+                        wall_jump_direction = get_wall_normal().x
+
+        if Input.is_action_just_pressed(\"down\") and !is_on_floor():
+                velocity.y -= tJumpVelocity
+
+        var direction := Input.get_axis(\"left\", \"right\")
+        if direction != 0:
+                facing_direction = sign(direction)
+        if wall_jump_timer > 0.0:
+                var toward_wall = sign(direction) == -sign(wall_jump_direction)
+                if direction != 0.0 and toward_wall:
+                        velocity.x = move_toward(velocity.x, 0, tSpeed * (WALL_J
+UMP_DURATION - wall_jump_timer))
+                elif direction:
+                        velocity.x = direction * tSpeed
+                else:
+                        velocity.x = move_toward(velocity.x, 0, tSpeed * 0.07)
+        elif direction:
+                velocity.x = direction * tSpeed
+        else:
+                velocity.x = move_toward(velocity.x, 0, tSpeed)
+
+        move_and_slide()
+
+        if grabbed_enemy and is_instance_valid(grabbed_enemy):
+                grabbed_enemy.global_position = global_position + Vector2(facing
+_direction * 40, -20)
+        elif grabbed_enemy:
+                grabbed_enemy = null
+
+
+func _on_active_area_body_entered(body: Node2D) -> void:
+        if body == grabbed_enemy:
+                return
+        body.set_physics_process(!_isTreePaused)
+
+
+func _on_active_area_body_exited(body: Node2D) -> void:
+        if body == grabbed_enemy:
+                return
+        body.set_physics_process(false)
+"
+
+[sub_resource type="Gradient" id="Gradient_srvkq"]
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_bxxdx"]
+gradient = SubResource("Gradient_srvkq")
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_8njf7"]
+radius = 16.0
+height = 48.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_8njf7"]
+size = Vector2(4800, 2800)
+
+[node name="Player" type="CharacterBody2D" unique_id=687081500 groups=["Player"]
+]
+collision_mask = 47
+script = SubResource("GDScript_su4eo")
+SPEED = 489.0
+JUMP_VELOCITY = -600.0
+WALL_JUMP_ANGLE = 35.0
+WALL_JUMP_SPEED = 1100.0
+WALL_JUMP_DURATION = 0.5
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1371535421]
+z_index = 4
+scale = Vector2(0.5, 0.75)
+texture = SubResource("GradientTexture2D_bxxdx")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=98105
+6087]
+shape = SubResource("CapsuleShape2D_8njf7")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=950777011]
+offset = Vector2(0, -180)
+zoom = Vector2(0.5, 0.5)
+position_smoothing_enabled = true
+rotation_smoothing_enabled = true
+drag_horizontal_enabled = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=527054487]
+layer = 100
+
+[node name="bg_display_on_mode" type="Sprite2D" parent="CanvasLayer" unique_id=1
+490776435]
+visible = false
+texture = ExtResource("1_db84v")
+centered = false
+
+[node name="activeArea" type="Area2D" parent="." unique_id=1438056155]
+position = Vector2(1, 0)
+collision_layer = 0
+collision_mask = 8
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="activeArea" unique
+_id=242807403]
+visible = false
+shape = SubResource("RectangleShape2D_8njf7")
+
+[node name="PauseMenu" parent="." unique_id=1875723097 instance=ExtResource("2_p
+ause")]
+
+[node name="PlayerHUD" parent="." unique_id=1994374791 instance=ExtResource("3_h
+ud")]
+
+[connection signal="body_entered" from="activeArea" to="." method="_on_active_ar
+ea_body_entered"]
+[connection signal="body_exited" from="activeArea" to="." method="_on_active_are
+a_body_exited"]
+➜  gtmk-26 git:(main) ✗  godot --headless --path . --quit && echo '---' && godot
+ --headless --path . --scene res://scenes/ui/StartMenu.tscn --quit
+Initialize godot-rust (API v4.4.stable.official, runtime v4.7.1.stable.official,
+ safeguards balanced)
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+---
+Initialize godot-rust (API v4.4.stable.official, runtime v4.7.1.stable.official,
+ safeguards balanced)
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+➜  gtmk-26 git:(main) ✗  godot --headless --path . --quit && echo '---' && godot
+ --headless --path . --scene res://scenes/ui/StartMenu.tscn --quit
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+---
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+➜  gtmk-26 git:(main) ✗  godot --headless --path . --quit && echo '---' && godot
+ --headless --path . --scene res://scenes/ui/StartMenu.tscn --quit
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+---
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+➜  gtmk-26 git:(main) ✗  git status --porcelain=1 --branch && echo '--- rebase d
+irectory listing ---' && ls -la .git/rebase-merge || true
+## HEAD (no branch)
+ M art/laser.png.import
+--- rebase directory listing ---
+total 48
+drwxrwxr-x  2 kairav kairav 4096 Jul 26 19:53 .
+drwxrwxr-x 11 kairav kairav 4096 Jul 26 19:55 ..
+-rw-rw-r--  1 kairav kairav  102 Jul 26 19:53 author-script
+-rw-rw-r--  1 kairav kairav  124 Jul 26 19:53 done
+-rw-rw-r--  1 kairav kairav    0 Jul 26 19:53 drop_redundant_commits
+-rw-rw-r--  1 kairav kairav    2 Jul 26 19:53 end
+-rw-rw-r--  1 kairav kairav    0 Jul 26 19:53 git-rebase-todo
+-rw-rw-r--  1 kairav kairav 1604 Jul 26 19:53 git-rebase-todo.backup
+-rw-rw-r--  1 kairav kairav   16 Jul 26 19:53 head-name
+-rw-rw-r--  1 kairav kairav    0 Jul 26 19:53 interactive
+-rw-rw-r--  1 kairav kairav   79 Jul 26 19:53 message
+-rw-rw-r--  1 kairav kairav    2 Jul 26 19:53 msgnum
+-rw-rw-r--  1 kairav kairav    0 Jul 26 19:53 no-reschedule-failed-exec
+-rw-rw-r--  1 kairav kairav   41 Jul 26 19:53 onto
+-rw-rw-r--  1 kairav kairav   41 Jul 26 19:53 orig-head
+-rw-rw-r--  1 kairav kairav    0 Jul 26 19:53 patch
+-rw-rw-r--  1 kairav kairav   41 Jul 26 19:53 stopped-sha
+➜  gtmk-26 git:(f65fe6c) ✗ 
+➜  gtmk-26 git:(f65fe6c) ✗  git add art/laser.png.import && git rebase --continu
+e || true
+[detached HEAD 1adbd47] added the sprites for everything i have... couldnt find 
+gunner idk agar shi h
+ 1 file changed, 4 deletions(-)
+Successfully rebased and updated refs/heads/main.
+➜  gtmk-26 git:(main)  git status --short --branch && echo '--- recent commits -
+--' && git log --oneline -n 5 && echo '--- running Godot headless ---' && godot 
+--headless --path . --quit
+## main...origin/main [ahead 2]
+--- recent commits ---
+1adbd47 (HEAD -> main) added the sprites for everything i have... couldnt find g
+unner idk agar shi h
+f65fe6c added the sprites for everything i have... couldnt find gunner idk agar 
+shi h
+243e4aa (origin/main, origin/HEAD) lvl 10 fix
+fa5c076 added lvl 12
+0992025 Glue. Match sticks. Paper. Build script!
+--- running Godot headless ---
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+➜  gtmk-26 git:(main) >....                                                     
+' "$NON_ART"
+# restore non-art files from origin/main if any
+if [ -n "$NON_ART" ]; then
+  echo 'Restoring non-art files from origin/main...'
+  # restore each safely
+  echo "$NON_ART" | while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    echo "Restoring: $f"
+    git checkout origin/main -- "$f"
+    git add "$f"
+  done
+  git commit -m "Restore remote files; keep local sprites only" || echo 'No comm
+it needed'
+else
+  echo 'No non-art files to restore.'
+fi
+
+echo '--- final diff vs origin/main ---'
+git diff --name-only origin/main...main || true
+
+echo '--- git status ---'
+git status --short --branch
+
+echo '--- recent commits ---'
+git log --oneline -n 5
+
+echo '--- running Godot headless ---'
+godot --headless --path . --quit || true
+
+--- changed files between origin/main and main ---
+art/gunner.png
+art/gunner.png.import
+scenes/characters/enemies/Lazer.tscn
+scenes/characters/enemies/LongLazer.tscn
+scenes/characters/enemies/gunner_enemy.tscn
+--- art files changed:
+art/gunner.png
+art/gunner.png.import
+--- non-art files changed:
+scenes/characters/enemies/Lazer.tscn
+scenes/characters/enemies/LongLazer.tscn
+scenes/characters/enemies/gunner_enemy.tscn
+Restoring non-art files from origin/main...
+Restoring: scenes/characters/enemies/Lazer.tscn
+Restoring: scenes/characters/enemies/LongLazer.tscn
+Restoring: scenes/characters/enemies/gunner_enemy.tscn
+U       art/laser.png.import
+error: Committing is not possible because you have unmerged files.
+hint: Fix them up in the work tree, and then use 'git add/rm <file>'
+hint: as appropriate to mark resolution and make a commit.
+fatal: Exiting because of an unresolved conflict.
+No commit needed
+--- final diff vs origin/main ---
+art/gunner.png
+art/gunner.png.import
+scenes/characters/enemies/Lazer.tscn
+scenes/characters/enemies/LongLazer.tscn
+scenes/characters/enemies/gunner_enemy.tscn
+--- git status ---
+## HEAD (no branch)
+A  art/gunner.png
+A  art/gunner.png.import
+DU art/laser.png.import
+--- recent commits ---
+b1f8ddd (HEAD, origin/main, origin/HEAD) We have killzones yay
+2191f17 This is my code. My code is amazing.
+da616b2 lvl 12 fix
+243e4aa lvl 10 fix
+fa5c076 added lvl 12
+--- running Godot headless ---
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+➜  gtmk-26 git:(b1f8ddd) ✗ 
+➜  gtmk-26 git:(b1f8ddd) ✗ >....                                                
+y"
+else
+  echo 'Nothing staged to commit.'
+fi
+
+# Move branch main to this commit and checkout
+if git show-ref --verify --quiet refs/heads/main; then
+  echo 'Updating branch main to current HEAD'
+  git branch -f main HEAD
+else
+  echo 'Creating branch main at HEAD'
+  git branch main HEAD
+fi
+
+git checkout main
+
+echo '--- final diff vs origin/main ---'
+git fetch origin
+git diff --name-only origin/main...main || true
+
+echo '--- git status ---'
+git status --short --branch
+
+echo '--- recent commits ---'
+git log --oneline -n 7
+
+echo '--- running Godot headless ---'
+godot --headless --path . --quit || true
+
+--- show unmerged stages for art/laser.png.import ---
+100644 79eda8cc0d9ef3b6bb2b42d58766e55c54e934a3 1       art/laser.png.import
+100644 5ca5819e09e9e907335101bbd16a9630ee365771 3       art/laser.png.import
+--- writing origin/main version into file and staging ---
+Origin version not found; using HEAD version if available.
+fatal: path 'art/laser.png.import' exists on disk, but not in 'HEAD'
+[detached HEAD 952640c] Restore remote .import metadata for laser.png; keep spri
+tes only
+ 3 files changed, 40 insertions(+)
+ create mode 100644 art/gunner.png
+ create mode 100644 art/gunner.png.import
+ create mode 100644 art/laser.png.import
+Updating branch main to current HEAD
+fatal: cannot force update the branch 'main' used by worktree at '/home/kairav/d
+ev/gtmk-26'
+
+Command exited with code 128

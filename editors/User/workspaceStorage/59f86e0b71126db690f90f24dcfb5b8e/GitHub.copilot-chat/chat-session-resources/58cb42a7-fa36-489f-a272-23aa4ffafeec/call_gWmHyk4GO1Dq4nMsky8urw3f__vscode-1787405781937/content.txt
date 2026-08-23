@@ -1,0 +1,808 @@
+[Output too large (24KB). Full output saved to: /home/kairav/.config/Code/copilot-terminal-output/copilot-terminal-output-092804a2-96f6-44cd-80c1-f4b79048f8fd.txt]
+[Use readFile or grep to examine the full output.]
+
+flag provided but not defined: -version
+Usage of nwg-drawer:
+  -c uint
+        number of Columns (default 6)
+  -close
+        close drawer of existing instance
+  -closebtn string
+        close button position: 'left' or 'right', 'none' by default (default "no
+ne")
+  -d    Turn on Debug messages
+  -fm string
+        File Manager (default "thunar")
+  -fscol uint
+        File Search result COLumns (default 2)
+  -fslen int
+        File Search name LENgth Limit (default 80)
+  -ft
+        Force Theme 
+
+[... middle of output truncated ...]
+
+ound-panel.desktop
+2:Name=Appearance
+4:Exec=gnome-control-center background
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gnome-universal-access-panel.desktop
+2:Name=Accessibility
+4:Exec=gnome-control-center universal-access
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/code.desktop
+2:Name=Visual Studio Code
+5:Exec=/usr/share/code/code %F
+16:Name=New Empty Window
+27:Exec=/usr/share/code/code --new-window %F
+
+/usr/share/applications/forticlient.desktop
+3:Name=FortiClient
+6:Exec=/opt/forticlient/gui/FortiClient
+9:Terminal=false
+
+/usr/share/applications/org.gnome.Terminal.Preferences.desktop
+5:Exec=gnome-terminal --preferences
+8:Name=Terminal Preferences
+9:NoDisplay=true
+
+/usr/share/applications/gcr-viewer.desktop
+2:Name=View file
+4:Exec=/usr/bin/gcr-viewer
+6:Terminal=false
+7:NoDisplay=true
+
+/usr/share/applications/gnome-online-accounts-panel.desktop
+2:Name=Online Accounts
+4:Exec=gnome-control-center online-accounts
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/org.gnome.Calendar.desktop
+2:Name=Calendar
+4:Exec=gnome-calendar %U
+7:Terminal=false
+
+/usr/share/applications/org.gnome.Totem.desktop
+2:Name=Videos
+6:Exec=totem %U
+10:Terminal=false
+21:Name=Play/Pause
+22:Exec=totem --play-pause
+25:Name=Next
+26:Exec=totem --next
+29:Name=Previous
+30:Exec=totem --previous
+33:Name=Fullscreen
+34:Exec=totem --fullscreen
+
+/usr/share/applications/thunderbird.desktop
+3:NoDisplay=true
+4:Name=Thunderbird Mail
+108:Exec=thunderbird %u
+109:Terminal=false
+119:Name=Compose New Message
+181:Exec=thunderbird -compose
+185:Name=Contacts
+247:Exec=thunderbird -addressbook
+
+/usr/share/applications/nautilus-autorun-software.desktop
+2:Name=Run Software
+4:Exec=nautilus-autorun-software %u
+7:NoDisplay=true
+8:Terminal=false
+
+/usr/share/applications/com.brave.Browser.desktop
+3:Name=Brave Web Browser
+108:Exec=/usr/bin/brave-browser-stable %U
+111:Terminal=false
+121:NoDisplay=true
+125:Name=New Window
+176:Exec=/usr/bin/brave-browser-stable
+179:Name=New Incognito Window
+228:Exec=/usr/bin/brave-browser-stable --incognito
+
+/usr/share/applications/vim.desktop
+18:Name=Vim
+112:Exec=vim %F
+113:Terminal=true
+
+/usr/share/applications/org.gnome.Evince-previewer.desktop
+2:Name=Print Preview
+5:Exec=evince-previewer %U
+7:Terminal=false
+11:NoDisplay=true
+
+/usr/share/applications/remmina-gnome.desktop
+3:Name=remmina-gnome
+4:NoDisplay=true
+7:Exec=remmina-gnome
+
+/usr/share/applications/gnome-region-panel.desktop
+2:Name=Region & Language
+4:Exec=gnome-control-center system region
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/software-properties-livepatch.desktop
+2:Exec=/usr/bin/software-properties-gtk --open-tab=6
+4:Terminal=false
+9:Name=Livepatch
+12:NoDisplay=true
+
+/usr/share/applications/blender.desktop
+2:Name=Blender
+82:Exec=blender %f
+84:Terminal=false
+
+/usr/share/applications/gnome-multitasking-panel.desktop
+2:Name=Multitasking
+4:Exec=gnome-control-center multitasking
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gnome-display-panel.desktop
+2:Name=Displays
+4:Exec=gnome-control-center display
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/org.remmina.Remmina-file.desktop
+4:Name=Remmina Connect
+11:Exec=remmina-file-wrapper -c %U
+15:Terminal=false
+17:NoDisplay=true
+21:Name=Remmina Edit
+23:Exec=/usr/bin/remmina -e %U
+
+/usr/share/applications/software-properties-gtk.desktop
+2:Name=Software & Updates
+6:Exec=software-properties-gtk
+8:Terminal=false
+
+/usr/share/applications/libreoffice-startcenter.desktop
+20:Terminal=false
+21:NoDisplay=false
+25:Exec=libreoffice %U
+27:Name=LibreOffice
+232:Name=Writer
+233:Exec=libreoffice --writer
+236:Name=Calc
+237:Exec=libreoffice --calc
+240:Name=Impress
+241:Exec=libreoffice --impress
+244:Name=Draw
+245:Exec=libreoffice --draw
+248:Name=Base
+249:Exec=libreoffice --base
+252:Name=Math
+253:Exec=libreoffice --math
+
+/usr/share/applications/org.gnome.Evolution-alarm-notify.desktop
+3:Name=Events and Tasks Reminders
+6:Exec=/usr/libexec/evolution-data-server/evolution-alarm-notify
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gnome-initial-setup.desktop
+2:Name=Initial Setup
+5:Exec=/usr/libexec/gnome-initial-setup-wrapper /usr/libexec/gnome-initial-setup
+6:Terminal=false
+11:NoDisplay=true
+
+/usr/share/applications/forticlient-register.desktop
+2:Name=Register with FortiClient
+3:Exec=/opt/forticlient/gui/FortiClient %u
+5:NoDisplay=true
+
+/usr/share/applications/org.gnome.DejaDup.desktop
+5:Name=Backups
+11:Exec=deja-dup %u
+37:Name=Back Up
+38:Exec=deja-dup --backup
+
+/usr/share/applications/gcr-prompter.desktop
+2:Name=Access Prompt
+6:Exec=/usr/libexec/gcr-prompter
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/code-url-handler.desktop
+2:Name=Visual Studio Code - URL Handler
+5:Exec=/usr/share/code/code --open-url %U
+8:NoDisplay=true
+
+/usr/share/applications/org.gnome.Characters.desktop
+3:Name=Characters
+7:Exec=/usr/bin/gnome-characters
+
+/usr/share/applications/gnome-applications-panel.desktop
+2:Name=Apps
+4:Exec=gnome-control-center applications
+8:Terminal=false
+10:NoDisplay=true
+
+/usr/share/applications/org.gnome.eog.desktop
+2:Name=Image Viewer
+5:Exec=eog %U
+10:Terminal=false
+
+/usr/share/applications/org.gnome.DiskUtility.desktop
+2:Name=Disks
+6:Exec=gnome-disks
+9:Terminal=false
+
+/usr/share/applications/org.remmina.Remmina.desktop
+3:Name=Remmina
+74:Exec=remmina-file-wrapper %U
+76:Terminal=false
+85:Name=Create a New Connection Profile
+107:Exec=/usr/bin/remmina --new
+111:Name=Start Remmina in Kiosk mode
+117:Exec=/usr/bin/remmina --kiosk
+120:Name=Start Remmina Minimized
+142:Exec=/usr/bin/remmina --icon
+145:Name=Quit
+148:Exec=/usr/bin/remmina --quit
+
+/usr/share/applications/org.gnome.Terminal.desktop
+2:Name=Terminal
+6:Exec=gnome-terminal
+19:Name=New Window
+20:Exec=gnome-terminal --window
+23:Name=Preferences
+24:Exec=gnome-terminal --preferences
+
+/usr/share/applications/yelp.desktop
+2:Name=Help
+7:Exec=yelp %u
+11:Terminal=false
+
+/usr/share/applications/org.freedesktop.IBus.Panel.Extension.Gtk3.desktop
+2:Name=Emoji Choice
+4:Exec=/usr/libexec/ibus-extension-gtk3
+6:NoDisplay=true
+
+/usr/share/applications/gnome-search-panel.desktop
+3:Name=Search
+5:Exec=gnome-control-center search
+8:Terminal=false
+10:NoDisplay=true
+
+/usr/share/applications/blueman-adapters.desktop
+55:Name=Bluetooth Adapters
+84:Exec=blueman-adapters
+86:Terminal=false
+91:NoDisplay=false
+
+/usr/share/applications/org.gnome.Shotwell.desktop
+3:Name=Shotwell
+8:Exec=shotwell %U
+10:Terminal=false
+20:Name=Manage Different Profiles In Shotwell
+21:Exec=shotwell -b
+
+/usr/share/applications/gnome-about-panel.desktop
+2:Name=About
+4:Exec=gnome-control-center system about
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/xdg-desktop-portal-gtk.desktop
+31:Name=Portal
+34:Exec=/usr/libexec/xdg-desktop-portal-gtk
+35:NoDisplay=true
+
+/usr/share/applications/gnome-privacy-panel.desktop
+2:Name=Privacy & Security
+4:Exec=gnome-control-center privacy
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/openjdk-17-java.desktop
+2:Name=OpenJDK Java 17 Runtime
+7:Exec=cautious-launcher %f /usr/bin/java -jar
+8:Terminal=false
+12:NoDisplay=true
+
+/usr/share/applications/org.gnome.PowerStats.desktop
+2:Name=Power Statistics
+8:Exec=gnome-power-statistics
+9:Terminal=false
+
+/usr/share/applications/usb-creator-gtk.desktop
+2:Name=Startup Disk Creator
+5:Exec=usb-creator-gtk
+7:Terminal=false
+
+/usr/share/applications/gnome-session-properties.desktop
+2:Name=Startup Applications
+4:Exec=gnome-session-properties
+6:Terminal=false
+
+/usr/share/applications/gnome-keyboard-panel.desktop
+2:Name=Keyboard
+4:Exec=gnome-control-center keyboard
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gkbd-keyboard-display.desktop
+2:Name=Keyboard Layout
+6:Exec=gkbd-keyboard-display
+7:Terminal=false
+10:NoDisplay=true
+
+/usr/share/applications/org.gnome.Rhythmbox3.desktop
+2:Name=Rhythmbox
+7:Exec=rhythmbox %U
+8:Terminal=false
+20:Name=Play/Pause
+21:Exec=rhythmbox-client --play-pause
+24:Name=Next
+25:Exec=rhythmbox-client --next
+28:Name=Previous
+29:Exec=rhythmbox-client --previous
+32:Name=Stop & Quit
+33:Exec=rhythmbox-client --quit
+
+/usr/share/applications/gnome-ubuntu-panel.desktop
+2:Name=Ubuntu Desktop
+4:Exec=gnome-control-center ubuntu
+6:Terminal=false
+8:NoDisplay=true
+
+/usr/share/applications/org.gnome.Shell.Extensions.desktop
+4:Name=Extensions
+8:Exec=false
+10:NoDisplay=true
+
+/usr/share/applications/gnome-system-panel.desktop
+2:Name=System
+4:Exec=gnome-control-center system
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/libreoffice-impress.desktop
+20:Terminal=false
+24:Exec=libreoffice --impress %U
+26:Name=LibreOffice Impress
+230:Name=New Presentation
+328:Exec=libreoffice --impress
+
+/usr/share/applications/org.gnome.BrowserConnector.desktop
+3:Exec=/usr/bin/gnome-browser-connector %u
+5:Name=GNOME browser connector
+9:NoDisplay=true
+
+/usr/share/applications/htop.desktop
+4:Name=Htop
+64:Exec=htop
+65:Terminal=true
+
+/usr/share/applications/gnome-power-panel.desktop
+2:Name=Power
+4:Exec=gnome-control-center power
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/libreoffice-math.desktop
+20:Terminal=false
+21:NoDisplay=false
+25:Exec=libreoffice --math %U
+27:Name=LibreOffice Math
+231:Name=New Formula
+329:Exec=libreoffice --math
+
+/usr/share/applications/gnome-datetime-panel.desktop
+2:Name=Date & Time
+4:Exec=gnome-control-center system datetime
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gnome-language-selector.desktop
+2:Name=Language Support
+4:Exec=/usr/bin/gnome-language-selector
+6:Terminal=false
+
+/usr/share/applications/gvim.desktop
+18:Name=GVim
+112:Exec=gvim -f %F
+113:Terminal=false
+
+/usr/share/applications/org.gnome.GTG.desktop
+23:Name=Getting Things GNOME!
+45:Exec=gtg %U
+46:Terminal=false
+
+/usr/share/applications/org.gnome.font-viewer.desktop
+2:Name=Fonts
+8:Exec=gnome-font-viewer %u
+9:Terminal=false
+
+/usr/share/applications/org.gnome.Shotwell.Auth.desktop
+3:Name=Shotwell Authentication helper
+4:Exec=/usr/libexec/shotwell/shotwell-authenticator %u
+6:Terminal=false
+7:NoDisplay=true
+
+/usr/share/applications/org.freedesktop.Xwayland.desktop
+2:Name=Xwayland
+4:Terminal=false
+7:NoDisplay=true
+
+/usr/share/applications/rygel.desktop
+2:Name=Rygel
+6:Exec=rygel
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/org.freedesktop.IBus.Setup.desktop
+2:Name=IBus Preferences
+4:Exec=ibus-setup
+6:Terminal=false
+
+/usr/share/applications/gnome-bluetooth-panel.desktop
+2:Name=Bluetooth
+6:Exec=gnome-control-center bluetooth
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gnome-system-monitor-kde.desktop
+2:Name=GNOME System Monitor
+5:Exec=gnome-system-monitor
+8:Terminal=false
+
+/usr/share/applications/org.gnome.baobab.desktop
+2:Name=Disk Usage Analyzer
+7:Exec=baobab %U
+10:Terminal=false
+
+/usr/share/applications/gnome-printers-panel.desktop
+2:Name=Printers
+4:Exec=gnome-control-center printers
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/org.gnome.OnlineAccounts.OAuth2.desktop
+2:Name=GNOME OAuth2 Handler
+3:Exec=/usr/libexec/goa-oauth2-handler %u
+6:NoDisplay=true
+
+/usr/share/applications/ibus-setup-table.desktop
+2:Name=IBus Table Setup
+4:Exec=/usr/libexec/ibus-setup-table
+6:NoDisplay=true
+
+/usr/share/applications/org.gnome.TextEditor.desktop
+7:Exec=gnome-text-editor %U
+9:Name=Text Editor
+15:Terminal=false
+22:Name=New Window
+23:Exec=gnome-text-editor --new-window
+
+/usr/share/applications/com.anthropic.Claude.desktop
+2:Name=Claude
+6:Exec=claude-desktop %U
+20:Name=New chat
+21:Exec=claude-desktop claude://claude.ai/new
+24:Name=New Claude Code session
+25:Exec=claude-desktop claude://code/new
+
+/usr/share/applications/geoclue-demo-agent.desktop
+2:Name=Geoclue Demo agent
+5:Exec=/usr/libexec/geoclue-2.0/demos/agent
+8:NoDisplay=true
+9:Terminal=false
+
+/usr/share/applications/libreoffice-draw.desktop
+20:Terminal=false
+24:Exec=libreoffice --draw %U
+26:Name=LibreOffice Draw
+230:Name=New Drawing
+328:Exec=libreoffice --draw
+
+/usr/share/applications/python3.12.desktop
+2:Name=Python (v3.12)
+4:Exec=/usr/bin/python3.12
+6:Terminal=true
+10:NoDisplay=true
+
+/usr/share/applications/org.gnome.Settings.desktop
+2:Name=Settings
+5:Exec=gnome-control-center
+6:Terminal=false
+
+/usr/share/applications/org.gnome.SystemMonitor.desktop
+2:Name=System Monitor
+5:Exec=gnome-system-monitor
+8:Terminal=false
+
+/usr/share/applications/org.gnome.seahorse.Application.desktop
+2:Name=Passwords and Keys
+6:Exec=seahorse %u
+7:Terminal=false
+
+/usr/share/applications/gnome-network-panel.desktop
+2:Name=Network
+4:Exec=gnome-control-center network
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/org.gnome.Shotwell-Viewer.desktop
+3:Name=Shotwell Viewer
+5:Exec=shotwell %f
+7:Terminal=false
+8:NoDisplay=true
+
+/usr/share/applications/brave-browser.desktop
+3:Name=Brave Web Browser
+108:Exec=/usr/bin/brave-browser-stable %U
+111:Terminal=false
+120:Name=New Window
+171:Exec=/usr/bin/brave-browser-stable
+174:Name=New Incognito Window
+223:Exec=/usr/bin/brave-browser-stable --incognito
+
+/usr/share/applications/gnome-users-panel.desktop
+2:Name=Users
+4:Exec=gnome-control-center system users
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/nsnake.desktop
+4:Name=nsnake
+9:Exec=nsnake
+10:Terminal=true
+
+/usr/share/applications/libreoffice-xsltfilter.desktop
+3:Terminal=false
+5:Exec=libreoffice %U
+7:Name=LibreOffice XSLT based filters
+105:NoDisplay=true
+
+/usr/share/applications/org.gnome.evolution-data-server.OAuth2-handler.desktop
+3:Name=Evolution Data Server OAuth2 Handler
+5:Exec=/usr/libexec/evolution-data-server/evolution-oauth2-handler %u
+6:Terminal=false
+7:NoDisplay=true
+
+/usr/share/applications/xdg-desktop-portal-gnome.desktop
+3:Name=Portal
+6:Exec=/usr/libexec/xdg-desktop-portal-gnome
+7:NoDisplay=true
+
+/usr/share/applications/org.gnome.Calculator.desktop
+2:Name=Calculator
+6:Exec=gnome-calculator
+9:Terminal=false
+
+/usr/share/applications/gnome-wwan-panel.desktop
+2:Name=Mobile Network
+4:Exec=gnome-control-center wwan
+8:Terminal=false
+10:NoDisplay=true
+
+/usr/share/applications/org.gnome.FileRoller.desktop
+2:Name=File Roller
+8:Exec=file-roller %U
+10:Terminal=false
+
+/usr/share/applications/gnome-color-panel.desktop
+2:Name=Color
+4:Exec=gnome-control-center color
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/org.gnome.Todo.desktop
+2:Name=Endeavour
+4:Exec=endeavour
+7:Terminal=false
+
+/usr/share/applications/scenebuilder-SceneBuilder.desktop
+2:Name=SceneBuilder
+4:Exec=/opt/scenebuilder/bin/SceneBuilder
+6:Terminal=false
+
+/usr/share/applications/simple-scan.desktop
+2:Name=Document Scanner
+6:Exec=simple-scan
+9:Terminal=false
+
+/usr/share/applications/nm-connection-editor.desktop
+2:Name=Advanced Network Configuration
+5:Exec=nm-connection-editor
+6:Terminal=false
+
+/usr/share/applications/bluetooth-sendto.desktop
+2:Name=Bluetooth Transfer
+6:Exec=bluetooth-sendto
+7:Terminal=false
+11:NoDisplay=true
+
+/usr/share/applications/org.gnome.Shell.desktop
+3:Name=GNOME Shell
+5:Exec=/usr/bin/gnome-shell
+8:NoDisplay=true
+
+/usr/share/applications/org.gnome.Tecla.desktop
+2:Name=Tecla
+5:Exec=tecla
+6:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gnome-disk-image-writer.desktop
+2:Name=Disk Image Writer
+4:Exec=gnome-disks --restore-disk-image %U
+8:Terminal=false
+11:NoDisplay=true
+
+/usr/share/applications/transmission-gtk.desktop
+2:Name=Transmission
+7:Exec=transmission-gtk %U
+9:Terminal=false
+20:Name=Start Transmission with All Torrents Paused
+21:Exec=transmission-gtk --paused
+24:Name=Start Transmission Minimized
+25:Exec=transmission-gtk --minimized
+
+/usr/share/applications/org.gnome.Snapshot.desktop
+47:Name=Camera
+95:Exec=snapshot
+96:Terminal=false
+
+/usr/share/applications/snap-handle-link.desktop
+2:Name=Handler for snap:// URIs
+4:Exec=/usr/bin/snap handle-link %U
+6:NoDisplay=true
+
+/usr/share/applications/org.gnome.clocks.desktop
+2:Name=Clocks
+7:Exec=gnome-clocks
+10:Terminal=false
+
+/usr/share/applications/gnome-wifi-panel.desktop
+2:Name=Wi-Fi
+4:Exec=gnome-control-center wifi
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/google-chrome.desktop
+3:Name=Google Chrome
+108:Exec=/usr/bin/google-chrome-stable %U
+111:Terminal=false
+120:Name=New Window
+171:Exec=/usr/bin/google-chrome-stable
+174:Name=New Incognito Window
+223:Exec=/usr/bin/google-chrome-stable --incognito
+
+/usr/share/applications/blueman-manager.desktop
+33:Name=Bluetooth Manager
+66:Exec=blueman-manager
+67:Terminal=false
+
+/usr/share/applications/gnome-notifications-panel.desktop
+2:Name=Notifications
+4:Exec=gnome-control-center notifications
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gnome-sound-panel.desktop
+2:Name=Sound
+4:Exec=gnome-control-center sound
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/gnome-mouse-panel.desktop
+2:Name=Mouse & Touchpad
+4:Exec=gnome-control-center mouse
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/org.freedesktop.IBus.Panel.Wayland.Gtk3.desktop
+3:Name=IBus Wayland
+4:Exec=/usr/libexec/ibus-ui-gtk3 --enable-wayland-im --exec-daemon --daemon-args
+ "--xim --panel disable"
+8:NoDisplay=true
+
+/usr/share/applications/hplj1020.desktop
+2:Name=Reactivate HP LaserJet 1018/1020 after reloading paper
+5:Exec=/usr/share/foo2zjs/hplj10xx_gui.tcl
+6:Terminal=false
+12:NoDisplay=true
+
+/usr/share/applications/org.gnome.Nautilus.desktop
+2:Name=Files
+6:Exec=nautilus --new-window %U
+9:Terminal=false
+22:Name=New Window
+23:Exec=nautilus --new-window
+
+/usr/share/applications/org.gnome.Evince.desktop
+2:Name=Document Viewer
+7:Exec=evince %U
+9:Terminal=false
+19:Name=New Window
+20:Exec=evince --new-window
+
+/usr/share/applications/info.desktop
+2:Name=TeXInfo
+5:Exec=info
+9:Terminal=true
+
+/usr/share/applications/com.google.Chrome.desktop
+3:Name=Google Chrome
+108:Exec=/usr/bin/google-chrome-stable %U
+111:Terminal=false
+121:NoDisplay=true
+125:Name=New Window
+176:Exec=/usr/bin/google-chrome-stable
+179:Name=New Incognito Window
+228:Exec=/usr/bin/google-chrome-stable --incognito
+
+/usr/share/applications/gnome-sharing-panel.desktop
+2:Name=Sharing
+4:Exec=gnome-control-center sharing
+7:Terminal=false
+9:NoDisplay=true
+
+/usr/share/applications/qemu.desktop
+3:Name=QEMU
+6:Terminal=false
+8:NoDisplay=true
+
+/usr/share/applications/gnome-disk-image-mounter.desktop
+2:Name=Disk Image Mounter
+4:Exec=gnome-disk-image-mounter %U
+8:Terminal=false
+11:NoDisplay=true
+
+/usr/share/applications/openjdk-21-java.desktop
+2:Name=OpenJDK Java 21 Runtime
+7:Exec=cautious-launcher %f /usr/bin/java -jar
+8:Terminal=false
+12:NoDisplay=true
+
+/usr/share/applications/libreoffice-writer.desktop
+20:Terminal=false
+24:Exec=libreoffice --writer %U
+26:Name=LibreOffice Writer
+230:Name=New Document
+328:Exec=libreoffice --writer
+
+/usr/share/applications/io.snapcraft.SessionAgent.desktop
+3:Name=Snapd User Session Agent
+4:Exec=/bin/false
+6:NoDisplay=true
+
+/usr/share/applications/org.gnome.RemoteDesktop.Handover.desktop
+3:Name=GNOME Remote Desktop Handover Daemon
+4:Exec=/usr/libexec/gnome-remote-desktop-daemon --handover
+5:Terminal=false
+7:NoDisplay=true
+
+/usr/share/applications/org.gnome.Zenity.desktop
+2:Name=Zenity
+4:Exec=zenity
+5:Terminal=false
+7:NoDisplay=true
+
+/usr/share/applications/org.gnome.Logs.desktop
+2:Name=Logs
+9:Exec=gnome-logs
+12:Terminal=false
+
+/usr/share/applications/org.gnome.Rhythmbox3.device.desktop
+2:Name=Rhythmbox
+6:Exec=rhythmbox-client --select-source %U
+7:Terminal=false
+8:NoDisplay=true
+
+/usr/share/applications/im-config.desktop
+2:Name=Input Method
+6:Exec=im-config
+7:Terminal=false
+➜  ~ 

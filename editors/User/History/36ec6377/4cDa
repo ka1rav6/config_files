@@ -1,0 +1,100 @@
+# Prerequisites
+*.d
+*.gch
+*.pch
+
+# Compiled Object files
+*.o
+*.obj
+*.lo
+*.slo
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dbg
+*.pdb
+
+# Build directories
+/build/
+/bin/
+/obj/
+/out/
+/dist/
+/cmake-build-*/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Makefile
+
+# Ninja
+.ninja_deps
+.ninja_log
+build.ninja
+
+# Autotools
+autom4te.cache/
+aclocal.m4
+config.log
+config.status
+configure
+libtool
+m4/
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# CLion / JetBrains
+.idea/
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Coverage / Testing
+coverage/
+*.gcda
+*.gcno
+*.gcov
+
+# Cache
+.cache/
+
+# Package managers
+conan.lock
+conanbuildinfo.*

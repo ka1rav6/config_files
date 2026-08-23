@@ -1,0 +1,13 @@
+font-family = "JetBrainsMono Nerd Font"
+font-size = 13
+
+theme = Adventure
+
+background-opacity = 0.65
+
+window-padding-x = 6
+window-padding-y = 6
+
+copy-on-select = false
+
+confirm-close-surface = false
