@@ -182,3 +182,37 @@ export PATH="/opt/zig:$PATH"
 export OLLAMA_IGPU_ENABLE=1
 export PATH="$HOME/Applications/Godot:$PATH"
 export OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX=4096
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# use fd/rg if available — much faster and respects .gitignore
+if command -v fd >/dev/null; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --strip-cwd-prefix --exclude .git'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+fi
+
+export FZF_DEFAULT_OPTS="
+  --height=60% --layout=reverse --border=rounded
+  --preview-window=right:50%:wrap
+  --bind='ctrl-/:toggle-preview'
+"
+
+# preview file contents with bat if you have it
+if command -v bat >/dev/null; then
+  export FZF_CTRL_T_OPTS="--preview 'bat --style=numbers --color=always --line-range :100 {}'"
+fi
+
+# make ctrl-r layout nicer and dedupe history entries
+export FZF_CTRL_R_OPTS="
+  --preview 'echo {}' --preview-window down:3:hidden:wrap
+  --bind 'ctrl-/:toggle-preview'
+  --color header:italic
+  --header 'Enter to run, Ctrl+/ to preview'
+"
+notify-build() {
+  local cmd="$*"
+  if eval "$cmd"; then
+    notify-send -a "Build" -u normal -i software-update-available "Build succeeded" "$cmd"
+  else
+    notify-send -a "Build" -u critical -i dialog-error "Build failed" "$cmd"
+  fi
+}
