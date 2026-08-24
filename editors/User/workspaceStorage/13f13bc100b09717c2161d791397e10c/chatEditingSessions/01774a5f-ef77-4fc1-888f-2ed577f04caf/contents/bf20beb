@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Antigravity
+Comment=Antigravity IDE
+Exec=/home/kairav/Downloads/Antigravity/Antigravity-x64/antigravity --no-sandbox %U
+Terminal=false
+Type=Application
+Categories=Development;IDE;
+StartupNotify=true
+StartupWMClass=antigravity
+MimeType=x-scheme-handler/antigravity;

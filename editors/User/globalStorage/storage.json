@@ -3,19 +3,20 @@
     "telemetry.machineId": "719bf7b8c5f03e2e515a2b4ea457b9ff09255223248606505637cd2dba61b6f3",
     "telemetry.devDeviceId": "5514aa90-fd49-42cf-b94b-182cf2cd0842",
     "backupWorkspaces": {
-        "workspaces": [],
-        "folders": [
+        "workspaces": [
             {
-                "folderUri": "file:///home/kairav/dev/hyprtodo"
+                "id": "b0119a4276822bd69a52f4746949f539",
+                "configURIPath": "file:///home/kairav/.config/Code/User/agent-sessions.code-workspace"
             }
         ],
-        "emptyWindows": [
+        "folders": [
             {
-                "backupFolder": "1787513922618"
+                "folderUri": "file:///home/kairav/Downloads/Antigravity/Antigravity-x64"
             }
-        ]
+        ],
+        "emptyWindows": []
     },
-    "windowControlHeight": 60,
+    "windowControlHeight": 35,
     "profileAssociations": {
         "workspaces": {
             "file:///home/kairav/dev/local_projects/game_server": "__default__profile__",
@@ -57,20 +58,21 @@
             "file:///home/kairav/dev/pico/src": "__default__profile__",
             "file:///home/kairav/dev/gitpushpraydev": "__default__profile__",
             "file:///home/kairav": "__default__profile__",
-            "file:///home/kairav/dev/hyprtodo": "__default__profile__"
+            "file:///home/kairav/dev/hyprtodo": "__default__profile__",
+            "file:///home/kairav/Downloads/Antigravity/Antigravity-x64": "__default__profile__"
         },
         "emptyWindows": {}
     },
     "windowsState": {
         "lastActiveWindow": {
-            "folder": "file:///home/kairav/dev/hyprtodo",
-            "backupPath": "/home/kairav/.config/Code/Backups/7dfd4f3e58d0755d47d6fbb9202e21c5",
+            "folder": "file:///home/kairav/Downloads/Antigravity/Antigravity-x64",
+            "backupPath": "/home/kairav/.config/Code/Backups/159715775da53d8b033056419fb37c80",
             "uiState": {
                 "mode": 0,
                 "x": 16,
                 "y": 10,
-                "width": 1920,
-                "height": 1200,
+                "width": 950,
+                "height": 567,
                 "zoomLevel": 3
             }
         },
@@ -105,36 +107,30 @@
             "titleBarHeight": 35,
             "activityBarWidth": 44,
             "sideBarWidth": 0,
-            "auxiliaryBarWidth": 200,
+            "auxiliaryBarWidth": 280,
             "statusBarHeight": 32,
             "windowBorder": false,
             "modernUI": true,
             "partBounds": {
                 "auxiliaryBar": {
                     "top": 34.99951934814453,
-                    "left": 900.9934692382812,
-                    "width": 188.00033569335938,
+                    "left": 267.99407958984375,
+                    "width": 268.0000915527344,
                     "height": 582.5376586914062
-                },
-                "panel": {
-                    "top": 212.99310302734375,
-                    "left": 47.996238708496094,
-                    "width": 849.0005493164062,
-                    "height": 404.53802490234375
                 },
                 "editor": {
                     "top": 34.99951934814453,
                     "left": 47.996238708496094,
-                    "width": 849.0005493164062,
-                    "height": 173.5387725830078
+                    "width": 216.00115966796875,
+                    "height": 582.5376586914062
                 }
             }
         }
     },
     "windowSplashWorkspaceOverride": {
         "layoutInfo": {
-            "sideBarWidth": 235,
-            "auxiliaryBarWidth": 200,
+            "sideBarWidth": 300,
+            "auxiliaryBarWidth": 280,
             "workspaces": {
                 "12d7e4334a4a6db20ca533a977c0a0a3": {
                     "sideBarVisible": true,
@@ -305,6 +301,10 @@
                     "auxiliaryBarVisible": true
                 },
                 "8229e7e6007bedeb7e23dd036c2c7aa6": {
+                    "sideBarVisible": false,
+                    "auxiliaryBarVisible": true
+                },
+                "13f13bc100b09717c2161d791397e10c": {
                     "sideBarVisible": false,
                     "auxiliaryBarVisible": true
                 }

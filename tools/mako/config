@@ -1,0 +1,34 @@
+sort=-time
+layer=overlay
+background-color=#1e1e2eee
+text-color=#cdd6f4
+border-color=#89b4fa
+border-size=2
+border-radius=10
+default-timeout=5000
+ignore-timeout=0
+max-history=100
+history=1
+
+on-button-left=invoke-default-action
+on-button-middle=exec makoctl menu -n "$id" -- wofi --show dmenu -p 'Action: '
+on-button-right=dismiss
+
+[urgency=critical]
+border-color=#f38ba8
+default-timeout=0
+
+[app-name="Build"]
+on-button-left=exec hyprctl dispatch focuswindow class:^(com.mitchellh.ghostty)$
+
+[app-name="NowPlaying:chromium"]
+on-button-left=exec hyprctl dispatch focuswindow class:^(chromium|chrome)$
+
+[app-name="NowPlaying:firefox"]
+on-button-left=exec hyprctl dispatch focuswindow class:^(firefox)$
+
+[app-name="Battery"]
+on-button-left=dismiss
+
+[app-name="Temperature"]
+on-button-left=dismiss

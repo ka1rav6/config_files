@@ -48,6 +48,7 @@
         "exec": "~/.config/waybar/scripts/waybar-hyprtodo.sh",
         "return-type": "json",
         "interval": 30,
+        "signal": 8,
         "on-click": "hyprctl dispatch togglespecialworkspace todo",
         "on-click-right": "hyprctl dispatch workspace special:todo"
     },
