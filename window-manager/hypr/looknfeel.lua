@@ -25,7 +25,7 @@ hl.config({
 
     scrolling = { fullscreen_on_one_column = true },
 
-    cursor = { no_hardware_cursors = false },
+    cursor = { no_hardware_cursors = false, default_monitor = "HDMI-A-1" },
 
     misc = {
         disable_hyprland_logo = false,

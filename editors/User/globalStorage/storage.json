@@ -59,9 +59,7 @@
             "file:///home/kairav": "__default__profile__",
             "file:///home/kairav/dev/hyprtodo": "__default__profile__"
         },
-        "emptyWindows": {
-            "1787513922618": "__default__profile__"
-        }
+        "emptyWindows": {}
     },
     "windowsState": {
         "lastActiveWindow": {
@@ -69,38 +67,14 @@
             "backupPath": "/home/kairav/.config/Code/Backups/7dfd4f3e58d0755d47d6fbb9202e21c5",
             "uiState": {
                 "mode": 0,
-                "x": 10,
+                "x": 16,
                 "y": 10,
-                "width": 950,
-                "height": 567,
+                "width": 1920,
+                "height": 1200,
                 "zoomLevel": 3
             }
         },
-        "openedWindows": [
-            {
-                "backupPath": "/home/kairav/.config/Code/Backups/1787513922618",
-                "uiState": {
-                    "mode": 0,
-                    "x": 16,
-                    "y": 10,
-                    "width": 950,
-                    "height": 1134,
-                    "zoomLevel": 3
-                }
-            },
-            {
-                "folder": "file:///home/kairav/dev/hyprtodo",
-                "backupPath": "/home/kairav/.config/Code/Backups/7dfd4f3e58d0755d47d6fbb9202e21c5",
-                "uiState": {
-                    "mode": 0,
-                    "x": 10,
-                    "y": 10,
-                    "width": 950,
-                    "height": 567,
-                    "zoomLevel": 3
-                }
-            }
-        ]
+        "openedWindows": []
     },
     "theme": "vs-dark",
     "themeBackground": "#121314",
@@ -131,30 +105,36 @@
             "titleBarHeight": 35,
             "activityBarWidth": 44,
             "sideBarWidth": 0,
-            "auxiliaryBarWidth": 280,
+            "auxiliaryBarWidth": 200,
             "statusBarHeight": 32,
             "windowBorder": false,
             "modernUI": true,
             "partBounds": {
                 "auxiliaryBar": {
                     "top": 34.99951934814453,
-                    "left": 267.99407958984375,
-                    "width": 268.0000915527344,
+                    "left": 900.9934692382812,
+                    "width": 188.00033569335938,
                     "height": 582.5376586914062
+                },
+                "panel": {
+                    "top": 212.99310302734375,
+                    "left": 47.996238708496094,
+                    "width": 849.0005493164062,
+                    "height": 404.53802490234375
                 },
                 "editor": {
                     "top": 34.99951934814453,
                     "left": 47.996238708496094,
-                    "width": 216.00115966796875,
-                    "height": 582.5376586914062
+                    "width": 849.0005493164062,
+                    "height": 173.5387725830078
                 }
             }
         }
     },
     "windowSplashWorkspaceOverride": {
         "layoutInfo": {
-            "sideBarWidth": 170,
-            "auxiliaryBarWidth": 280,
+            "sideBarWidth": 235,
+            "auxiliaryBarWidth": 200,
             "workspaces": {
                 "12d7e4334a4a6db20ca533a977c0a0a3": {
                     "sideBarVisible": true,

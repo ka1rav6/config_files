@@ -26,7 +26,6 @@ end
 -- Session and window controls.
 hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
-hl.bind("ALT + F4", hl.dsp.window.close())
 hl.bind(mod .. " + M", hl.dsp.exit())
 hl.bind(mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
