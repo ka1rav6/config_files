@@ -1,0 +1,11 @@
+# OS files
+.DS_Store
+*~
+*.tmp
+
+# Large binaries - never track these
+custom-binaries/bin/todo
+custom-binaries/bin/zig
+custom-binaries/bin/zls
+*.exe
+*.bin
