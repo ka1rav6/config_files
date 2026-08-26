@@ -1,0 +1,204 @@
+ sudo apt install python-ruff
+    6  sudo apt install python3-ruff
+    7  sudo apt install ripgrep
+    8  nvim sudo apt install ripgrep
+   43  sudo apt update && sudo apt install -y libwebsocketpp-dev libasio-dev
+   52  sudo apt update\nsudo apt install manpages-dev libstdc++-13-doc
+   54  sudo apt install cppreference-doc-en-html
+   56  sudo apt install python3-pip\npip install --user cppman
+   57  sudo apt install pipx
+  107  sudo apt update\nsudo apt install openjdk-21-jdk maven
+  108  cd ~/Downloads\nsudo apt install ./SceneBuilder-*.deb
+  206  sudo apt install postgresql
+  267  sudo apt update\nsudo apt install libglfw3-dev
+  288  sudo apt install tree
+  605  sudo apt install libassimp-dev
+ 1013  sudo apt install fonts-firacode
+ 1022  sudo apt install kitty
+ 1107  sudo apt install libyyjson-dev
+ 1144  sudo apt install xclip
+ 1277  sudo apt install nasm
+ 1471  sudo apt install valgrid
+ 1472  sudo apt install valgrind
+ 1501  sudo apt install libcereal-dev
+ 1689  sudo apt update\nsudo apt install libjsoncpp-dev
+ 1690  sudo apt install nlohmann-json3-dev
+ 1800  sudo apt install libglfw3-dev
+ 1932  sudo apt install gprof
+ 2168  sudo apt update\nsudo apt install libfuse2
+ 2443  sudo apt install neovide
+ 2445  ➜  ~ sudo apt install neovide\n[sudo] password for kairav: \nReading package lists... Done\nBuilding dependency tree... Done\nReading state information... Done\n\nNo apt package "neovide", but there is a snap with that name.\nTry "snap install neovide"\n\nE: Unable to locate package neovide\n
+ 2660  sudo apt install docker
+ 2661  sudo apt update\nsudo apt install docker.io
+ 2760  sudo apt update\nsudo apt install ghostty
+ 3222  sudo apt install doxygen graphviz
+ 3231  sudo apt install clangd universal-ctags
+ 3401  sudo apt install hexedit
+ 3440  sudo apt install htop
+ 3800  sudo apt install libfmt-dev
+ 6486  sudo apt install clang-format
+ 6667  sudo apt update\nsudo apt install mesa-utils
+ 6723  sudo apt install blender
+ 6724  sudo apt install ffmpeg
+ 7093  sudo apt install ./forticlient*.deb
+ 7095  sudo apt install ./forticlient*.deb
+ 7096  sudo apt install net-tools
+ 7110  sudo apt update\nsudo apt install openjdk-17-jdk
+ 7872  sudo apt update\nsudo apt install -y ca-certificates curl
+ 7875  sudo apt update\n\nsudo apt install -y \\n    docker-ce \\n    docker-ce-cli \\n    containerd.io \\n    docker-buildx-plugin \\n    docker-compose-plugin
+ 7952  sudo apt update\nsudo apt install -y ca-certificates curl gnupg
+ 7957  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+ 7959  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+ 8065  sudo apt install nsnake
+ 8067  sudo apt update\nsudo apt install ninvaders
+ 8069  sudo apt update\nsudo apt install ninvaders
+ 8071  sudo apt install asciiquarium\nasciiquarium
+ 8074  sudo apt install pipes-sh\npipes.sh
+ 8076  \tsudo apt install aalib
+ 8080  \tsudo apt install aafire
+ 8081  sudo apt install tty-clock
+ 8666  sudo apt install curl gnupg
+ 8670  sudo apt update && sudo apt install claude-desktop
+ 8767  sudo apt update\nsudo apt install texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra
+ 8793  sudo apt install vulkan-tools
+ 9131  [200~sudo apt install \\n    git \\n    curl \\n    wget \\n    unzip \\n    build-essential \
+ 9133  sudo apt install \\n    git \\n    curl \\n    wget \\n    unzip \\n    build-essential \\n    pkg-config
+ 9134  sudo apt install \\n    mesa-utils \\n    mesa-vulkan-drivers \\n    libgl1-mesa-dri \\n    vulkan-tools \\n    wayland-protocols
+ 9141  sudo apt install software-properties-common
+ 9146  sudo apt install hyprland
+ 9152  sudo apt install \\n    xdg-desktop-portal \\n    xdg-desktop-portal-gtk \\n    polkitd \\n    policykit-1 \\n    dbus-user-session \\n    qtwayland5
+ 9171  sudo apt install xwayland
+ 9214  sudo apt install hyprpaper
+ 9242  sudo apt update\nsudo apt install waybar wofi brightnessctl playerctl
+ 9257  sudo apt install wev\ wev
+ 9258  sudo apt install wev
+ 9272  sudo apt install evtest
+ 9290  sudo apt install -y libgtk-4-dev libgtk4-layer-shell-dev
+ 9294  sudo apt install meson ninja
+ 9295  sudo apt install -y meson ninja-build pkg-config
+ 9297  sudo apt install -y libgtk-4-dev wayland-protocols libwayland-dev
+ 9300  sudo apt install -y libgirepository1.0-dev gobject-introspection
+ 9302  sudo apt install -y valac
+ 9306  sudo apt install -y libgtk-4-dev libgtk4-layer-shell-dev
+ 9308  sudo apt install -y goland-go libgtk-3-dev libgtk-layer-shell-dev
+ 9309  sudo apt install -y golang-go libgtk-3-dev libgtk-layer-shell-dev
+ 9328  sudo apt update\nsudo apt install hyprlock
+ 9344  sudo apt install nwg-drawer
+ 9358  sudo apt update\nsudo apt install xfdesktop4
+ 9369  sudo apt update\nsudo apt install git make gcc pkg-config libgtk-3-dev libgtk-layer-shell-dev xdg-utils
+ 9421  sudo apt update\nsudo apt install grim slurp wl-clipboard
+ 9446  sudo apt update\nsudo apt install network-manager-gnome blueman
+ 9583  sudo apt update\nsudo apt install wofi
+ 9603  sudo apt install gsimplecal
+ 9690  sudo apt install hypridle cliphist wlsunset
+ 9702  sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+ 9725  sudo apt install fzf
+ 9750  sudo apt install fdfind batcat
+ 9751  sudo apt install fd-find bat
+ 9752  sudo apt install mako-notifier
+ 9871  sudo apt install sioyek
+ 9876  sudo apt update\nsudo apt install obs-studio xdg-desktop-portal-hyprland
+ 9878  sudo apt update\nsudo apt install ffmpeg libva-drm2 libva-x11-2 intel-media-va-driver mesa-va-drivers
+ 9879  sudo apt update\nsudo apt install ffmpeg libnvidia-encode-1
+10024  sudo apt install python-ruff
+10025  sudo apt install python3-ruff
+10026  sudo apt install ripgrep
+10027  nvim sudo apt install ripgrep
+10062  sudo apt update && sudo apt install -y libwebsocketpp-dev libasio-dev
+10071  sudo apt update\nsudo apt install manpages-dev libstdc++-13-doc
+10073  sudo apt install cppreference-doc-en-html
+10075  sudo apt install python3-pip\npip install --user cppman
+10076  sudo apt install pipx
+10126  sudo apt update\nsudo apt install openjdk-21-jdk maven
+10127  cd ~/Downloads\nsudo apt install ./SceneBuilder-*.deb
+10225  sudo apt install postgresql
+10286  sudo apt update\nsudo apt install libglfw3-dev
+10307  sudo apt install tree
+10624  sudo apt install libassimp-dev
+11032  sudo apt install fonts-firacode
+11041  sudo apt install kitty
+11126  sudo apt install libyyjson-dev
+11163  sudo apt install xclip
+11296  sudo apt install nasm
+11490  sudo apt install valgrid
+11491  sudo apt install valgrind
+11520  sudo apt install libcereal-dev
+11708  sudo apt update\nsudo apt install libjsoncpp-dev
+11709  sudo apt install nlohmann-json3-dev
+11819  sudo apt install libglfw3-dev
+11951  sudo apt install gprof
+12187  sudo apt update\nsudo apt install libfuse2
+12462  sudo apt install neovide
+12464  ➜  ~ sudo apt install neovide\n[sudo] password for kairav: \nReading package lists... Done\nBuilding dependency tree... Done\nReading state information... Done\n\nNo apt package "neovide", but there is a snap with that name.\nTry "snap install neovide"\n\nE: Unable to locate package neovide\n
+12679  sudo apt install docker
+12680  sudo apt update\nsudo apt install docker.io
+12779  sudo apt update\nsudo apt install ghostty
+13241  sudo apt install doxygen graphviz
+13250  sudo apt install clangd universal-ctags
+13420  sudo apt install hexedit
+13459  sudo apt install htop
+13819  sudo apt install libfmt-dev
+16505  sudo apt install clang-format
+16686  sudo apt update\nsudo apt install mesa-utils
+16742  sudo apt install blender
+16743  sudo apt install ffmpeg
+17112  sudo apt install ./forticlient*.deb
+17114  sudo apt install ./forticlient*.deb
+17115  sudo apt install net-tools
+17129  sudo apt update\nsudo apt install openjdk-17-jdk
+17891  sudo apt update\nsudo apt install -y ca-certificates curl
+17894  sudo apt update\n\nsudo apt install -y \\n    docker-ce \\n    docker-ce-cli \\n    containerd.io \\n    docker-buildx-plugin \\n    docker-compose-plugin
+17971  sudo apt update\nsudo apt install -y ca-certificates curl gnupg
+17976  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+17978  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+18084  sudo apt install nsnake
+18086  sudo apt update\nsudo apt install ninvaders
+18088  sudo apt update\nsudo apt install ninvaders
+18090  sudo apt install asciiquarium\nasciiquarium
+18093  sudo apt install pipes-sh\npipes.sh
+18095  \tsudo apt install aalib
+18099  \tsudo apt install aafire
+18100  sudo apt install tty-clock
+18685  sudo apt install curl gnupg
+18689  sudo apt update && sudo apt install claude-desktop
+18786  sudo apt update\nsudo apt install texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra
+18812  sudo apt install vulkan-tools
+19150  [200~sudo apt install \\n    git \\n    curl \\n    wget \\n    unzip \\n    build-essential \
+19152  sudo apt install \\n    git \\n    curl \\n    wget \\n    unzip \\n    build-essential \\n    pkg-config
+19153  sudo apt install \\n    mesa-utils \\n    mesa-vulkan-drivers \\n    libgl1-mesa-dri \\n    vulkan-tools \\n    wayland-protocols
+19160  sudo apt install software-properties-common
+19165  sudo apt install hyprland
+19171  sudo apt install \\n    xdg-desktop-portal \\n    xdg-desktop-portal-gtk \\n    polkitd \\n    policykit-1 \\n    dbus-user-session \\n    qtwayland5
+19190  sudo apt install xwayland
+19233  sudo apt install hyprpaper
+19261  sudo apt update\nsudo apt install waybar wofi brightnessctl playerctl
+19276  sudo apt install wev\ wev
+19277  sudo apt install wev
+19291  sudo apt install evtest
+19309  sudo apt install -y libgtk-4-dev libgtk4-layer-shell-dev
+19313  sudo apt install meson ninja
+19314  sudo apt install -y meson ninja-build pkg-config
+19316  sudo apt install -y libgtk-4-dev wayland-protocols libwayland-dev
+19319  sudo apt install -y libgirepository1.0-dev gobject-introspection
+19321  sudo apt install -y valac
+19325  sudo apt install -y libgtk-4-dev libgtk4-layer-shell-dev
+19327  sudo apt install -y goland-go libgtk-3-dev libgtk-layer-shell-dev
+19328  sudo apt install -y golang-go libgtk-3-dev libgtk-layer-shell-dev
+19347  sudo apt update\nsudo apt install hyprlock
+19363  sudo apt install nwg-drawer
+19377  sudo apt update\nsudo apt install xfdesktop4
+19388  sudo apt update\nsudo apt install git make gcc pkg-config libgtk-3-dev libgtk-layer-shell-dev xdg-utils
+19440  sudo apt update\nsudo apt install grim slurp wl-clipboard
+19465  sudo apt update\nsudo apt install network-manager-gnome blueman
+19602  sudo apt update\nsudo apt install wofi
+19622  sudo apt install gsimplecal
+19709  sudo apt install hypridle cliphist wlsunset
+19721  sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+19744  sudo apt install fzf
+19769  sudo apt install fdfind batcat
+19770  sudo apt install fd-find bat
+19771  sudo apt install mako-notifier
+19890  sudo apt install sioyek
+19895  sudo apt update\nsudo apt install obs-studio xdg-desktop-portal-hyprland
+19897  sudo apt update\nsudo apt install ffmpeg libva-drm2 libva-x11-2 intel-media-va-driver mesa-va-drivers
+19898  sudo apt update\nsudo apt install ffmpeg libnvidia-encode-1
