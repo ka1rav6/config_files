@@ -127,14 +127,6 @@ pipinst() {
   python -m pip install --break-system-packages "$@"
 }
 
-hyperlapse(){
-  ffmpeg -y -i "$1" \
-  -an \
-  -vf "setpts=PTS/10" \
-  -r 30 \
-  "${1%.mp4}.fast.mp4"
-}
-
 # --------- PROMPT ---------
 
 # kairav/time format

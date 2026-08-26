@@ -3,12 +3,7 @@
     "telemetry.machineId": "719bf7b8c5f03e2e515a2b4ea457b9ff09255223248606505637cd2dba61b6f3",
     "telemetry.devDeviceId": "5514aa90-fd49-42cf-b94b-182cf2cd0842",
     "backupWorkspaces": {
-        "workspaces": [
-            {
-                "id": "b0119a4276822bd69a52f4746949f539",
-                "configURIPath": "file:///home/kairav/.config/Code/User/agent-sessions.code-workspace"
-            }
-        ],
+        "workspaces": [],
         "folders": [
             {
                 "folderUri": "file:///home/kairav/Downloads/Antigravity/Antigravity-x64"
@@ -16,7 +11,7 @@
         ],
         "emptyWindows": []
     },
-    "windowControlHeight": 35,
+    "windowControlHeight": 60,
     "profileAssociations": {
         "workspaces": {
             "file:///home/kairav/dev/local_projects/game_server": "__default__profile__",
@@ -72,7 +67,7 @@
                 "x": 16,
                 "y": 10,
                 "width": 950,
-                "height": 567,
+                "height": 1134,
                 "zoomLevel": 3
             }
         },

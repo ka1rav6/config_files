@@ -1,0 +1,2 @@
+#!/bin/bash
+~/Downloads/arduino-ide_2.3.10_Linux_64bit.AppImage --no-sandbox

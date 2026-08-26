@@ -1,0 +1,6 @@
+#!/bin/sh
+ffmpeg -y -i "$1" \
+  -an \
+  -vf "setpts=PTS/10,fps=30" \
+  -c:v libx264 -pix_fmt yuv420p \
+  "${1%.mp4}.fast.mp4"

@@ -3,5 +3,10 @@
     "path": ".config/hyprtodo",
     "category": "custom",
     "description": "Custom backup: hyprtodo"
+  },
+  {
+    "path": "bin",
+    "category": "custom",
+    "description": "Custom backup: bin"
   }
 ]
