@@ -127,6 +127,30 @@ pipinst() {
   python -m pip install --break-system-packages "$@"
 }
 
+
+# Ctrl+F → fuzzy-find files in the current directory
+fzf-file-widget() {
+    local selected
+
+    selected=$(
+        find . \
+            -type f \
+            -not -path '*/.git/*' \
+            2>/dev/null |
+        fzf \
+            --height 70% \
+            --layout=reverse \
+            --border=rounded \
+            --preview 'bat --style=numbers --color=always --line-range=:200 {} 2>/dev/null || file {}' \
+            --preview-window='right:60%'
+    ) || return
+
+    LBUFFER="${LBUFFER}${selected#./}"
+}
+
+zle -N fzf-file-widget
+bindkey '^F' fzf-file-widget
+
 # --------- PROMPT ---------
 
 # kairav/time format
@@ -137,6 +161,7 @@ PS1='\e[32mkairav/\A:\w\$\e[32m '
 
 bindkey "^[[A" history-search-backward
 bindkey "^[[B" history-search-forward
+
 
 source $ZSH/oh-my-zsh.sh
 
