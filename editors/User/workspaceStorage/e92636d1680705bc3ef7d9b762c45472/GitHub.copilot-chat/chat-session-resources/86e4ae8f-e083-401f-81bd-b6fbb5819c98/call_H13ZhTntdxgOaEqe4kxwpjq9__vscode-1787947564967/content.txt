@@ -1,0 +1,463 @@
+[Output too large (44KB). Full output saved to: /home/kairav/.config/Code/copilot-terminal-output/copilot-terminal-output-57ab394f-6c34-4884-8e41-bb3fac389bd5.txt]
+[Use readFile or grep to examine the full output.]
+
+                 ^
+core/kpl.cpp:122:42: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case '.': add(TokenKind::Dot, 1); return;
+                                         ^
+core/kpl.cpp:122:50: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case '.': add(TokenKind::Dot, 1); return;
+                                                 ^
+core/kpl.cpp:123:18: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case '+': add(T
+
+[... middle of output truncated ...]
+
+
+tions]
+        case TokenKind::OrOr: return 1;
+                                       ^
+core/kpl.cpp:451:32: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::AndAnd: return 2;
+                               ^
+core/kpl.cpp:451:42: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::AndAnd: return 2;
+                                         ^
+core/kpl.cpp:452:36: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::EqualEqual: case TokenKind::BangEqual: return 3;
+                                   ^
+core/kpl.cpp:452:63: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::EqualEqual: case TokenKind::BangEqual: return 3;
+                                                              ^
+core/kpl.cpp:452:73: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::EqualEqual: case TokenKind::BangEqual: return 3;
+                                                                        ^
+core/kpl.cpp:453:30: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Less: case TokenKind::LessEqual: case TokenKind::Greater
+: case TokenKind::GreaterEqual: return 4;
+                             ^
+core/kpl.cpp:453:57: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Less: case TokenKind::LessEqual: case TokenKind::Greater
+: case TokenKind::GreaterEqual: return 4;
+                                                        ^
+core/kpl.cpp:453:82: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Less: case TokenKind::LessEqual: case TokenKind::Greater
+: case TokenKind::GreaterEqual: return 4;
+
+ ^
+core/kpl.cpp:453:112: error: code should be clang-formatted [-Wclang-format-viol
+ations]
+        case TokenKind::Less: case TokenKind::LessEqual: case TokenKind::Greater
+: case TokenKind::GreaterEqual: return 4;
+
+                               ^
+core/kpl.cpp:453:122: error: code should be clang-formatted [-Wclang-format-viol
+ations]
+        case TokenKind::Less: case TokenKind::LessEqual: case TokenKind::Greater
+: case TokenKind::GreaterEqual: return 4;
+
+                                         ^
+core/kpl.cpp:454:30: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Plus: case TokenKind::Minus: return 5;
+                             ^
+core/kpl.cpp:454:53: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Plus: case TokenKind::Minus: return 5;
+                                                    ^
+core/kpl.cpp:454:63: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Plus: case TokenKind::Minus: return 5;
+                                                              ^
+core/kpl.cpp:455:30: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Star: case TokenKind::Slash: return 6;
+                             ^
+core/kpl.cpp:455:53: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Star: case TokenKind::Slash: return 6;
+                                                    ^
+core/kpl.cpp:455:63: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        case TokenKind::Star: case TokenKind::Slash: return 6;
+                                                              ^
+core/kpl.cpp:456:17: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        default: return 0;
+                ^
+core/kpl.cpp:458:6: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    }
+     ^
+core/kpl.cpp:463:24: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+            result.kind = Expr::Kind::Unary;
+                       ^
+core/kpl.cpp:469:6: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    }
+     ^
+core/kpl.cpp:476:26: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+                next.kind = Expr::Kind::Member;
+                         ^
+core/kpl.cpp:485:23: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+                    do next.children.push_back(expression()); while (match(Token
+Kind::Comma));
+                      ^
+core/kpl.cpp:485:62: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+                    do next.children.push_back(expression()); while (match(Token
+Kind::Comma));
+                                                             ^
+core/kpl.cpp:491:26: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+                next.kind = Expr::Kind::Index;
+                         ^
+core/kpl.cpp:495:19: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+            } else break;
+                  ^
+core/kpl.cpp:498:6: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    }
+     ^
+core/kpl.cpp:504:24: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+            result.kind = Expr::Kind::Conditional;
+                       ^
+core/kpl.cpp:513:38: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        if (match(TokenKind::String)) return Expr{Expr::Kind::String, token, {},
+ {}};
+                                     ^
+core/kpl.cpp:514:39: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        if (match(TokenKind::Integer)) return Expr{Expr::Kind::Integer, token, {
+}, {}};
+                                      ^
+core/kpl.cpp:519:32: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        if (match_text("none")) return Expr{Expr::Kind::None, token, {}, {}};
+                               ^
+core/kpl.cpp:520:42: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+        if (match(TokenKind::Identifier)) return Expr{Expr::Kind::Name, token, {
+}, {}};
+                                         ^
+core/kpl.cpp:530:19: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+                do result.children.push_back(expression()); while (match(TokenKi
+nd::Comma));
+                  ^
+core/kpl.cpp:530:60: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+                do result.children.push_back(expression()); while (match(TokenKi
+nd::Comma));
+                                                           ^
+core/kpl.cpp:539:40: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+                result.names.push_back(consume(TokenKind::Identifier, "expected
+record field").text);
+                                       ^
+core/kpl.cpp:542:46: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+                if (!match(TokenKind::Comma)) break;
+                                             ^
+core/kpl.cpp:551:16: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+    std::string source_name_;
+               ^
+core/kpl.cpp:552:16: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+    std::size_t position_ = 0;
+               ^
+core/kpl.hpp:52:14: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    TokenKind   kind = TokenKind::End;
+             ^
+core/kpl.hpp:53:16: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    std::string text;
+               ^
+core/kpl.hpp:55:22: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    int          line = 1;
+                     ^
+core/kpl.hpp:56:24: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    int          column = 1;
+                       ^
+core/kpl.hpp:63:20: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                   ^
+core/kpl.hpp:63:22: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                     ^
+core/kpl.hpp:63:30: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                             ^
+core/kpl.hpp:63:39: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                                      ^
+core/kpl.hpp:63:48: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                                               ^
+core/kpl.hpp:63:54: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                                                     ^
+core/kpl.hpp:63:60: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                                                           ^
+core/kpl.hpp:63:66: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                                                                 ^
+core/kpl.hpp:63:74: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+                                                                         ^
+core/kpl.hpp:63:81: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+
+^
+core/kpl.hpp:63:89: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+
+        ^
+core/kpl.hpp:63:95: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+
+              ^
+core/kpl.hpp:63:103: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+
+                      ^
+core/kpl.hpp:63:110: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+
+                             ^
+core/kpl.hpp:63:122: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+    enum class Kind { String, Integer, Boolean, None, Name, List, Record, Unary,
+ Binary, Call, Member, Index, Conditional };
+
+                                         ^
+core/kpl.hpp:64:9: error: code should be clang-formatted [-Wclang-format-violati
+ons]
+    Kind kind = Kind::None;
+        ^
+core/kpl.hpp:65:10: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    Token token;
+         ^
+core/kpl.hpp:66:22: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    std::vector<Expr> children;
+                     ^
+core/kpl.hpp:72:20: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                   ^
+core/kpl.hpp:72:22: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                     ^
+core/kpl.hpp:72:34: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                                 ^
+core/kpl.hpp:72:39: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                                      ^
+core/kpl.hpp:72:51: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                                                  ^
+core/kpl.hpp:72:57: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                                                        ^
+core/kpl.hpp:72:61: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                                                            ^
+core/kpl.hpp:72:66: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                                                                 ^
+core/kpl.hpp:72:73: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+                                                                        ^
+core/kpl.hpp:72:85: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+
+    ^
+core/kpl.hpp:72:102: error: code should be clang-formatted [-Wclang-format-viola
+tions]
+    enum class Kind { Assignment, Let, Expression, Step, If, For, Match, Concurr
+ent, ReportFreedSpace };
+
+                     ^
+core/kpl.hpp:73:9: error: code should be clang-formatted [-Wclang-format-violati
+ons]
+    Kind kind = Kind::Expression;
+        ^
+core/kpl.hpp:74:10: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    Token token;
+         ^
+core/kpl.hpp:75:16: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    std::string name;
+               ^
+core/kpl.hpp:77:22: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    std::vector<Expr> expressions;
+                     ^
+core/kpl.hpp:78:27: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    std::vector<Statement> body;
+                          ^
+core/kpl.hpp:79:27: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    std::vector<Statement> otherwise;
+                          ^
+core/kpl.hpp:89:16: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    std::string name;
+               ^
+core/kpl.hpp:91:10: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    Block body;
+         ^
+core/kpl.hpp:92:10: error: code should be clang-formatted [-Wclang-format-violat
+ions]
+    Token token;
+         ^
+tests/test_kpl.cpp:13:39: error: code should be clang-formatted [-Wclang-format-
+violations]
+    const auto tokens = kap::kpl::lex(
+                                      ^
+tests/test_kpl.cpp:14:71: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "// header\nmanifest { name = \"cmake-cpp\" priority = -2 }\n"
+                                                                      ^
+tests/test_kpl.cpp:20:52: error: code should be clang-formatted [-Wclang-format-
+violations]
+    KAP_ASSERT_EQ(static_cast<int>(tokens[3].kind),
+                                                   ^
+tests/test_kpl.cpp:23:52: error: code should be clang-formatted [-Wclang-format-
+violations]
+    KAP_ASSERT_EQ(static_cast<int>(tokens[7].kind),
+                                                   ^
+tests/test_kpl.cpp:26:53: error: code should be clang-formatted [-Wclang-format-
+violations]
+    KAP_ASSERT_EQ(static_cast<int>(tokens[12].kind),
+                                                    ^
+tests/test_kpl.cpp:61:41: error: code should be clang-formatted [-Wclang-format-
+violations]
+    const auto plugin = kap::kpl::parse(
+                                        ^
+tests/test_kpl.cpp:62:55: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "manifest { name = \"demo\" priority = 10 }\n"
+                                                      ^
+tests/test_kpl.cpp:63:54: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "detect { file_exists \"CMakeLists.txt\" }\n"
+                                                     ^
+tests/test_kpl.cpp:64:52: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "command build(project, config, extra) {\n"
+                                                   ^
+tests/test_kpl.cpp:65:45: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "  let args = [\"cmake\"] + extra\n"
+                                            ^
+tests/test_kpl.cpp:66:69: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "  if config.release { step args } else { step \"make\" }\n"
+                                                                    ^
+tests/test_kpl.cpp:67:15: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "}\n",
+              ^
+tests/test_kpl.cpp:82:24: error: code should be clang-formatted [-Wclang-format-
+violations]
+    const auto plugin = kap::kpl::parse(
+                       ^
+tests/test_kpl.cpp:82:41: error: code should be clang-formatted [-Wclang-format-
+violations]
+    const auto plugin = kap::kpl::parse(
+                                        ^
+tests/test_kpl.cpp:83:78: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "schema { mode: enum { auto, ninja } = auto args: list<str> = [] }\n"
+                                                                             ^
+tests/test_kpl.cpp:84:35: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "command pick(config) {\n"
+                                  ^
+tests/test_kpl.cpp:85:69: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "  let value = if config.release then \"yes\" else \"no\"\n"
+                                                                    ^
+tests/test_kpl.cpp:86:70: error: code should be clang-formatted [-Wclang-format-
+violations]
+        "  match config.mode { auto => value, ninja => \"fast\", }\n"
+                                                                     ^
+➜  zero-dependency git:(main) ✗ 
+
+Output exceeded terminal scrollback; beginning of output was lost

@@ -6,7 +6,7 @@
         "workspaces": [],
         "folders": [
             {
-                "folderUri": "file:///home/kairav/Downloads/Antigravity/Antigravity-x64"
+                "folderUri": "file:///home/kairav/Desktop/Hackathons/zero-dependency"
             }
         ],
         "emptyWindows": []
@@ -54,14 +54,15 @@
             "file:///home/kairav/dev/gitpushpraydev": "__default__profile__",
             "file:///home/kairav": "__default__profile__",
             "file:///home/kairav/dev/hyprtodo": "__default__profile__",
-            "file:///home/kairav/Downloads/Antigravity/Antigravity-x64": "__default__profile__"
+            "file:///home/kairav/Downloads/Antigravity/Antigravity-x64": "__default__profile__",
+            "file:///home/kairav/Desktop/Hackathons/zero-dependency": "__default__profile__"
         },
         "emptyWindows": {}
     },
     "windowsState": {
         "lastActiveWindow": {
-            "folder": "file:///home/kairav/Downloads/Antigravity/Antigravity-x64",
-            "backupPath": "/home/kairav/.config/Code/Backups/159715775da53d8b033056419fb37c80",
+            "folder": "file:///home/kairav/Desktop/Hackathons/zero-dependency",
+            "backupPath": "/home/kairav/.config/Code/Backups/c4707436112736dd0d68cbfe642b250f",
             "uiState": {
                 "mode": 0,
                 "x": 16,
@@ -102,7 +103,7 @@
             "titleBarHeight": 35,
             "activityBarWidth": 44,
             "sideBarWidth": 0,
-            "auxiliaryBarWidth": 280,
+            "auxiliaryBarWidth": 833,
             "statusBarHeight": 32,
             "windowBorder": false,
             "modernUI": true,
@@ -110,7 +111,7 @@
                 "auxiliaryBar": {
                     "top": 34.99951934814453,
                     "left": 267.99407958984375,
-                    "width": 268.0000915527344,
+                    "width": 820.999755859375,
                     "height": 582.5376586914062
                 },
                 "editor": {
@@ -124,8 +125,8 @@
     },
     "windowSplashWorkspaceOverride": {
         "layoutInfo": {
-            "sideBarWidth": 300,
-            "auxiliaryBarWidth": 280,
+            "sideBarWidth": 170,
+            "auxiliaryBarWidth": 833,
             "workspaces": {
                 "12d7e4334a4a6db20ca533a977c0a0a3": {
                     "sideBarVisible": true,
@@ -300,6 +301,10 @@
                     "auxiliaryBarVisible": true
                 },
                 "13f13bc100b09717c2161d791397e10c": {
+                    "sideBarVisible": false,
+                    "auxiliaryBarVisible": true
+                },
+                "e92636d1680705bc3ef7d9b762c45472": {
                     "sideBarVisible": false,
                     "auxiliaryBarVisible": true
                 }

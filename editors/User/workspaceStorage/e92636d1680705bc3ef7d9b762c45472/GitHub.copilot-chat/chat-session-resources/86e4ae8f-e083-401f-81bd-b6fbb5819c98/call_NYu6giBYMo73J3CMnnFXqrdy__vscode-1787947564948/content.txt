@@ -1,0 +1,236 @@
+[1/4] Building CXX object CMakeFiles/kap_tests.dir/tests/test_kpl.cpp.o
+FAILED: CMakeFiles/kap_tests.dir/tests/test_kpl.cpp.o 
+/usr/bin/c++  -I/home/kairav/Desktop/Hackathons/zero-dependency -g -std=c++20 -W
+all -Wextra -Wpedantic -Werror -MD -MT CMakeFiles/kap_tests.dir/tests/test_kpl.c
+pp.o -MF CMakeFiles/kap_tests.dir/tests/test_kpl.cpp.o.d -o CMakeFiles/kap_tests
+.dir/tests/test_kpl.cpp.o -c /home/kairav/Desktop/Hackathons/zero-dependency/tes
+ts/test_kpl.cpp
+In file included from /home/kairav/Desktop/Hackathons/zero-dependency/tests/test
+_kpl.cpp:6:
+/home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.hpp:99:26: error: expec
+ted unqualified-id before ‘requires’
+   99 |     std::optional<Block> requires;
+      |                          ^~~~~~~~
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/test_kpl.cpp:82:2: error:
+expected ‘)’ at end of input
+   82 | }
+      |  ^
+      |  )
+In file included from /home/kairav/Desktop/Hackathons/zero-dependency/tests/test
+_kpl.cpp:7:
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/harness.hpp:244:75: note:
+to match this ‘(’
+  244 |     static ::kap_test::Registrar KAP_TEST_CONCAT(kap_registrar_, __LINE_
+_)(       \
+      |
+  ^
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/test_kpl.cpp:79:1: note: i
+n expansion of macro ‘KAP_TEST’
+   79 | KAP_TEST("KPL parser rejects malformed declarations with a location")
+      | ^~~~~~~~
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/test_kpl.cpp:82:2: error:
+expected ‘,’ or ‘;’ at end of input
+   82 | }
+      |  ^
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/harness.hpp: In instantiat
+ion of ‘std::string kap_test::to_string_display(const T&) [with T = kap::kpl::St
+atement::Kind; std::string = std::__cxx11::basic_string<char>]’:
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/test_kpl.cpp:76:5:   requi
+red from here
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/harness.hpp:131:26: error:
+ no matching function for call to ‘to_string(const kap::kpl::Statement::Kind&)’
+  131 |     return std::to_string(v);
+      |            ~~~~~~~~~~~~~~^~~
+In file included from /usr/include/c++/13/string:54,
+                 from /home/kairav/Desktop/Hackathons/zero-dependency/core/diag.
+hpp:17,
+                 from /home/kairav/Desktop/Hackathons/zero-dependency/tests/test
+_kpl.cpp:5:
+/usr/include/c++/13/bits/basic_string.h:4162:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(int)’
+ 4162 |   to_string(int __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4162:17: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘int’
+ 4162 |   to_string(int __val)
+      |             ~~~~^~~~~
+/usr/include/c++/13/bits/basic_string.h:4177:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(unsigned int)’
+ 4177 |   to_string(unsigned __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4177:22: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘unsigned int’
+ 4177 |   to_string(unsigned __val)
+      |             ~~~~~~~~~^~~~~
+/usr/include/c++/13/bits/basic_string.h:4189:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(long int)’
+ 4189 |   to_string(long __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4189:18: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘long int’
+ 4189 |   to_string(long __val)
+      |             ~~~~~^~~~~
+/usr/include/c++/13/bits/basic_string.h:4204:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(long unsigned int)’
+ 4204 |   to_string(unsigned long __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4204:27: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘long unsigned int’
+ 4204 |   to_string(unsigned long __val)
+      |             ~~~~~~~~~~~~~~^~~~~
+/usr/include/c++/13/bits/basic_string.h:4216:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(long long int)’
+ 4216 |   to_string(long long __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4216:23: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘long long int’
+ 4216 |   to_string(long long __val)
+      |             ~~~~~~~~~~^~~~~
+/usr/include/c++/13/bits/basic_string.h:4229:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(long long unsigned int)’
+ 4229 |   to_string(unsigned long long __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4229:32: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘long long unsigned int’
+ 4229 |   to_string(unsigned long long __val)
+      |             ~~~~~~~~~~~~~~~~~~~^~~~~
+/usr/include/c++/13/bits/basic_string.h:4241:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(float)’
+ 4241 |   to_string(float __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4241:19: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘float’
+ 4241 |   to_string(float __val)
+      |             ~~~~~~^~~~~
+/usr/include/c++/13/bits/basic_string.h:4251:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(double)’
+ 4251 |   to_string(double __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4251:20: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘double’
+ 4251 |   to_string(double __val)
+      |             ~~~~~~~^~~~~
+/usr/include/c++/13/bits/basic_string.h:4261:3: note: candidate: ‘std::string st
+d::__cxx11::to_string(long double)’
+ 4261 |   to_string(long double __val)
+      |   ^~~~~~~~~
+/usr/include/c++/13/bits/basic_string.h:4261:25: note:   no known conversion for
+ argument 1 from ‘const kap::kpl::Statement::Kind’ to ‘long double’
+ 4261 |   to_string(long double __val)
+      |             ~~~~~~~~~~~~^~~~~
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/harness.hpp:244:50: error:
+ ‘kap_registrar_79’ defined but not used [-Werror=unused-variable]
+  244 |     static ::kap_test::Registrar KAP_TEST_CONCAT(kap_registrar_, __LINE_
+_)(       \
+      |                                                  ^~~~~~~~~~~~~~
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/harness.hpp:240:36: note:
+in definition of macro ‘KAP_TEST_CONCAT_IMPL’
+  240 | #define KAP_TEST_CONCAT_IMPL(a, b) a##b
+      |                                    ^
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/harness.hpp:244:34: note:
+in expansion of macro ‘KAP_TEST_CONCAT’
+  244 |     static ::kap_test::Registrar KAP_TEST_CONCAT(kap_registrar_, __LINE_
+_)(       \
+      |                                  ^~~~~~~~~~~~~~~
+/home/kairav/Desktop/Hackathons/zero-dependency/tests/test_kpl.cpp:79:1: note: i
+n expansion of macro ‘KAP_TEST’
+   79 | KAP_TEST("KPL parser rejects malformed declarations with a location")
+      | ^~~~~~~~
+cc1plus: all warnings being treated as errors
+[2/4] Building CXX object CMakeFiles/kap_core.dir/core/kpl.cpp.o
+FAILED: CMakeFiles/kap_core.dir/core/kpl.cpp.o 
+/usr/bin/c++  -I/home/kairav/Desktop/Hackathons/zero-dependency -g -std=c++20 -W
+all -Wextra -Wpedantic -Werror -MD -MT CMakeFiles/kap_core.dir/core/kpl.cpp.o -M
+F CMakeFiles/kap_core.dir/core/kpl.cpp.o.d -o CMakeFiles/kap_core.dir/core/kpl.c
+pp.o -c /home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.cpp
+In file included from /home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.c
+pp:6:
+/home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.hpp:99:26: error: expec
+ted unqualified-id before ‘requires’
+   99 |     std::optional<Block> requires;
+      |                          ^~~~~~~~
+/home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.cpp: In member function
+ ‘kap::kpl::Plugin kap::kpl::{anonymous}::Parser::run()’:
+/home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.cpp:239:57: error: expe
+cted unqualified-id before ‘requires’
+  239 |             else if (keyword.text == "requires") plugin.requires = block
+();
+      |                                                         ^~~~~~~~
+/home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.cpp: In member function
+ ‘kap::kpl::Statement kap::kpl::{anonymous}::Parser::statement()’:
+/home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.cpp:331:33: error: no m
+atch for ‘operator=’ (operand types are ‘std::vector<kap::kpl::Statement>’ and ‘
+kap::kpl::Block’)
+  331 |             result.body = block();
+      |                                 ^
+In file included from /usr/include/c++/13/vector:72,
+                 from /home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.h
+pp:13:
+/usr/include/c++/13/bits/vector.tcc:210:5: note: candidate: ‘constexpr std::vect
+or<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(const std::vector<_Tp, _All
+oc>&) [with _Tp = kap::kpl::Statement; _Alloc = std::allocator<kap::kpl::Stateme
+nt>]’
+  210 |     vector<_Tp, _Alloc>::
+      |     ^~~~~~~~~~~~~~~~~~~
+/usr/include/c++/13/bits/vector.tcc:211:42: note:   no known conversion for argu
+ment 1 from ‘kap::kpl::Block’ to ‘const std::vector<kap::kpl::Statement>&’
+  211 |     operator=(const vector<_Tp, _Alloc>& __x)
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+In file included from /usr/include/c++/13/vector:66:
+/usr/include/c++/13/bits/stl_vector.h:766:7: note: candidate: ‘constexpr std::ve
+ctor<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(std::vector<_Tp, _Alloc>&
+&) [with _Tp = kap::kpl::Statement; _Alloc = std::allocator<kap::kpl::Statement>
+]’
+  766 |       operator=(vector&& __x) noexcept(_Alloc_traits::_S_nothrow_move())
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/stl_vector.h:766:26: note:   no known conversion for ar
+gument 1 from ‘kap::kpl::Block’ to ‘std::vector<kap::kpl::Statement>&&’
+  766 |       operator=(vector&& __x) noexcept(_Alloc_traits::_S_nothrow_move())
+      |                 ~~~~~~~~~^~~
+/usr/include/c++/13/bits/stl_vector.h:788:7: note: candidate: ‘constexpr std::ve
+ctor<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(std::initializer_list<_Tp
+>) [with _Tp = kap::kpl::Statement; _Alloc = std::allocator<kap::kpl::Statement>
+]’
+  788 |       operator=(initializer_list<value_type> __l)
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/stl_vector.h:788:46: note:   no known conversion for ar
+gument 1 from ‘kap::kpl::Block’ to ‘std::initializer_list<kap::kpl::Statement>’
+  788 |       operator=(initializer_list<value_type> __l)
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+/home/kairav/Desktop/Hackathons/zero-dependency/core/kpl.cpp:342:33: error: no m
+atch for ‘operator=’ (operand types are ‘std::vector<kap::kpl::Statement>’ and ‘
+kap::kpl::Block’)
+  342 |             result.body = block();
+      |                                 ^
+/usr/include/c++/13/bits/vector.tcc:210:5: note: candidate: ‘constexpr std::vect
+or<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(const std::vector<_Tp, _All
+oc>&) [with _Tp = kap::kpl::Statement; _Alloc = std::allocator<kap::kpl::Stateme
+nt>]’
+  210 |     vector<_Tp, _Alloc>::
+      |     ^~~~~~~~~~~~~~~~~~~
+/usr/include/c++/13/bits/vector.tcc:211:42: note:   no known conversion for argu
+ment 1 from ‘kap::kpl::Block’ to ‘const std::vector<kap::kpl::Statement>&’
+  211 |     operator=(const vector<_Tp, _Alloc>& __x)
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+/usr/include/c++/13/bits/stl_vector.h:766:7: note: candidate: ‘constexpr std::ve
+ctor<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(std::vector<_Tp, _Alloc>&
+&) [with _Tp = kap::kpl::Statement; _Alloc = std::allocator<kap::kpl::Statement>
+]’
+  766 |       operator=(vector&& __x) noexcept(_Alloc_traits::_S_nothrow_move())
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/stl_vector.h:766:26: note:   no known conversion for ar
+gument 1 from ‘kap::kpl::Block’ to ‘std::vector<kap::kpl::Statement>&&’
+  766 |       operator=(vector&& __x) noexcept(_Alloc_traits::_S_nothrow_move())
+      |                 ~~~~~~~~~^~~
+/usr/include/c++/13/bits/stl_vector.h:788:7: note: candidate: ‘constexpr std::ve
+ctor<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(std::initializer_list<_Tp
+>) [with _Tp = kap::kpl::Statement; _Alloc = std::allocator<kap::kpl::Statement>
+]’
+  788 |       operator=(initializer_list<value_type> __l)
+      |       ^~~~~~~~
+/usr/include/c++/13/bits/stl_vector.h:788:46: note:   no known conversion for ar
+gument 1 from ‘kap::kpl::Block’ to ‘std::initializer_list<kap::kpl::Statement>’
+  788 |       operator=(initializer_list<value_type> __l)
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+ninja: build stopped: subcommand failed.
+➜  zero-dependency git:(main) ✗ 

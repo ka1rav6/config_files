@@ -242,3 +242,4 @@ notify-build() {
     notify-send -a "Build" -u critical -i dialog-error "Build failed" "$cmd"
   fi
 }
+eval "$(zoxide init zsh --cmd z)"

@@ -24,15 +24,15 @@ vim.opt.smartindent = true
 -- Show whitespace
 vim.opt.list = true
 vim.opt.listchars = {
-  space = "·",
+    space = "·",
 }
 
 -- Completion
 vim.opt.completeopt = {
-  "menu",
-  "menuone",
-  "noinsert",
-  "noselect",
+    "menu",
+    "menuone",
+    "noinsert",
+    "noselect",
 }
 
 -- Folding
@@ -45,9 +45,9 @@ vim.opt.foldlevelstart = 99
 vim.opt.foldcolumn = "1"
 
 vim.opt.fillchars = {
-  foldopen = "",
-  foldclose = "",
-  fold = " ",
+    foldopen = "",
+    foldclose = "",
+    fold = " ",
 }
 -- Use 4 spaces for indentation
 vim.opt.tabstop = 4
