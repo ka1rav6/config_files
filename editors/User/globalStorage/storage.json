@@ -11,7 +11,7 @@
         ],
         "emptyWindows": []
     },
-    "windowControlHeight": 60,
+    "windowControlHeight": 42,
     "profileAssociations": {
         "workspaces": {
             "file:///home/kairav/dev/local_projects/game_server": "__default__profile__",
@@ -69,7 +69,7 @@
                 "y": 10,
                 "width": 950,
                 "height": 1134,
-                "zoomLevel": 3
+                "zoomLevel": 1
             }
         },
         "openedWindows": []
@@ -102,23 +102,29 @@
             "editorPartMinWidth": 220,
             "titleBarHeight": 35,
             "activityBarWidth": 44,
-            "sideBarWidth": 0,
-            "auxiliaryBarWidth": 833,
+            "sideBarWidth": 170,
+            "auxiliaryBarWidth": 0,
             "statusBarHeight": 32,
             "windowBorder": false,
             "modernUI": true,
             "partBounds": {
-                "auxiliaryBar": {
-                    "top": 34.99951934814453,
-                    "left": 267.99407958984375,
-                    "width": 820.999755859375,
-                    "height": 582.5376586914062
+                "sideBar": {
+                    "top": 34.999996185302734,
+                    "left": 47.986106872558594,
+                    "width": 166.00692749023438,
+                    "height": 869.1058349609375
+                },
+                "panel": {
+                    "top": 710.9895629882812,
+                    "left": 217.98609924316406,
+                    "width": 1354.0103759765625,
+                    "height": 193.1076202392578
                 },
                 "editor": {
-                    "top": 34.99951934814453,
-                    "left": 47.996238708496094,
-                    "width": 216.00115966796875,
-                    "height": 582.5376586914062
+                    "top": 34.999996185302734,
+                    "left": 217.98609924316406,
+                    "width": 1354.0103759765625,
+                    "height": 671.111083984375
                 }
             }
         }
@@ -126,7 +132,7 @@
     "windowSplashWorkspaceOverride": {
         "layoutInfo": {
             "sideBarWidth": 170,
-            "auxiliaryBarWidth": 833,
+            "auxiliaryBarWidth": 280,
             "workspaces": {
                 "12d7e4334a4a6db20ca533a977c0a0a3": {
                     "sideBarVisible": true,
@@ -305,8 +311,8 @@
                     "auxiliaryBarVisible": true
                 },
                 "e92636d1680705bc3ef7d9b762c45472": {
-                    "sideBarVisible": false,
-                    "auxiliaryBarVisible": true
+                    "sideBarVisible": true,
+                    "auxiliaryBarVisible": false
                 }
             }
         }

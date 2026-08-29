@@ -54,18 +54,19 @@
     },
 
     "cpu": {
-        "interval": 5,
+        "interval": 10,
         "format": "󰍛 {usage}%",
         "tooltip": true
     },
 
     "memory": {
-        "interval": 5,
+        "interval": 10,
         "format": "󰘚 {percentage}%",
         "tooltip": true
     },
 
     "network": {
+        "interval": 10,
         "format-wifi": "󰖩 {essid}",
         "format-ethernet": "󰈀 {ipaddr}",
         "format-disconnected": "󰖪 offline",

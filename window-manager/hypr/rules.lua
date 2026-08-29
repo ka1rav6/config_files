@@ -10,6 +10,34 @@ hl.window_rule({
     match = { class = "^nm-connection-editor$" },
     float = true,
     center = true,
+    no_focus = true,
+})
+
+hl.window_rule({
+    name = "floating-blueman",
+    match = { class = "^(Blueman-manager|blueman-manager)$" },
+    float = true,
+    center = true,
+})
+
+hl.window_rule({
+    name = "floating-swaync",
+    match = { class = "^swaync-control-center$" },
+    float = true,
+    center = true,
+})
+
+hl.window_rule({
+    name = "floating-calculator",
+    match = { class = "^(org.gnome.Calculator|galculator|qalculate-gtk)$" },
+    float = true,
+    center = true,
+})
+
+hl.window_rule({
+    name = "skip-focus-applets",
+    match = { class = "^(nm-applet|blueman-applet)$" },
+    no_focus = true,
 })
 
 hl.window_rule({

@@ -24,14 +24,18 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("waybar &")
     hl.exec_cmd("mako")
     hl.exec_cmd("~/.local/bin/system-monitor-notify &")
-    hl.exec_cmd("~/.local/bin/now-playing-notify")
+    hl.exec_cmd("pgrep -f '[n]ow-playing-notify' >/dev/null 2>&1 || " .. home .. "/.local/bin/now-playing-notify &")
     hl.exec_cmd("command -v hypridle >/dev/null 2>&1 && hypridle")
     hl.exec_cmd("command -v wlsunset >/dev/null 2>&1 && wlsunset -t 4000")
     hl.exec_cmd(
-        "command -v wl-paste >/dev/null 2>&1 && command -v cliphist >/dev/null 2>&1 && wl-paste --type text --watch cliphist store"
+        "command -v wl-paste >/dev/null 2>&1 && command -v cliphist >/dev/null 2>&1 && wl-paste --type text --watch "
+            .. home
+            .. "/.config/hypr/scripts/cliphist-store.sh"
     )
     hl.exec_cmd(
-        "command -v wl-paste >/dev/null 2>&1 && command -v cliphist >/dev/null 2>&1 && wl-paste --type image --watch cliphist store"
+        "command -v wl-paste >/dev/null 2>&1 && command -v cliphist >/dev/null 2>&1 && wl-paste --type image --watch "
+            .. home
+            .. "/.config/hypr/scripts/cliphist-store.sh"
     )
     hl.exec_cmd("systemctl --user start hyprpolkitagent.service 2>/dev/null || true")
     hl.exec_cmd("nm-applet --indicator")

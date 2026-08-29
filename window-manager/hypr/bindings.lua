@@ -127,6 +127,5 @@ hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURC
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
-hl.bind("PRINT", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/screenshot.sh copy"))
-hl.bind(mod .. " + PRINT", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/screenshot.sh save"))
-hl.bind(mod .. " + SHIFT + PRINT", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/screenshot.sh full"))
+hl.bind(mod .. " + P", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/screenshot.sh region"))
+hl.bind(mod .. " + SHIFT + S", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/screenshot.sh region-save"))
