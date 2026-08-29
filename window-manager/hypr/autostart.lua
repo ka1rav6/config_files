@@ -33,7 +33,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd(
         "command -v wl-paste >/dev/null 2>&1 && command -v cliphist >/dev/null 2>&1 && wl-paste --type image --watch cliphist store"
     )
-    hl.exec_cmd(home .. "/.config/hypr/scripts/start-dock.sh")
     hl.exec_cmd("systemctl --user start hyprpolkitagent.service 2>/dev/null || true")
     hl.exec_cmd("nm-applet --indicator")
     hl.exec_cmd("blueman-applet")
