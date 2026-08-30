@@ -23,14 +23,35 @@ hl.env("XCURSOR_THEME", "Yaru")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("_JAVA_AWT_WM_NONREPARENTING", "1")
 
+-- Spawn a window straight into a hidden special workspace, but only if one
+-- isn't already there.
+--
+-- The old form shelled out to `hyprctl dispatch exec '[workspace ...] cmd'`.
+-- Under the Lua config `hyprctl dispatch` evaluates Lua, so that string no
+-- longer parses and the spawn silently did nothing.
+local function ensure_in_special(class, workspace, command)
+    if #hl.get_windows({ class = class }) > 0 then
+        return
+    end
+
+    hl.dispatch(hl.dsp.exec_cmd(command, { workspace = "special:" .. workspace .. " silent" }))
+end
+
 local function ensure_hyprtodo()
-    hl.exec_cmd("pgrep -x hyprtodo >/dev/null 2>&1 || hyprctl dispatch exec '[workspace special:todo silent] hyprtodo'")
+    ensure_in_special("hyprtodo", "todo", "hyprtodo")
+end
+
+-- Scratchpad terminal, toggled with SUPER+ALT+T.
+local function ensure_scratchpad()
+    ensure_in_special("com.scratchpad.ghostty", "scratch", terminal .. " --class=com.scratchpad.ghostty")
 end
 
 hl.on("config.reloaded", ensure_hyprtodo)
+hl.on("config.reloaded", ensure_scratchpad)
 
 hl.on("hyprland.start", function()
     ensure_hyprtodo()
+    ensure_scratchpad()
     hl.exec_cmd("hyprpaper")
     hl.exec_cmd("waybar &")
     hl.exec_cmd("mako")

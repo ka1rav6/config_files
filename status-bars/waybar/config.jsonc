@@ -11,7 +11,8 @@
     "modules-left": [
         "custom/launcher",
         "hyprland/workspaces",
-        "custom/hyprtodo"
+        "custom/hyprtodo",
+        "hyprland/window"
     ],
 
     "modules-center": [
@@ -24,8 +25,11 @@
         "network",
         "temperature",
         "tray",
+        "backlight",
         "pulseaudio",
         "pulseaudio#microphone",
+        "power-profiles-daemon",
+        "idle_inhibitor",
         "battery",
         "custom/power"
     ],
@@ -51,6 +55,46 @@
         "signal": 8,
         "on-click": "hyprctl dispatch togglespecialworkspace todo",
         "on-click-right": "hyprctl dispatch workspace special:todo"
+    },
+
+    "hyprland/window": {
+        "format": "{title}",
+        "max-length": 45,
+        "separate-outputs": true,
+        "rewrite": {
+            "": ""
+        }
+    },
+
+    "backlight": {
+        "device": "intel_backlight",
+        "format": "{icon} {percent}%",
+        "format-icons": ["\udb00\udcde", "\udb00\udcdf", "\udb00\udce0"],
+        "on-scroll-up": "brightnessctl set 5%+",
+        "on-scroll-down": "brightnessctl set 5%-",
+        "tooltip-format": "Brightness {percent}%"
+    },
+
+    "power-profiles-daemon": {
+        "format": "{icon}",
+        "tooltip": true,
+        "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
+        "format-icons": {
+            "default": "\udb80\uddd1",
+            "performance": "\udb81\udcc5",
+            "balanced": "\udb83\udd85",
+            "power-saver": "\udb83\udf2a"
+        }
+    },
+
+    "idle_inhibitor": {
+        "format": "{icon}",
+        "format-icons": {
+            "activated": "\udb80\udd76",
+            "deactivated": "\udb81\uddca"
+        },
+        "tooltip-format-activated": "Idle inhibited \u2014 screen will not lock",
+        "tooltip-format-deactivated": "Idle inhibitor off"
     },
 
     "cpu": {

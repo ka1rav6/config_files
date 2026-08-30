@@ -30,6 +30,10 @@ hl.bind("ALT + F4", hl.dsp.window.close())
 hl.bind(mod .. " + M", hl.dsp.exec_cmd(home .. "/.config/waybar/scripts/power-menu.sh"))
 hl.bind(mod .. " + SHIFT + L", hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
+-- Maximize: fills the monitor but keeps gaps, borders and the bar visible.
+hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
+-- Throw the focused window at the next monitor (wraps, so it round-trips).
+hl.bind(mod .. " + SHIFT + M", hl.dsp.window.move({ monitor = "+1" }))
 hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + SHIFT + C", hl.dsp.window.center())
 
@@ -43,8 +47,8 @@ hl.bind(mod .. " + J", hl.dsp.focus({ direction = "d" }))
 hl.bind(mod .. " + K", hl.dsp.focus({ direction = "u" }))
 hl.bind(mod .. " + L", hl.dsp.focus({ direction = "r" }))
 
--- Move windows. On ALT rather than SHIFT so this cluster stops colliding with
--- the lock bind and the named-workspace toggles; left now has a bind at all.
+-- Move windows on ALT so the cluster stops colliding with the lock bind and
+-- the named-workspace toggles; left now has a bind at all.
 hl.bind(mod .. " + ALT + H", hl.dsp.window.move({ direction = "l" }))
 hl.bind(mod .. " + ALT + J", hl.dsp.window.move({ direction = "d" }))
 hl.bind(mod .. " + ALT + K", hl.dsp.window.move({ direction = "u" }))
@@ -65,6 +69,23 @@ hl.bind(mod .. " + equal", resize(10, 0), { repeating = true })
 hl.bind(mod .. " + minus", resize(-10, 0), { repeating = true })
 hl.bind(mod .. " + SHIFT + equal", resize(0, 10), { repeating = true })
 hl.bind(mod .. " + SHIFT + minus", resize(0, -10), { repeating = true })
+
+-- Resize mode: tap SUPER+R once, then resize with bare hjkl / arrows until
+-- ESCAPE or RETURN.
+hl.define_submap("resize", function()
+    hl.bind("H", resize(-50, 0), { repeating = true })
+    hl.bind("J", resize(0, 50), { repeating = true })
+    hl.bind("K", resize(0, -50), { repeating = true })
+    hl.bind("L", resize(50, 0), { repeating = true })
+    hl.bind("LEFT", resize(-50, 0), { repeating = true })
+    hl.bind("DOWN", resize(0, 50), { repeating = true })
+    hl.bind("UP", resize(0, -50), { repeating = true })
+    hl.bind("RIGHT", resize(50, 0), { repeating = true })
+    hl.bind("ESCAPE", hl.dsp.submap("reset"))
+    hl.bind("RETURN", hl.dsp.submap("reset"))
+end)
+
+hl.bind(mod .. " + R", hl.dsp.submap("resize"))
 
 -- Workspace count, switching, and moving.
 for workspace = 1, 10 do
@@ -98,6 +119,16 @@ hl.bind(mod .. " + SHIFT + R", toggle_named_workspace("brave", "brave-browser --
 hl.bind(mod .. " + D", hl.dsp.workspace.toggle_special("desktop"))
 hl.bind(mod .. " + SHIFT + D", toggle_named_workspace("debug"))
 hl.bind(mod .. " + SHIFT + H", hl.dsp.workspace.toggle_special("todo"))
+hl.bind(mod .. " + ALT + T", hl.dsp.workspace.toggle_special("scratch"))
+
+-- Display layout. X toggles duplicate/extended; CTRL+SHIFT+arrows move the
+-- external monitor around the laptop panel (default: to its left).
+local display = home .. "/.config/hypr/scripts/display-layout.sh "
+hl.bind(mod .. " + SHIFT + X", hl.dsp.exec_cmd(display .. "toggle-mirror"))
+hl.bind(mod .. " + CTRL + SHIFT + LEFT", hl.dsp.exec_cmd(display .. "place left"))
+hl.bind(mod .. " + CTRL + SHIFT + RIGHT", hl.dsp.exec_cmd(display .. "place right"))
+hl.bind(mod .. " + CTRL + SHIFT + UP", hl.dsp.exec_cmd(display .. "place up"))
+hl.bind(mod .. " + CTRL + SHIFT + DOWN", hl.dsp.exec_cmd(display .. "place down"))
 
 -- Applications and utilities.
 hl.bind(mod .. " + S", hl.dsp.exec_cmd(launcher))

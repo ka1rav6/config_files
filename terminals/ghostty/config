@@ -4,7 +4,6 @@ font-size = 13
 theme = Adventure
 
 background-opacity = 0.65
-background-blur-radius = 20
 
 window-padding-x = 6
 window-padding-y = 6

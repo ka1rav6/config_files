@@ -67,7 +67,10 @@ window#waybar {
 #network,
 #temperature,
 #tray,
+#backlight,
 #pulseaudio,
+#power-profiles-daemon,
+#idle_inhibitor,
 #battery,
 #custom-power {
     margin: 5px 2px;
@@ -125,6 +128,49 @@ window#waybar {
 #custom-power:hover,
 #pulseaudio:hover,
 #network:hover {
+    background: @panel-hover;
+}
+
+#window {
+    margin: 5px 6px;
+    padding: 0 10px;
+    color: @muted;
+    font-weight: 500;
+}
+
+#window.empty {
+    margin: 0;
+    padding: 0;
+}
+
+#backlight {
+    color: @amber;
+}
+
+#power-profiles-daemon {
+    color: @mint;
+}
+
+#power-profiles-daemon.performance {
+    color: @coral;
+}
+
+#power-profiles-daemon.power-saver {
+    color: #a9c7ff;
+}
+
+#idle_inhibitor {
+    color: @muted;
+}
+
+#idle_inhibitor.activated {
+    background: @mint;
+    color: #14211f;
+}
+
+#backlight:hover,
+#power-profiles-daemon:hover,
+#idle_inhibitor:hover {
     background: @panel-hover;
 }
 
