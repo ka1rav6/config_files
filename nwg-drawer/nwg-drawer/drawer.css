@@ -1,0 +1,174 @@
+/* =========================================================
+   macOS / Launchpad style
+   ========================================================= */
+
+window {
+    background-color: rgba(18, 18, 20, 0.82);
+
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 20px;
+
+    font-family: "Inter", "Ubuntu", sans-serif;
+}
+
+/* ---------------------------------------------------------
+   Search
+   --------------------------------------------------------- */
+
+#search {
+    margin: 14px 18px 10px 18px;
+    padding: 9px 15px;
+
+    min-height: 20px;
+
+    background-color: rgba(255, 255, 255, 0.08);
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 11px;
+
+    color: rgba(255, 255, 255, 0.95);
+
+    font-family: "Inter", "Ubuntu", sans-serif;
+    font-size: 14px;
+
+    caret-color: rgba(255, 255, 255, 0.9);
+}
+
+#search:focus {
+    background-color: rgba(255, 255, 255, 0.11);
+
+    border-color: rgba(255, 255, 255, 0.16);
+
+    box-shadow: none;
+}
+
+/* ---------------------------------------------------------
+   Categories
+   --------------------------------------------------------- */
+
+#category-button {
+    background: transparent;
+
+    border: none;
+    border-radius: 9px;
+
+    color: rgba(255, 255, 255, 0.60);
+
+    font-family: "Inter", "Ubuntu", sans-serif;
+    font-size: 12px;
+
+    padding: 6px 9px;
+}
+
+#category-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+
+    color: rgba(255, 255, 255, 0.95);
+}
+
+#category-button:focus {
+    background-color: rgba(255, 255, 255, 0.10);
+
+    color: white;
+
+    box-shadow: none;
+}
+
+/* ---------------------------------------------------------
+   Application buttons
+   --------------------------------------------------------- */
+
+/*
+   GTK likes to paint buttons with its own background.
+   These declarations intentionally override it.
+*/
+
+button {
+    background: transparent;
+    background-color: transparent;
+
+    border: 1px solid transparent;
+    border-radius: 15px;
+
+    box-shadow: none;
+
+    color: rgba(255, 255, 255, 0.90);
+
+    padding: 7px;
+    margin: 3px;
+
+    transition: 120ms;
+}
+
+button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.08);
+
+    border-color: rgba(255, 255, 255, 0.06);
+
+    box-shadow: none;
+}
+
+button:focus {
+    background: rgba(255, 255, 255, 0.11);
+    background-color: rgba(255, 255, 255, 0.11);
+
+    border-color: rgba(255, 255, 255, 0.14);
+
+    box-shadow: none;
+    outline: none;
+}
+
+/* Remove GTK's pressed effect */
+
+button:active {
+    background: rgba(255, 255, 255, 0.14);
+    background-color: rgba(255, 255, 255, 0.14);
+
+    box-shadow: none;
+}
+
+/* ---------------------------------------------------------
+   Application labels
+   --------------------------------------------------------- */
+
+label {
+    background: transparent;
+
+    color: rgba(255, 255, 255, 0.82);
+
+    font-family: "Inter", "Ubuntu", sans-serif;
+    font-size: 11px;
+}
+
+/* ---------------------------------------------------------
+   Icons
+   --------------------------------------------------------- */
+
+image {
+    background: transparent;
+}
+
+/* ---------------------------------------------------------
+   Tooltip
+   --------------------------------------------------------- */
+
+tooltip {
+    background-color: rgba(25, 25, 27, 0.96);
+
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+
+    color: rgba(255, 255, 255, 0.95);
+
+    font-family: "Inter", "Ubuntu", sans-serif;
+    font-size: 12px;
+}
+
+/* ---------------------------------------------------------
+   Math / special labels
+   --------------------------------------------------------- */
+
+#math-label {
+    color: rgba(255, 255, 255, 0.85);
+}

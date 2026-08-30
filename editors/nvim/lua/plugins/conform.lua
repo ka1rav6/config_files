@@ -4,6 +4,9 @@ return {
     formatters_by_ft = {
       lua = { "stylua" },
       zig = { "zigfmt" },
+      c = { "clang_format" },
+      cpp = { "clang_format" },
+      python = { "ruff_format" },
     },
     formatters = {
       stylua = {

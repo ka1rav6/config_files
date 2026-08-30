@@ -12,7 +12,7 @@ hl.monitor({
 hl.monitor({
     output = INTERNAL,
     mode = "2880x1800@120",
-    position = "2560x0",
+    position = "auto-right",
     scale = 1.5,
 })
 

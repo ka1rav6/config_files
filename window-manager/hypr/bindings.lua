@@ -27,20 +27,28 @@ end
 hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind("ALT + F4", hl.dsp.window.close())
-hl.bind(mod .. " + M", hl.dsp.exit())
-hl.bind(mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
+hl.bind(mod .. " + M", hl.dsp.exec_cmd(home .. "/.config/waybar/scripts/power-menu.sh"))
+hl.bind(mod .. " + SHIFT + L", hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + SHIFT + C", hl.dsp.window.center())
 
--- Focus and move windows.
+-- Focus windows: arrows and hjkl are equivalent.
 hl.bind(mod .. " + LEFT", hl.dsp.focus({ direction = "l" }))
 hl.bind(mod .. " + DOWN", hl.dsp.focus({ direction = "d" }))
 hl.bind(mod .. " + UP", hl.dsp.focus({ direction = "u" }))
 hl.bind(mod .. " + RIGHT", hl.dsp.focus({ direction = "r" }))
-hl.bind(mod .. " + SHIFT + J", hl.dsp.window.move({ direction = "d" }))
-hl.bind(mod .. " + SHIFT + K", hl.dsp.window.move({ direction = "u" }))
-hl.bind(mod .. " + SHIFT + L", hl.dsp.window.move({ direction = "r" }))
+hl.bind(mod .. " + H", hl.dsp.focus({ direction = "l" }))
+hl.bind(mod .. " + J", hl.dsp.focus({ direction = "d" }))
+hl.bind(mod .. " + K", hl.dsp.focus({ direction = "u" }))
+hl.bind(mod .. " + L", hl.dsp.focus({ direction = "r" }))
+
+-- Move windows. On ALT rather than SHIFT so this cluster stops colliding with
+-- the lock bind and the named-workspace toggles; left now has a bind at all.
+hl.bind(mod .. " + ALT + H", hl.dsp.window.move({ direction = "l" }))
+hl.bind(mod .. " + ALT + J", hl.dsp.window.move({ direction = "d" }))
+hl.bind(mod .. " + ALT + K", hl.dsp.window.move({ direction = "u" }))
+hl.bind(mod .. " + ALT + L", hl.dsp.window.move({ direction = "r" }))
 
 -- Continuous keyboard resizing.
 local function resize(x, y)
@@ -100,8 +108,7 @@ hl.bind(mod .. " + SHIFT + V", hl.dsp.exec_cmd("code"))
 hl.bind(mod .. " + SHIFT + A", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/minimize-window.sh"))
 hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/restore-window.sh"))
 hl.bind(mod .. " + ALT + SPACE", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/toggle-waybar.sh"))
-hl.bind(mod .. " + CTRL + V", hl.dsp.exec_cmd("cliphist list | wofi --dmenu | cliphist decode | wl-copy"))
-hl.bind(mod .. " + CTRL + N", hl.dsp.exec_cmd("swaync-client -t"))
+hl.bind(mod .. " + CTRL + N", hl.dsp.exec_cmd("makoctl restore"))
 hl.bind(mod .. " + N", hl.dsp.exec_cmd("ghostty -e ~/.local/bin/mako-fzf-history"))
 
 -- Jcode launch hotkeys.

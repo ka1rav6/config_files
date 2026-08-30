@@ -1,0 +1,44 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "provider": {
+    "openrouter": {
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1"
+      }
+    },
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "qwen2.5-instruct-igpu": {
+          "name": "Qwen2.5 7B Instruct (iGPU)"
+        }
+      }
+    }
+  },
+
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 15000
+  },
+
+  "agent": {
+    "build": {
+      "maxTokens": 4096
+    },
+    "plan": {
+      "maxTokens": 4096
+    },
+    "general": {
+      "maxTokens": 4096
+    },
+    "explore": {
+      "maxTokens": 2048
+    }
+  }
+}

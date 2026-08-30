@@ -1,18 +1,8 @@
 -- Keymaps are automatically loaded on the VeryLazy event
--- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
--- Add any additional keymaps here
--- Keymaps are automatically loaded on the VeryLazy event
 -- Default keymaps: https://www.lazyvim.org/configuration/keymaps
+-- Add any additional keymaps here
 
 local map = vim.keymap.set
-
--- ==========================================
--- File Explorer
--- ==========================================
-
-map("n", "<C-b>", "<cmd>NERDTreeToggle<CR>", {
-  desc = "Toggle NERDTree",
-})
 
 -- ==========================================
 -- Indentation
@@ -31,14 +21,12 @@ map("v", "<S-Tab>", "<gv", {
 -- ==========================================
 -- Buffers
 -- ==========================================
+-- Deliberately NOT mapped to <Tab>/<S-Tab>: terminals send the same byte for
+-- <Tab> and <C-i>, so that would shadow the jumplist. LazyVim's [b / ]b also
+-- work out of the box.
 
-map("n", "<Tab>", "<cmd>bnext<CR>", {
-  silent = true,
-})
-
-map("n", "<S-Tab>", "<cmd>bprevious<CR>", {
-  silent = true,
-})
+map("n", "<S-l>", "<cmd>bnext<CR>", { silent = true, desc = "Next Buffer" })
+map("n", "<S-h>", "<cmd>bprevious<CR>", { silent = true, desc = "Previous Buffer" })
 
 -- ==========================================
 -- Duplicate Line
@@ -103,11 +91,6 @@ map("n", "<leader>zc", "zM", {
 -- ==========================================
 -- LSP
 -- ==========================================
-
-map("n", "K", vim.lsp.buf.hover)
-
-map("n", "gd", vim.lsp.buf.definition)
-
-map("n", "gr", vim.lsp.buf.references)
-
-map("i", "<C-k>", vim.lsp.buf.signature_help)
+-- Intentionally empty. LazyVim already maps K / gd / gr / gI to picker-backed
+-- versions that handle multiple results. Mapping bare `gr` here also shadowed
+-- Neovim 0.11+'s built-in grn / gra / grr / gri.

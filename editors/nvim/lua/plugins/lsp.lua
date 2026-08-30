@@ -3,8 +3,11 @@ return {
     "neovim/nvim-lspconfig",
     opts = {
       servers = {
-        clangd = {},
+        clangd = {
+          cmd = { "clangd", "--background-index", "--clang-tidy", "--header-insertion=never" },
+        },
         pyright = {},
+        ruff = {},
         ts_ls = {},
 
         zls = {

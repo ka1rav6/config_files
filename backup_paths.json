@@ -1,12 +1,92 @@
 [
   {
-    "path": ".config/hyprtodo",
+    "path": "/home/kairav/.config/hyprtodo",
     "category": "custom",
     "description": "Custom backup: hyprtodo"
   },
   {
-    "path": "bin",
+    "path": "/home/kairav/bin",
     "category": "custom",
     "description": "Custom backup: bin"
+  },
+  {
+    "path": "/home/kairav/.config/htop",
+    "category": "htop",
+    "description": "Custom backup: htop"
+  },
+  {
+    "path": "/home/kairav/.config/sioyek",
+    "category": "sioyek",
+    "description": "Custom backup: sioyek"
+  },
+  {
+    "path": "/home/kairav/.config/gsimplecal",
+    "category": "gsimplecal",
+    "description": "Custom backup: gsimplecal"
+  },
+  {
+    "path": "/home/kairav/.config/cppman",
+    "category": "cppman",
+    "description": "Custom backup: cppman"
+  },
+  {
+    "path": "/home/kairav/.config/clang",
+    "category": "clang",
+    "description": "Custom backup: clang"
+  },
+  {
+    "path": "/home/kairav/.config/pipewire",
+    "category": "pipewire",
+    "description": "Custom backup: pipewire"
+  },
+  {
+    "path": "/home/kairav/.config/nwg-dock-hyprland",
+    "category": "nwg-dock-hyprland",
+    "description": "Custom backup: nwg-dock-hyprland"
+  },
+  {
+    "path": "/home/kairav/.config/nwg-drawer",
+    "category": "nwg-drawer",
+    "description": "Custom backup: nwg-drawer"
+  },
+  {
+    "path": "/home/kairav/.config/gtk-3.0",
+    "category": "gtk-3",
+    "description": "Custom backup: gtk-3.0"
+  },
+  {
+    "path": "/home/kairav/.config/gtk-4.0",
+    "category": "gtk-4",
+    "description": "Custom backup: gtk-4.0"
+  },
+  {
+    "path": "/home/kairav/.config/mimeapps.list",
+    "category": "mimeapps",
+    "description": "Custom backup: mimeapps.list"
+  },
+  {
+    "path": "/home/kairav/.config/opencode/opencode.json",
+    "category": "opencode",
+    "description": "Custom backup: opencode.json"
+  },
+  {
+    "path": "/home/kairav/.zshenv",
+    "category": "custom",
+    "description": "Custom backup: .zshenv"
+  },
+  {
+    "path": "/home/kairav/.local/bin/system-monitor-notify",
+    "category": "custom-binaries",
+    "description": "Custom backup: system-monitor-notify"
+  },
+  {
+    "path": "/home/kairav/.local/bin/now-playing-notify",
+    "category": "custom-binaries",
+    "description": "Custom backup: now-playing-notify"
+  },
+  {
+    "path": "/home/kairav/.local/bin/mako-fzf-history",
+    "category": "custom-binaries",
+    "description": "Custom backup: mako-fzf-history"
   }
 ]

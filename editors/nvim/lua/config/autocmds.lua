@@ -1,63 +1,36 @@
 -- Autocmds are automatically loaded on the VeryLazy event
--- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
---
--- Add any additional autocmds here
--- with `vim.api.nvim_create_autocmd`
---
--- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
--- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
--- Autocmds are automatically loaded on the VeryLazy event
 -- Default autocmds: https://www.lazyvim.org/configuration/autocmds
 -- Add any additional autocmds here
 
 local autocmd = vim.api.nvim_create_autocmd
 
 -- ==========================================
--- Indentation
--- ==========================================
-
-autocmd("FileType", {
-  pattern = {
-    "html",
-    "css",
-    "javascript",
-    "typescript",
-  },
-
-  callback = function()
-    vim.opt_local.tabstop = 4
-    vim.opt_local.softtabstop = 4
-    vim.opt_local.shiftwidth = 4
-    vim.opt_local.expandtab = true
-  end,
-})
-
-autocmd("FileType", {
-  pattern = {
-    "c",
-    "cpp",
-    "python",
-    "zig",
-    "java",
-  },
-
-  callback = function()
-    vim.opt_local.tabstop = 4
-    vim.opt_local.softtabstop = 4
-    vim.opt_local.shiftwidth = 4
-    vim.opt_local.expandtab = true
-  end,
-})
-
--- ==========================================
 -- Autosave
 -- ==========================================
+-- Debounced, current-buffer-only. The previous version ran `wall` directly on
+-- TextChanged, which wrote every modified buffer on nearly every edit and
+-- re-triggered format-on-save and any external file watchers mid-keystroke.
 
-autocmd({
-  "InsertLeave",
-  "TextChanged",
-}, {
-  callback = function()
-    vim.cmd("silent! wall")
+local save_timer = (vim.uv or vim.loop).new_timer()
+
+autocmd({ "InsertLeave", "TextChanged", "FocusLost", "BufLeave" }, {
+  callback = function(ev)
+    local buf = ev.buf
+    save_timer:stop()
+    save_timer:start(
+      1000,
+      0,
+      vim.schedule_wrap(function()
+        if not vim.api.nvim_buf_is_valid(buf) then
+          return
+        end
+        local bo = vim.bo[buf]
+        if bo.modified and bo.modifiable and bo.buftype == "" and vim.api.nvim_buf_get_name(buf) ~= "" then
+          vim.api.nvim_buf_call(buf, function()
+            vim.cmd("silent! write")
+          end)
+        end
+      end)
+    )
   end,
 })

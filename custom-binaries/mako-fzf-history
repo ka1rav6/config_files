@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+makoctl history -j | jq -r '
+  .data[] | .[] |
+  "\(.id.data)\t\(.["app-name"].data)  —  \(.summary.data)  \(.body.data // "" | .[0:60])"
+' | fzf --delimiter='\t' --with-nth=2 --preview-window=hidden \
+  --header 'Enter: repost notification' |
+cut -f1 |
+while read -r id; do
+  [ -n "$id" ] && makoctl invoke -n "$id" 2>/dev/null || \
+    notify-send -a "History" "Notification #$id" "$(makoctl history -j | jq -r --arg id "$id" '.data[][] | select(.id.data==($id|tonumber)) | .body.data')"
+done

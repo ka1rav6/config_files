@@ -21,13 +21,6 @@ hl.window_rule({
 })
 
 hl.window_rule({
-    name = "floating-swaync",
-    match = { class = "^swaync-control-center$" },
-    float = true,
-    center = true,
-})
-
-hl.window_rule({
     name = "floating-calculator",
     match = { class = "^(org.gnome.Calculator|galculator|qalculate-gtk)$" },
     float = true,

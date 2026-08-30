@@ -12,6 +12,17 @@ hl.env(
         .. "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
 )
 
+-- Toolkit hints. Without these, Electron apps (VS Code, Cursor, Claude,
+-- Obsidian, Antigravity) fall back to XWayland and get upscaled from 1x onto
+-- the 1.5x-scaled internal panel, which reads as blurry text.
+hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
+hl.env("QT_QPA_PLATFORM", "wayland;xcb")
+hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1")
+hl.env("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
+hl.env("XCURSOR_THEME", "Yaru")
+hl.env("XCURSOR_SIZE", "24")
+hl.env("_JAVA_AWT_WM_NONREPARENTING", "1")
+
 local function ensure_hyprtodo()
     hl.exec_cmd("pgrep -x hyprtodo >/dev/null 2>&1 || hyprctl dispatch exec '[workspace special:todo silent] hyprtodo'")
 end

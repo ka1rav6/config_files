@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Battery and CPU temperature monitor — sends mako notifications via notify-send.
+# Launched at login from autostart.lua.
+set -euo pipefail
+
+BATTERY_LOW=20           # percent
+CPU_TEMP_HIGH=80         # °C
+POLL_SECONDS=30          # check interval
+
+# Cooldowns to avoid spamming the same notification.
+battery_cooldown=0
+cpu_cooldown=0
+COOLDOWN=300             # 5 min between repeated alerts
+
+while true; do
+    now=$(date +%s)
+
+    # ── Battery ──────────────────────────────────────────────────────
+    bat_cap_file="/sys/class/power_supply/BAT0/capacity"
+    bat_status_file="/sys/class/power_supply/BAT0/status"
+    if [ -f "$bat_cap_file" ]; then
+        capacity=$(cat "$bat_cap_file")
+        status=$(cat "$bat_status_file" 2>/dev/null || echo "Unknown")
+        if [ "$capacity" -le "$BATTERY_LOW" ] && [ "$status" != "Charging" ] && [ "$now" -ge "$battery_cooldown" ]; then
+            urgency="critical"
+            [ "$capacity" -gt 10 ] && urgency="normal"
+            notify-send -u "$urgency" -a "Battery" \
+                "󰁻 Battery Low — ${capacity}%" \
+                "Plug in your charger"
+            battery_cooldown=$((now + COOLDOWN))
+        fi
+        # Reset cooldown once charging
+        [ "$status" = "Charging" ] && battery_cooldown=0
+    fi
+
+    # ── CPU Temperature ──────────────────────────────────────────────
+    # Try hwmon thermal_zone fallback
+    temp=""
+    for tz in /sys/class/thermal/thermal_zone*/temp; do
+        [ -f "$tz" ] || continue
+        t=$(cat "$tz")
+        t_c=$((t / 1000))
+        if [ -z "$temp" ] || [ "$t_c" -gt "$temp" ]; then
+            temp=$t_c
+        fi
+    done
+
+    if [ -n "$temp" ] && [ "$temp" -ge "$CPU_TEMP_HIGH" ] && [ "$now" -ge "$cpu_cooldown" ]; then
+        notify-send -u critical -a "Temperature" \
+            "󰔏 CPU Temperature High — ${temp}°C" \
+            "Thermal throttling may occur"
+        cpu_cooldown=$((now + COOLDOWN))
+    fi
+    # Reset once cooled
+    if [ -n "$temp" ] && [ "$temp" -lt "$((CPU_TEMP_HIGH - 5))" ]; then
+        cpu_cooldown=0
+    fi
+
+    sleep "$POLL_SECONDS"
+done
