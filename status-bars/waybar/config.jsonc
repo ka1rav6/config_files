@@ -70,9 +70,10 @@
         "device": "intel_backlight",
         "format": "{icon} {percent}%",
         "format-icons": ["\udb00\udcde", "\udb00\udcdf", "\udb00\udce0"],
+        "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py brightness",
         "on-scroll-up": "brightnessctl set 5%+",
         "on-scroll-down": "brightnessctl set 5%-",
-        "tooltip-format": "Brightness {percent}%"
+        "tooltip-format": "Brightness {percent}%\nClick for slider · scroll to adjust"
     },
 
     "power-profiles-daemon": {
@@ -132,8 +133,8 @@
     },
 
     "pulseaudio": {
-        "format": "{icon}",
-        "format-muted": "󰝟",
+        "format": "{icon} {volume}%",
+        "format-muted": "󰝟 muted",
         "format-icons": {
             "default": [
                 "󰕿",
@@ -141,15 +142,23 @@
                 "󰕾"
             ]
         },
-        "on-click": "pavucontrol"
+        "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py volume",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-click-middle": "pavucontrol",
+        "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
+        "tooltip-format": "Volume {volume}%\nClick for slider · right-click to mute · middle-click for pavucontrol"
     },
 
     "pulseaudio#microphone": {
         "format": "{format_source}",
         "format-source": "󰍬 {volume}%",
         "format-source-muted": "󰍭 muted",
-        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
-        "tooltip": true
+        "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py mic",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+        "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SOURCE@ 5%+",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-",
+        "tooltip-format": "Mic {volume}%\nClick for slider · right-click to mute"
     },
 
     "battery": {

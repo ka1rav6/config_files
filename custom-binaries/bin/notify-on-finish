@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Wrapper: run a command and send a mako notification when it finishes.
+# Usage:  notify-on-finish cargo build --release
+#         notify-on-finish make -j$(nproc)
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+    echo "Usage: notify-on-finish <command> [args...]" >&2
+    exit 1
+fi
+
+start=$(date +%s)
+
+if "$@"; then
+    elapsed=$(( $(date +%s) - start ))
+    notify-send -a "Build" -u normal \
+        "✅ Build Succeeded" \
+        "$(printf '%s finished in %ds' "$1" "$elapsed")"
+else
+    code=$?
+    elapsed=$(( $(date +%s) - start ))
+    notify-send -a "Build" -u critical \
+        "❌ Build Failed (exit $code)" \
+        "$(printf '%s failed after %ds' "$1" "$elapsed")"
+    exit $code
+fi

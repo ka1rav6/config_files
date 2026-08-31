@@ -80,6 +80,8 @@ alias l='ls -CF'
 alias cls='clear'
 alias h='history'
 alias getasm='gcc -S -O2 -fverbose-asm'
+alias pdf='sioyek'
+alias gmd='ghostwriter'
 
 # Git aliases
 alias gs='git status'
@@ -90,7 +92,6 @@ alias gl='git pull'
 alias gd='git diff'
 alias gb='git branch'
 alias gco='git checkout'
-
 alias lockssd="fusermount -u ./unlocked"
 alias unlockssd="gocryptfs ./encrypted ./unlocked"
 
@@ -203,10 +204,10 @@ export PATH="$PATH:/home/kairav/.local/bin"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-export PATH="$HOME/bin:$PATH"
+# ~/bin merged into ~/.local/bin (already on PATH via .zshenv)
 export PATH="/opt/zig:$PATH"
 export OLLAMA_IGPU_ENABLE=1
-export PATH="$HOME/Applications/Godot:$PATH"
+export PATH="$HOME/.local/opt/godot:$PATH"
 export OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX=4096
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh

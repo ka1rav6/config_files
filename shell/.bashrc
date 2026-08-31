@@ -2,8 +2,8 @@
 
 # If not running interactively, don't do anything
 case $- in
-    *i*) ;;
-      *) return;;
+*i*) ;;
+*) return ;;
 esac
 exec zsh
 force_color_prompt=yes
@@ -13,15 +13,16 @@ alias grep='grep --color=auto'
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
+alias pdf='sioyek'
+alias gmd='ghostwriter'
 # --------- ALIASES ---------
 
 alias cls='clear'
 alias h='history'
 alias getasm='gcc -S -O2 -fverbose-asm'
-#instead of this use the function: r5asm filename 
+#instead of this use the function: r5asm filename
 alias lockssd="fusermount -u ./unlocked"
 alias unlockssd="gocryptfs ./encrypted ./unlocked"
-
 
 # Git aliases- actually use them
 alias gs='git status'
@@ -50,7 +51,7 @@ r5asm() {
     riscv64-linux-gnu-gcc -O0 -g "$file" -o "${base}.out"
 
     # Generate mixed view
-    riscv64-linux-gnu-objdump -d -S "${base}.out" > "${base}.mix"
+    riscv64-linux-gnu-objdump -d -S "${base}.out" >"${base}.mix"
 
     echo "Generated:"
     echo "  ${base}.s   → verbose assembly"
@@ -59,7 +60,7 @@ r5asm() {
     vim "${base}.mix"
 }
 pipinst() {
-  python -m pip install --break-system-packages "$@"
+    python -m pip install --break-system-packages "$@"
 }
 # mkcd → make directory and cd into it
 mkcd() {
@@ -71,15 +72,14 @@ mkcd() {
 # kairav/time format
 PS1='\e[32mkairav/\A:\w\$\e[32m '
 
-
 # --------- HISTORY SEARCH WITH ARROW KEYS ---------
 
 bind '"\e[A": history-search-backward'
 bind '"\e[B": history-search-forward'
 
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                   # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
 export PATH="$HOME/.local/bin:$PATH"
 # test
 # test

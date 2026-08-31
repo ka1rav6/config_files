@@ -1,8 +1,0 @@
-SECRET_KEY=your-secret-key
-DEBUG=True
-
-DB_NAME=lms
-DB_USER=postgres
-DB_PASSWORD=in_dev_pass1
-DB_HOST=localhost
-DB_PORT=5432

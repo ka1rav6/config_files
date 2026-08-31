@@ -1,6 +1,0 @@
-#!bin/bash/
-
-echo "starting build"
-
-
-echo "ending build"

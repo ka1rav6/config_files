@@ -1,8 +1,0 @@
-SECRET_KEY='django-insecure-ol!=%^k0ldvts-obh9dg+age@7ugs@95tg$goyjrsn#zlk@w6#'
-DEBUG=True
-
-DB_NAME=kairav
-DB_USER=postgres
-DB_PASSWORD=in_dev_pass1
-DB_HOST=localhost
-DB_PORT=5432

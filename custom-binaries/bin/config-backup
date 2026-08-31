@@ -1,0 +1,375 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import shutil
+import subprocess
+import json
+from datetime import datetime
+from pathlib import Path
+
+# Configuration
+HOME_DIR = Path.home()
+BACKUP_DIR = HOME_DIR / "dotfiles"
+BACKUP_CONFIG_FILE = BACKUP_DIR / "backup_paths.json"
+
+# Default paths to backup (organized by category)
+DEFAULT_BACKUP_PATHS = [
+    {
+        "path": HOME_DIR / ".zshrc",
+        "category": "shell",
+        "description": "Zsh shell configuration"
+    },
+    {
+        "path": HOME_DIR / ".bashrc",
+        "category": "shell",
+        "description": "Bash shell configuration"
+    },
+    {
+        "path": HOME_DIR / ".profile",
+        "category": "shell",
+        "description": "Profile configuration"
+    },
+    {
+        "path": HOME_DIR / ".gitconfig",
+        "category": "shell",
+        "description": "Git configuration"
+    },
+    {
+        "path": HOME_DIR / ".tmux.conf",
+        "category": "shell",
+        "description": "TMUX configuration"
+    },
+    {
+        "path": HOME_DIR / ".vimrc",
+        "category": "shell",
+        "description": "Vim configuration"
+    },
+    {
+        "path": HOME_DIR / ".config/ghostty",
+        "category": "terminals",
+        "description": "Ghostty terminal emulator config"
+    },
+    {
+        "path": HOME_DIR / ".config/hypr",
+        "category": "window-manager",
+        "description": "Hyprland window manager config"
+    },
+    {
+        "path": HOME_DIR / ".config/waybar",
+        "category": "status-bars",
+        "description": "Waybar status bar config"
+    },
+    {
+        "path": HOME_DIR / ".config/wofi",
+        "category": "status-bars",
+        "description": "Wofi launcher config"
+    },
+    {
+        "path": HOME_DIR / ".config/nvim",
+        "category": "editors",
+        "description": "Neovim configuration"
+    },
+    {
+        "path": HOME_DIR / ".config/Code/User",
+        "category": "editors",
+        "description": "VS Code user settings"
+    },
+    {
+        "path": HOME_DIR / ".config/lazygit",
+        "category": "tools",
+        "description": "Lazygit configuration"
+    },
+    {
+        "path": HOME_DIR / ".config/btop",
+        "category": "tools",
+        "description": "Btop system monitor config"
+    },
+    {
+        "path": HOME_DIR / ".config/neovide",
+        "category": "tools",
+        "description": "Neovide config"
+    },
+    {
+        "path": HOME_DIR / ".config/autostart",
+        "category": "tools",
+        "description": "Application autostart config"
+    },
+    {
+        "path": HOME_DIR / ".config/kitty",
+        "category": "terminals",
+        "description": "Kitty terminal config"
+    },
+    {
+        "path": HOME_DIR / ".config/mako",
+        "category": "tools",
+        "description": "Mako notification daemon config"
+    }
+]
+
+# Never back these up: machine-local editor state, caches, build output and
+# compiled binaries. Matched by exact directory/file name at any depth.
+EXCLUDE_NAMES = {
+    "workspaceStorage", "globalStorage", "History", "sync",
+    "Cache", "CachedData", "Code Cache", "GPUCache", "DawnCache",
+    "logs", "node_modules", "__pycache__", ".venv", "venv",
+    "build", "dist", "target", "zig-cache", "zig-out", ".cache",
+}
+
+# Anything bigger than this is an artifact, not a config file.
+MAX_FILE_MB = 2
+
+
+def is_excluded(path):
+    return path.name in EXCLUDE_NAMES
+
+
+def ignore_excluded(directory, names):
+    """shutil.copytree ignore-callback: prune caches inside nested trees too."""
+    return {n for n in names if n in EXCLUDE_NAMES}
+
+
+def print_usage():
+    print("Usage:")
+    print("  config-backup - Backup all default configs")
+    print("  config-backup add <path> [<path> ...] - Add folders/files to backup")
+    print("  config-backup status - Show current backup status")
+
+def load_backup_paths():
+    if BACKUP_CONFIG_FILE.exists():
+        try:
+            with open(BACKUP_CONFIG_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_backup_paths(paths):
+    with open(BACKUP_CONFIG_FILE, 'w') as f:
+        json.dump(paths, f, indent=2)
+
+def ensure_git_repo():
+    git_dir = BACKUP_DIR / ".git"
+    if not git_dir.exists():
+        print(f"Initializing git repository in {BACKUP_DIR}")
+        subprocess.run(["git", "init"], cwd=BACKUP_DIR, check=True)
+        subprocess.run(["git", "config", "user.email", "backup@example.com"], cwd=BACKUP_DIR, check=True)
+        subprocess.run(["git", "config", "user.name", "Config Backup"], cwd=BACKUP_DIR, check=True)
+        # Create .gitignore
+        gitignore_content = (HOME_DIR / "dotfiles" / ".gitignore").read_text() \
+            if (HOME_DIR / "dotfiles" / ".gitignore").exists() else "*.tmp\n*~\n.DS_Store\n"
+        with open(BACKUP_DIR / ".gitignore", "w") as f:
+            f.write(gitignore_content)
+        subprocess.run(["git", "add", ".gitignore"], cwd=BACKUP_DIR, check=True)
+        subprocess.run(["git", "commit", "-m", "Initial commit: Add .gitignore"], cwd=BACKUP_DIR, check=True)
+
+def should_skip_file(file_path):
+    if is_excluded(file_path):
+        print(f"  \u26a0 Skipping excluded path: {file_path.name}")
+        return True
+    if file_path.is_file():
+        size_mb = file_path.stat().st_size / (1024 * 1024)
+        if size_mb > MAX_FILE_MB:
+            print(f"  \u26a0 Skipping large file: {file_path.name} ({size_mb:.2f} MB)")
+            return True
+    return False
+
+
+def copy_path_to_backup(path_entry):
+    source = Path(path_entry["path"])
+    category = path_entry["category"]
+    backup_category_dir = BACKUP_DIR / category
+    
+    if not source.exists():
+        print(f"  Skipping {source}: does not exist")
+        return False
+    
+    if source.is_dir():
+        dest = backup_category_dir / source.name
+        if dest.exists():
+            shutil.rmtree(dest)
+        dest.mkdir(parents=True, exist_ok=True)
+        for item in source.iterdir():
+            if should_skip_file(item):
+                continue
+            if item.is_file():
+                shutil.copy2(item, dest / item.name)
+            else:
+                shutil.copytree(item, dest / item.name, ignore=ignore_excluded)
+    else:
+        if should_skip_file(source):
+            return False
+        dest = backup_category_dir / source.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, dest)
+    
+    print(f"  ✓ Copied {source} to {dest}")
+    return True
+
+def commit_changes():
+    try:
+        subprocess.run(["git", "add", "."], cwd=BACKUP_DIR, check=True)
+        
+        # Check if there are actually changes to commit
+        status_result = subprocess.run(
+            ["git", "status", "--porcelain"], 
+            cwd=BACKUP_DIR, 
+            capture_output=True, 
+            text=True
+        )
+        
+        if not status_result.stdout.strip():
+            print("  ⚠ No changes to commit")
+            return False
+        
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        commit_message = f"Backup created at {timestamp}"
+        subprocess.run(["git", "commit", "-m", commit_message], cwd=BACKUP_DIR, check=True)
+        print(f"  ✓ Committed: {commit_message}")
+        push_changes()
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"  ✗ Git commit failed: {e}")
+        return False
+
+def push_changes():
+    try:
+        # Check if remote exists
+        remote_result = subprocess.run(
+            ["git", "remote"],
+            cwd=BACKUP_DIR, capture_output=True, text=True
+        )
+        if "origin" not in remote_result.stdout:
+            print("  ⚠ No remote 'origin' configured, skipping push")
+            return False
+
+        print("  Pushing to remote repository...")
+        # Try normal push first with timeout
+        try:
+            subprocess.run(
+                ["git", "push", "-u", "origin", "main"],
+                cwd=BACKUP_DIR, check=True, timeout=120
+            )
+            print("  ✓ Push successful")
+            return True
+        except subprocess.CalledProcessError:
+            # Non-fast-forward or other push error — force push
+            # Safe for a personal config backup repo
+            print("  ⚠ Normal push failed, force pushing...")
+            subprocess.run(
+                ["git", "push", "--force", "-u", "origin", "main"],
+                cwd=BACKUP_DIR, check=True, timeout=120
+            )
+            print("  ✓ Force push successful")
+            return True
+        except subprocess.TimeoutExpired:
+            print("  ✗ Push timed out after 120s. Will retry on next backup.")
+            return False
+    except subprocess.CalledProcessError as e:
+        print(f"  ✗ Git push failed: {e}")
+        print("  Note: Check your SSH key or remote URL configuration")
+        return False
+    except subprocess.TimeoutExpired:
+        print("  ✗ Push timed out after 120s. Will retry on next backup.")
+        return False
+
+def add_path_to_backup(path_str):
+    # Store an absolute path. A relative one is resolved against the CWD at
+    # backup time, so it only works when the script is run from $HOME.
+    path = Path(os.path.abspath(os.path.expanduser(path_str)))
+    if not path.exists():
+        print(f"✗ Path does not exist: {path_str}")
+        return False
+
+    paths = load_backup_paths()
+
+    tracked = {
+        os.path.abspath(os.path.expanduser(str(e["path"])))
+        for e in list(paths) + DEFAULT_BACKUP_PATHS
+    }
+    if str(path) in tracked:
+        print(f"  – Already tracked, skipping: {path}")
+        return False
+    
+    # Try to guess category
+    category = "custom"
+    path_lower = str(path).lower()
+    if "/config/" in path_lower:
+        category = "config"
+    elif "/bin/" in path_lower:
+        category = "custom-binaries"
+    elif "/.config/" in path_lower:
+        category = path.stem
+    
+    path_entry = {
+        "path": str(path),
+        "category": category,
+        "description": f"Custom backup: {path.name}"
+    }
+    
+    paths.append(path_entry)
+    save_backup_paths(paths)
+    
+    print(f"✓ Added {path_str} to backup list (category: {category})")
+    return True
+
+def main():
+    if len(sys.argv) == 1:
+        # Backup all default and custom paths
+        print("Starting configuration backup...")
+        
+        # Ensure backup directory exists
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Ensure git is initialized
+        ensure_git_repo()
+        
+        # Backup all paths (default + custom)
+        all_paths = DEFAULT_BACKUP_PATHS.copy()
+        all_paths.extend(load_backup_paths())
+        
+        print(f"Backing up {len(all_paths)} paths:")
+        copied_count = 0
+        for path_entry in all_paths:
+            if copy_path_to_backup(path_entry):
+                copied_count += 1
+        
+        if copied_count > 0:
+            commit_changes()
+            print(f"\n✓ Backup completed: {copied_count} files/folders copied")
+        else:
+            print("\n✗ No files were backed up")
+    
+    elif sys.argv[1] == "add":
+        if len(sys.argv) < 3:
+            print("✗ Please specify a path to add")
+            print_usage()
+            sys.exit(1)
+        
+        for path_str in sys.argv[2:]:
+            add_path_to_backup(path_str)
+    
+    elif sys.argv[1] == "status":
+        print("Current backup configuration:")
+        print(f"  Backup directory: {BACKUP_DIR}")
+        print(f"  Git initialized: {((BACKUP_DIR / '.git').exists())}")
+        
+        if BACKUP_CONFIG_FILE.exists():
+            custom_paths = load_backup_paths()
+            print(f"  Custom paths tracked: {len(custom_paths)}")
+            for path in custom_paths[:5]:
+                print(f"    - {path['description']}")
+            if len(custom_paths) > 5:
+                print(f"    ... and {len(custom_paths) - 5} more")
+        else:
+            print("  No custom paths tracked")
+        
+        print(f"  Default paths to backup: {len(DEFAULT_BACKUP_PATHS)}")
+    
+    else:
+        print(f"✗ Unknown command: {sys.argv[1]}")
+        print_usage()
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

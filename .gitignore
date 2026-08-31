@@ -1,11 +1,16 @@
-# OS files
-.DS_Store
-*~
+# transient / machine-local editor state — never belongs in a config repo
+editors/User/workspaceStorage/
+editors/User/globalStorage/
+editors/User/History/
+editors/User/sync/
+**/Cache/
+**/CachedData/
+**/Code Cache/
+**/logs/
+**/node_modules/
+# compiled binaries (back up the source project, not the artifact)
+custom/bin/
+custom-binaries/**/*.bin
 *.tmp
-
-# Large binaries - never track these
-custom-binaries/bin/todo
-custom-binaries/bin/zig
-custom-binaries/bin/zls
-*.exe
-*.bin
+*~
+.DS_Store

@@ -1,5 +1,0 @@
-
-
-class Course:
-    credits:int
-    

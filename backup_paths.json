@@ -5,9 +5,9 @@
     "description": "Custom backup: hyprtodo"
   },
   {
-    "path": "/home/kairav/bin",
-    "category": "custom",
-    "description": "Custom backup: bin"
+    "path": "/home/kairav/.local/bin",
+    "category": "custom-binaries",
+    "description": "Custom backup: .local/bin scripts"
   },
   {
     "path": "/home/kairav/.config/htop",

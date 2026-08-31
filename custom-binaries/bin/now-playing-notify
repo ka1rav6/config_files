@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+lock_dir="${XDG_RUNTIME_DIR:-/tmp}/now-playing-notify"
+if ! mkdir "$lock_dir" 2>/dev/null; then
+    exit 0
+fi
+trap 'rmdir "$lock_dir"' EXIT
+
+playerctl --follow metadata --format '{{playerName}}|{{title}}|{{artist}}' 2>/dev/null |
+while IFS='|' read -r player title artist; do
+    [ -z "$title" ] && continue
+    notify-send -a "NowPlaying:${player}" -i audio-x-generic "$title" "${artist:-Now Playing}"
+done
