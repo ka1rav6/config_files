@@ -88,5 +88,10 @@
     "path": "/home/kairav/.local/bin/mako-fzf-history",
     "category": "custom-binaries",
     "description": "Custom backup: mako-fzf-history"
+  },
+  {
+    "path": "/home/kairav/docs/notes/keys.md",
+    "category": "custom",
+    "description": "Custom backup: keys.md"
   }
 ]
