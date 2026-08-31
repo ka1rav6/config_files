@@ -17,14 +17,23 @@
 # back into place too. That is exactly what pressing SUPER+P did by accident,
 # via slurp's fullscreen overlay.
 #
-# No flock here on purpose: a previous version held an flock on fd 9, the
-# backgrounded waybar inherited that fd, and every later run then deadlocked.
+# Locking: a previous version held an flock on fd 9, the backgrounded waybar
+# inherited that fd, and every later run then deadlocked. The lock is back --
+# `hyprctl reload` re-emits monitor.added once per connected monitor, so two
+# copies of this script raced and each spawned its own waybar -- but every
+# long-lived child is now started with 9>&- so nothing inherits the lock.
 
 LOG="${XDG_RUNTIME_DIR:-/tmp}/hypr-relayer.log"
 exec >>"$LOG" 2>&1
 ts() { date +'%H:%M:%S.%3N'; }
 
 echo "--- $(ts) relayer.sh (event=${1:-unknown}) ---"
+
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/hypr-relayer.lock"
+if ! flock -n 9; then
+    echo "$(ts)   another relayer run is in flight -- skipping"
+    exit 0
+fi
 
 # Wait for the output list and monitor positions to stop moving.
 prev=""
@@ -65,7 +74,7 @@ restart_waybar() {
     pkill -x waybar 2>/dev/null
     sleep 0.4
     setsid --fork waybar -c "$HOME/.config/waybar/config.jsonc" \
-        -s "$HOME/.config/waybar/style.css" >/tmp/waybar.log 2>&1 </dev/null
+        -s "$HOME/.config/waybar/style.css" >/tmp/waybar.log 2>&1 </dev/null 9>&-
     sleep 1.2
 }
 
@@ -75,7 +84,7 @@ restart_hyprpaper() {
         wp=$(awk -F' = ' '/^\$wallpaper = / { print $2 }' "$HOME/.config/hypr/wallpaper.conf")
     pkill -x hyprpaper 2>/dev/null
     sleep 0.4
-    setsid --fork hyprpaper >/dev/null 2>&1 </dev/null
+    setsid --fork hyprpaper >/dev/null 2>&1 </dev/null 9>&-
     sleep 1.2
     if [[ -n "$wp" && -f "$wp" ]]; then
         hyprctl hyprpaper preload "$wp" >/dev/null 2>&1
@@ -85,7 +94,10 @@ restart_hyprpaper() {
     fi
 }
 
-echo "$(ts)   before: $(layers_aligned)"
+# A plain `hyprctl reload` also lands here (it re-emits monitor.added) but moves
+# nothing, so bail out before killing a perfectly good bar.
+before=$(layers_aligned) && { echo "$(ts)   before: $before -- nothing to do"; echo "$(ts) done"; exit 0; }
+echo "$(ts)   before: $before"
 
 # Remapping waybar re-arranges every layer surface on the output, hyprpaper included.
 restart_waybar

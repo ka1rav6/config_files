@@ -9,22 +9,21 @@ local map = vim.keymap.set
 -- ==========================================
 
 map("v", "<Tab>", ">gv", {
-  noremap = true,
-  silent = true,
+    noremap = true,
+    silent = true,
 })
 
 map("v", "<S-Tab>", "<gv", {
-  noremap = true,
-  silent = true,
+    noremap = true,
+    silent = true,
 })
 
 -- ==========================================
 -- Buffers
 -- ==========================================
--- Deliberately NOT mapped to <Tab>/<S-Tab>: terminals send the same byte for
--- <Tab> and <C-i>, so that would shadow the jumplist. LazyVim's [b / ]b also
--- work out of the box.
 
+map("n", "<Tab>", "<cmd>bnext<CR>", { silent = true, desc = "Next Buffer" })
+map("n", "<S-Tab>", "<cmd>bprevious<CR>", { silent = true, desc = "Previous Buffer" })
 map("n", "<S-l>", "<cmd>bnext<CR>", { silent = true, desc = "Next Buffer" })
 map("n", "<S-h>", "<cmd>bprevious<CR>", { silent = true, desc = "Previous Buffer" })
 
@@ -33,7 +32,7 @@ map("n", "<S-h>", "<cmd>bprevious<CR>", { silent = true, desc = "Previous Buffer
 -- ==========================================
 
 map("n", "<leader>d", "yyp", {
-  desc = "Duplicate Line",
+    desc = "Duplicate Line",
 })
 
 -- ==========================================
@@ -41,11 +40,11 @@ map("n", "<leader>d", "yyp", {
 -- ==========================================
 
 map("n", "<leader>gs", "<cmd>Git<CR>", {
-  desc = "Git Status",
+    desc = "Git Status",
 })
 
 map("n", "<leader>gc", "<cmd>Git commit<CR>", {
-  desc = "Git Commit",
+    desc = "Git Commit",
 })
 
 -- ==========================================
@@ -53,23 +52,23 @@ map("n", "<leader>gc", "<cmd>Git commit<CR>", {
 -- ==========================================
 
 map("n", "<A-j>", ":m .+1<CR>==", {
-  noremap = true,
-  silent = true,
+    noremap = true,
+    silent = true,
 })
 
 map("n", "<A-k>", ":m .-2<CR>==", {
-  noremap = true,
-  silent = true,
+    noremap = true,
+    silent = true,
 })
 
 map("v", "<A-j>", ":m '>+1<CR>gv=gv", {
-  noremap = true,
-  silent = true,
+    noremap = true,
+    silent = true,
 })
 
 map("v", "<A-k>", ":m '<-2<CR>gv=gv", {
-  noremap = true,
-  silent = true,
+    noremap = true,
+    silent = true,
 })
 
 -- ==========================================
@@ -77,15 +76,15 @@ map("v", "<A-k>", ":m '<-2<CR>gv=gv", {
 -- ==========================================
 
 map("n", "<leader>z", "za", {
-  desc = "Toggle Fold",
+    desc = "Toggle Fold",
 })
 
 map("n", "<leader>zo", "zR", {
-  desc = "Open All Folds",
+    desc = "Open All Folds",
 })
 
 map("n", "<leader>zc", "zM", {
-  desc = "Close All Folds",
+    desc = "Close All Folds",
 })
 
 -- ==========================================

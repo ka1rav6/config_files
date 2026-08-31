@@ -37,11 +37,10 @@ hl.bind(mod .. " + SHIFT + M", hl.dsp.window.move({ monitor = "+1" }))
 hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + SHIFT + C", hl.dsp.window.center())
 
--- Focus windows: arrows and hjkl are equivalent.
-hl.bind(mod .. " + LEFT", hl.dsp.focus({ direction = "l" }))
+-- Focus windows. hjkl covers all four directions; the arrows only cover up and
+-- down, because LEFT and RIGHT now slide between workspaces (see below).
 hl.bind(mod .. " + DOWN", hl.dsp.focus({ direction = "d" }))
 hl.bind(mod .. " + UP", hl.dsp.focus({ direction = "u" }))
-hl.bind(mod .. " + RIGHT", hl.dsp.focus({ direction = "r" }))
 hl.bind(mod .. " + H", hl.dsp.focus({ direction = "l" }))
 hl.bind(mod .. " + J", hl.dsp.focus({ direction = "d" }))
 hl.bind(mod .. " + K", hl.dsp.focus({ direction = "u" }))
@@ -102,6 +101,15 @@ hl.bind("SUPER + TAB", function()
 end)
 hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
+
+-- Keyboard equivalent of the 3-finger swipe: same workspaces, same slide.
+-- Not marked repeating, so holding the arrow down cannot stack up a queue of
+-- switches that outruns the animation.
+hl.bind(mod .. " + LEFT", hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mod .. " + RIGHT", hl.dsp.focus({ workspace = "e+1" }))
+-- And carry the focused window along with the slide.
+hl.bind(mod .. " + SHIFT + LEFT", hl.dsp.window.move({ workspace = "e-1" }))
+hl.bind(mod .. " + SHIFT + RIGHT", hl.dsp.window.move({ workspace = "e+1" }))
 
 -- Move and resize floating windows with the mouse.
 hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
