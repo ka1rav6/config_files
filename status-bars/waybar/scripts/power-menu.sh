@@ -18,7 +18,7 @@ case "$chosen" in
     ;;
 
 "󰍃  Logout")
-    hyprctl dispatch exit
+    hyprctl dispatch 'hl.dsp.exit()'
     ;;
 
 "󰜉  Restart")
