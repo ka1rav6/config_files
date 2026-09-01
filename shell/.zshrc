@@ -164,6 +164,7 @@ bindkey "^[[A" history-search-backward
 bindkey "^[[B" history-search-forward
 
 
+
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
@@ -244,3 +245,7 @@ notify-build() {
   fi
 }
 eval "$(zoxide init zsh --cmd z)"
+
+
+export PATH=$PATH:/home/kairav/.local/share/config-backup/
+

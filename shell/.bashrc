@@ -87,3 +87,4 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # Added by jcode installer
 export PATH="/home/kairav/.local/bin:$PATH"
+export PATH=$PATH:/home/kairav/.local/share/config-backup/
