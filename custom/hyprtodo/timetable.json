@@ -1,0 +1,23 @@
+{
+  "label": "Semester 3",
+  "courses": {
+    "dm": { "name": "Discrete Mathematics", "short": "DM", "color": "#7aa2f7" },
+    "os": { "name": "Operating Systems", "short": "OS", "color": "#9ece6a" },
+    "tc": { "name": "Technical Communication", "short": "TC", "color": "#e0af68" },
+    "iml": { "name": "Introduction to Machine Learning", "short": "IML", "color": "#bb9af7" },
+    "m3": { "name": "Mathematics III", "short": "M3", "color": "#f7768e" },
+    "evs": { "name": "Environmental Science", "short": "EVS", "color": "#73daca" }
+  },
+  "classes": [
+    { "course": "os", "days": ["wed"], "start": "08:30", "end": "09:30", "kind": "tutorial" },
+    { "course": "iml", "days": ["fri"], "start": "14:00", "end": "16:30", "kind": "tutorial" },
+    { "course": "dm", "days": ["mon", "wed"], "start": "09:30", "end": "11:00" },
+    { "course": "m3", "days": ["tue"], "start": "13:30", "end": "15:00", "kind": "tutorial" },
+    { "course": "tc", "days": ["wed"], "start": "13:30", "end": "15:00" },
+    { "course": "evs", "days": ["thu"], "start": "13:30", "end": "15:00" },
+    { "course": "dm", "days": ["mon"], "start": "14:00", "end": "15:00", "kind": "tutorial" },
+    { "course": "os", "days": ["mon", "wed"], "start": "15:00", "end": "16:30" },
+    { "course": "iml", "days": ["tue", "thu"], "start": "15:00", "end": "16:30" },
+    { "course": "m3", "days": ["tue", "thu"], "start": "16:30", "end": "18:00" }
+  ]
+}
