@@ -1,0 +1,17 @@
+DEST := "/media/kairav/PROJECTS/dev/"
+EXCLUDES := home_directory() / ".config/rsync/excludes.txt"
+BACKUP := home_directory() / ".local/share/config-backup/config_backup.py"
+
+all: backup
+
+backup:
+	python {{BACKUP}}
+
+add ARGS="":
+	python {{BACKUP}} add {{ARGS}}
+
+drive SRC DEST=DEST:
+	fpsync -n 8 \
+		-o "-lptgoD -vhW --info=progress2 --exclude-from={{EXCLUDES}}" \
+		"{{SRC}}" \
+		"{{DEST}}"

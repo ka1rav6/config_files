@@ -95,8 +95,8 @@
     "description": "Custom backup: keys.md"
   },
   {
-    "path": "/home/kairav/Makefile",
+    "path": "/home/kairav/Justfile",
     "category": "custom",
-    "description": "Custom backup: Makefile"
+    "description": "Custom backup: Justfile"
   }
 ]
