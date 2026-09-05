@@ -70,11 +70,11 @@ HYPHEN_INSENSITIVE="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(git)
-alias ls='ls --color=auto'
+alias ls='eza'
 alias grep='grep --color=auto'
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
+alias ll='eza -alF'
+alias la='eza -A'
+alias l='eza -CF'
 # --------- ALIASES ---------
 
 alias cls='clear'
