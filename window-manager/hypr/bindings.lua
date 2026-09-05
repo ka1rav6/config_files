@@ -140,7 +140,12 @@ hl.bind(mod .. " + CTRL + SHIFT + DOWN", hl.dsp.exec_cmd(display .. "place down"
 
 -- Applications and utilities.
 hl.bind(mod .. " + S", hl.dsp.exec_cmd(launcher))
-hl.bind(mod .. " + E", hl.dsp.exec_cmd(fileManager))
+-- E is yazi now; Nautilus keeps the SHIFT variant for the times a GTK file
+-- chooser or a thumbnail grid is genuinely the better tool.
+hl.bind(mod .. " + E", hl.dsp.exec_cmd(fileBrowser))
+hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd(fileManager))
+-- Floating, centred yazi for a quick look without disturbing the tiling.
+hl.bind(mod .. " + ALT + E", hl.dsp.exec_cmd(fileBrowserFloat))
 hl.bind(mod .. " + C", hl.dsp.exec_cmd("google-chrome --new-window"))
 hl.bind(mod .. " + V", hl.dsp.exec_cmd("cliphist list | wofi --dmenu | cliphist decode | wl-copy"))
 hl.bind(mod .. " + SHIFT + V", hl.dsp.exec_cmd("code"))

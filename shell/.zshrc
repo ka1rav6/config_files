@@ -165,6 +165,10 @@ bindkey "^[[B" history-search-forward
 
 
 
+# yazi's shell completions live outside the oh-my-zsh tree so an omz update
+# can't wipe them. fpath has to grow before oh-my-zsh calls compinit.
+fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
+
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
@@ -249,3 +253,17 @@ eval "$(zoxide init zsh --cmd z)"
 
 export PATH=$PATH:/home/kairav/.local/share/config-backup/
 
+
+# --------- YAZI ---------
+# `y` instead of `yazi`: yazi writes its final directory to --cwd-file on
+# exit, and the wrapper cd's the shell there. Quitting with Q skips the
+# write, so Q leaves the shell where it started.
+function y() {
+	local tmp cwd
+	tmp="$(mktemp -t "yazi-cwd.XXXXXX")" || return
+	yazi "$@" --cwd-file="$tmp"
+	if IFS= read -r -d '' cwd < "$tmp" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+		builtin cd -- "$cwd" || return
+	fi
+	rm -f -- "$tmp"
+}

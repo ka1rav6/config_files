@@ -10,7 +10,6 @@ hl.window_rule({
     match = { class = "^nm-connection-editor$" },
     float = true,
     center = true,
-    no_focus = true,
 })
 
 hl.window_rule({
@@ -54,6 +53,15 @@ hl.window_rule({
     float = true,
     -- Percentages are not parsed by the Lua rule API; pixels are.
     size = "1200 800",
+    center = true,
+})
+
+hl.window_rule({
+    name = "floating-yazi",
+    match = { class = "^com\\.yazi\\.ghostty$" },
+    float = true,
+    -- Percentages are not parsed by the Lua rule API; pixels are.
+    size = "1400 850",
     center = true,
 })
 

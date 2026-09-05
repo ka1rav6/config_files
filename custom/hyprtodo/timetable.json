@@ -13,7 +13,7 @@
     { "course": "iml", "days": ["fri"], "start": "14:00", "end": "16:30", "kind": "tutorial" },
     { "course": "dm", "days": ["mon", "wed"], "start": "09:30", "end": "11:00" },
     { "course": "m3", "days": ["tue"], "start": "13:30", "end": "15:00", "kind": "tutorial" },
-    { "course": "tc", "days": ["wed"], "start": "13:30", "end": "15:00" },
+    { "course": "tc", "days": ["wed"], "start": "12:30", "end": "14:00" },
     { "course": "evs", "days": ["thu"], "start": "13:30", "end": "15:00" },
     { "course": "dm", "days": ["mon"], "start": "14:00", "end": "15:00", "kind": "tutorial" },
     { "course": "os", "days": ["mon", "wed"], "start": "15:00", "end": "16:30" },
