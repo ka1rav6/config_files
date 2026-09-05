@@ -94,6 +94,8 @@ alias gb='git branch'
 alias gco='git checkout'
 alias lockssd="fusermount -u ./unlocked"
 alias unlockssd="gocryptfs ./encrypted ./unlocked"
+alias cat='batcat'
+alias cd='z'
 
 # --------- FUNCTIONS ---------
 r5asm() {

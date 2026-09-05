@@ -93,5 +93,10 @@
     "path": "/home/kairav/docs/notes/keys.md",
     "category": "custom",
     "description": "Custom backup: keys.md"
+  },
+  {
+    "path": "/home/kairav/Makefile",
+    "category": "custom",
+    "description": "Custom backup: Makefile"
   }
 ]

@@ -9,6 +9,8 @@ exec zsh
 force_color_prompt=yes
 # Enable color support for ls
 alias ls='ls --color=auto'
+alias cd='z'
+alias cat='batcat'
 alias grep='grep --color=auto'
 alias ll='ls -alF'
 alias la='ls -A'
