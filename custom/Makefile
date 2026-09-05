@@ -1,17 +1,19 @@
+ARGS :=
+SRC :=
+DEST := /media/kairav/PROJECTS/dev/
 
-SRC=""
-DEST="/media/kairav/PROJECTS/dev/"
+.PHONY: all backup add drive
 
-.PHONY: backup devtodrive
-
-all:
-	backup
+all: backup
 
 backup:
-	python ~/.local/share/config-backup/config_backup.py 
+	python ~/.local/share/config-backup/config_backup.py
+
+add:
+	python ~/.local/share/config-backup/config_backup.py add $(ARGS)
 
 drive:
 	fpsync -n 8 \
-  -o "-lptgoD -vhW --info=progress2 --exclude-from=/tmp/rsync_excludes.txt" \
-  $(SRC) \
-  $(DEST)
+		-o "-lptgoD -vhW --info=progress2 --exclude-from=/tmp/rsync_excludes.txt" \
+		"$(SRC)" \
+		"$(DEST)"
