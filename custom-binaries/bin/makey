@@ -1,0 +1,30 @@
+#!/bin/bash
+
+cat >Makefile <<'EOF'
+CC := gcc
+
+SRC   := src
+INC   := include
+BUILD := build
+
+TARGET := $(BUILD)/program
+
+SOURCES := $(wildcard $(SRC)/*.c)
+OBJECTS := $(SOURCES:$(SRC)/%.c=$(BUILD)/%.o)
+
+CFLAGS := -Wall -Wextra -I$(INC)
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $^ -o $@
+
+$(BUILD)/%.o: $(SRC)/%.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(BUILD)
+EOF

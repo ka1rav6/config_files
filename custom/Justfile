@@ -1,6 +1,7 @@
 DEST := "/media/kairav/PROJECTS/dev/"
 EXCLUDES := home_directory() / ".config/rsync/excludes.txt"
 BACKUP := home_directory() / ".local/share/config-backup/config_backup.py"
+MAXVOL := "150"
 
 all: backup
 
@@ -15,3 +16,7 @@ drive SRC DEST=DEST:
 		-o "-lptgoD -vhW --info=progress2 --exclude-from={{EXCLUDES}}" \
 		"{{SRC}}" \
 		"{{DEST}}"
+
+
+loud VOL=MAXVOL:
+    wpctl set-volume @DEFAULT_AUDIO_SINK@ {{VOL}}%
