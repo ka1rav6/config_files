@@ -3,6 +3,12 @@ hl.config({
         gaps_in = 5,
         gaps_out = 10,
         border_size = 2,
+        -- new
+        -- Gradients are tables here, not the "c1 c2 45deg" string the .conf
+        -- parser takes -- see HL.Gradient in /usr/share/hypr/stubs/hl.meta.lua.
+        ["col.active_border"] = { colors = { "rgba(8ee3c1ee)", "rgba(f4c47baa)" }, angle = 45 },
+        ["col.inactive_border"] = "rgba(1c212788)",
+        -- old
         layout = "dwindle",
         resize_on_border = true,
         allow_tearing = false,
@@ -15,10 +21,10 @@ hl.config({
         inactive_opacity = 0.94,
         shadow = {
             enabled = true,
-            range = 10,
+            range = 14, -- from 10 to 14
             render_power = 3,
-            offset = { 0, 2 },
-            color = "rgba(0, 0, 0, 0.35)",
+            offset = { 0, 3 }, -- from 2 to 3
+            color = "rgba(0d211bcc)", --"rgba(0, 0, 0, 0.35)",
         },
         blur = {
             enabled = true,

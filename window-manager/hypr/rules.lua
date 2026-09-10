@@ -96,3 +96,18 @@ hl.window_rule({
     },
     no_focus = true,
 })
+
+-- wlogout draws on the overlay layer. Blurring it and dimming what's behind
+-- separates the menu from the desktop, so a keypress that powers the machine
+-- off never reads as part of the window you were just working in.
+--
+-- The namespace is "gtk-layer-shell", not "wlogout" -- wlogout 1.1.1 never
+-- sets one of its own, so it inherits gtk-layer-shell's default. Checked
+-- against `hyprctl layers`; nwg-drawer registers under its own name, so this
+-- does not catch the launcher.
+hl.layer_rule({
+    name = "wlogout-overlay",
+    match = { namespace = "^gtk-layer-shell$" },
+    blur = true,
+    dim_around = true,
+})

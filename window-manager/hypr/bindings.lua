@@ -23,6 +23,20 @@ local function toggle_named_workspace(name, command)
     end
 end
 
+-- Special workspaces that own one specific app. Exiting the shell (or closing
+-- the app) destroys the window, and nothing respawns it until the next login,
+-- so the toggle would just flash an empty workspace. Re-spawn on demand: the
+-- window rules in rules.lua drop the new window straight onto the workspace.
+local function toggle_special_app(workspace, class, command)
+    return function()
+        if #hl.get_windows({ class = class }) == 0 then
+            hl.dispatch(hl.dsp.exec_cmd(command, { workspace = "special:" .. workspace .. " silent" }))
+        end
+
+        hl.dispatch(hl.dsp.workspace.toggle_special(workspace))
+    end
+end
+
 -- Session and window controls.
 hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
@@ -126,8 +140,8 @@ hl.bind(mod .. " + SHIFT + G", toggle_named_workspace("chrome", "google-chrome -
 hl.bind(mod .. " + SHIFT + R", toggle_named_workspace("brave", "brave-browser --new-window"))
 hl.bind(mod .. " + D", hl.dsp.workspace.toggle_special("desktop"))
 hl.bind(mod .. " + SHIFT + D", toggle_named_workspace("debug"))
-hl.bind(mod .. " + SHIFT + H", hl.dsp.workspace.toggle_special("todo"))
-hl.bind(mod .. " + ALT + T", hl.dsp.workspace.toggle_special("scratch"))
+hl.bind(mod .. " + SHIFT + H", toggle_special_app("todo", "hyprtodo", "hyprtodo"))
+hl.bind(mod .. " + ALT + T", toggle_special_app("scratch", scratchpadClass, scratchpad))
 
 -- Display layout. X toggles duplicate/extended; CTRL+SHIFT+arrows move the
 -- external monitor around the laptop panel (default: to its left).

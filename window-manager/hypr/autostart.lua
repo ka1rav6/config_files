@@ -43,7 +43,7 @@ end
 
 -- Scratchpad terminal, toggled with SUPER+ALT+T.
 local function ensure_scratchpad()
-    ensure_in_special("com.scratchpad.ghostty", "scratch", terminal .. " --class=com.scratchpad.ghostty")
+    ensure_in_special(scratchpadClass, "scratch", scratchpad)
 end
 
 hl.on("config.reloaded", ensure_hyprtodo)
