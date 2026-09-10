@@ -1,10 +1,14 @@
 sort=-time
 layer=top
-background-color=#1e1e2eee
-text-color=#cdd6f4
-border-color=#89b4fa
+# Palette shared with waybar (~/.config/waybar/style.css) and the Hyprland
+# border gradient: bg rgba(18,20,24,.94), mint #8ee3c1, amber #f4c47b,
+# coral #ff9b85. Radius matches the bar's 11px.
+background-color=#121418f0
+text-color=#f4f7fa
+border-color=#8ee3c1
+progress-color=over #1f2d2a
 border-size=2
-border-radius=10
+border-radius=11
 default-timeout=5000
 ignore-timeout=0
 max-history=100
@@ -15,17 +19,17 @@ on-button-middle=exec makoctl menu -n "$id" -- wofi --show dmenu -p 'Action: '
 on-button-right=dismiss
 
 [urgency=critical]
-border-color=#f38ba8
+border-color=#ff9b85
 default-timeout=0
 
 [app-name="Build"]
-on-button-left=exec hyprctl dispatch focuswindow class:^(com.mitchellh.ghostty)$
+on-button-left=exec ~/.config/hypr/scripts/focus-window.sh com.mitchellh.ghostty
 
 [app-name="NowPlaying:chromium"]
-on-button-left=exec hyprctl dispatch focuswindow class:^(chromium|chrome)$
+on-button-left=exec ~/.config/hypr/scripts/focus-window.sh chromium google-chrome chrome
 
 [app-name="NowPlaying:firefox"]
-on-button-left=exec hyprctl dispatch focuswindow class:^(firefox)$
+on-button-left=exec ~/.config/hypr/scripts/focus-window.sh firefox
 
 [app-name="Battery"]
 on-button-left=dismiss

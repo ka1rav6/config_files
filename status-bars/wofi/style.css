@@ -2,7 +2,11 @@ window {
     margin: 0;
     border: 1px solid #3b4a4d;
     border-radius: 20px;
-    background-color: #111719;
+    /* Alpha channel so the compositor's blur rule for the "wofi" layer
+       (~/.config/hypr/rules.lua) has something to show through. Blurring a
+       fully opaque surface is invisible and pure wasted GPU work.
+       Value matches waybar's @bar-bg family: rgb(18, 20, 24). */
+    background-color: rgba(18, 20, 24, 0.92);
     color: #e8efed;
     font-family: "Noto Sans", sans-serif;
     font-size: 15px;

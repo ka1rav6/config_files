@@ -19,19 +19,47 @@ hl.config({
         rounding_power = 2,
         active_opacity = 1.0,
         inactive_opacity = 0.94,
+        -- Unfocused windows sit back a little. Deliberately gentle: this
+        -- stacks on top of inactive_opacity above, and the two together at
+        -- default strength (0.5) would black out half the screen.
+        dim_inactive = true,
+        dim_strength = 0.08,
+        -- Special workspaces (the scratchpads) dim what is behind them, so an
+        -- overlay reads as an overlay rather than as another tile.
+        dim_special = 0.3,
+
         shadow = {
             enabled = true,
-            range = 14, -- from 10 to 14
+            -- Shadow cost scales with the area it is drawn over, i.e. with the
+            -- square of the range -- 14 -> 10 is roughly half the work for a
+            -- difference you have to look for.
+            range = 10,
             render_power = 3,
-            offset = { 0, 3 }, -- from 2 to 3
-            color = "rgba(0d211bcc)", --"rgba(0, 0, 0, 0.35)",
+            offset = { 0, 3 },
+            color = "rgba(0d211bcc)",
         },
+
+        -- Blur is the single most expensive thing the compositor does, so it is
+        -- scoped down to the only windows that actually show it: Ghostty, which
+        -- runs at background-opacity 0.65. See the blur rules in rules.lua --
+        -- everything else carries no_blur, so nothing is blurred behind a
+        -- window you cannot see through anyway.
         blur = {
             enabled = true,
             size = 4,
-            passes = 2,
+            -- Was 2. Passes multiply the cost more or less linearly, and at
+            -- size 4 the second pass is not something you can pick out.
+            passes = 1,
+            -- Keeps blur cached for regions that are not changing -- most of
+            -- the time, that is the whole bar and a still terminal.
             new_optimizations = true,
-            ignore_opacity = true,
+            -- Was true, which meant "blur behind this window even if it is
+            -- fully opaque" -- i.e. render a blur nobody can see. With it off,
+            -- blur only happens where something is actually translucent.
+            ignore_opacity = false,
+            -- Don't blur behind menus and tooltips; they are small, short-lived
+            -- and land on top of an already-blurred surface half the time.
+            popups = false,
         },
     },
 
@@ -50,10 +78,25 @@ hl.config({
     misc = {
         disable_hyprland_logo = false,
         disable_splash_rendering = false,
+
+        -- Swallowing: when a terminal launches a GUI app, the terminal hides
+        -- itself until that app exits, instead of sitting there as a dead tile.
+        --
+        -- The regex is deliberately ONLY the default Ghostty class. The
+        -- scratchpads run under com.scratchpad.ghostty and com.yazi.ghostty, so
+        -- they are excluded automatically -- a scratchpad that swallowed itself
+        -- would vanish off its special workspace and be very confusing to get
+        -- back.
+        enable_swallow = true,
+        swallow_regex = "^com\\.mitchellh\\.ghostty$",
     },
 
     debug = {
-        disable_logs = false,
+        -- Was false. The log lives in /run (tmpfs, i.e. RAM) and was growing at
+        -- roughly 3.3 MB every 3 hours -- about 26 MB a day of RAM plus the
+        -- formatting cost, for output that is only ever read when something has
+        -- already gone wrong. Flip back to false while debugging.
+        disable_logs = true,
         enable_stdout_logs = false,
     },
 })

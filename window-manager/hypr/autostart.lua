@@ -23,41 +23,56 @@ hl.env("XCURSOR_THEME", "Yaru")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("_JAVA_AWT_WM_NONREPARENTING", "1")
 
--- Spawn a window straight into a hidden special workspace, but only if one
--- isn't already there.
+-- Pre-spawned scratchpads.
 --
--- The old form shelled out to `hyprctl dispatch exec '[workspace ...] cmd'`.
--- Under the Lua config `hyprctl dispatch` evaluates Lua, so that string no
--- longer parses and the spawn silently did nothing.
-local function ensure_in_special(class, workspace, command)
-    if #hl.get_windows({ class = class }) > 0 then
-        return
+-- scratchpads.ensure_prespawned() walks the registry in scratchpads.lua and
+-- brings up every entry marked `prespawn`, hidden on its own special workspace,
+-- skipping any that is already running. Which apps those are is decided there,
+-- not here.
+--
+-- Note for anyone editing this: the spawn deliberately goes through
+-- hl.dsp.exec_cmd with a workspace rule rather than shelling out to
+-- `hyprctl dispatch exec '[workspace ...] cmd'`. Under the Lua config
+-- `hyprctl dispatch` evaluates Lua, so that older string form no longer parses
+-- and the spawn silently did nothing.
+
+-- `config.reloaded` also fires once while the config is parsed for the very
+-- first time, well before the compositor has finished coming up, so acting on
+-- it there spawned the pre-spawned scratchpads a second time at every login, on
+-- top of the hyprland.start block below.
+--
+-- A plain "have we started yet" flag can't separate the two: `hyprctl reload`
+-- re-executes this file from a fresh Lua state and drops the old
+-- subscriptions, so the flag would read false on every reload and these would
+-- never run again. Monitors do survive that - none exist during the first
+-- parse, at least one does by the time any later reload runs - so gate on
+-- those instead.
+local function compositor_is_up()
+    local ok, monitors = pcall(hl.get_monitors)
+    return ok and #monitors > 0
+end
+
+local function on_reload(fn)
+    return function()
+        if compositor_is_up() then
+            fn()
+        end
     end
-
-    hl.dispatch(hl.dsp.exec_cmd(command, { workspace = "special:" .. workspace .. " silent" }))
 end
 
-local function ensure_hyprtodo()
-    ensure_in_special("hyprtodo", "todo", "hyprtodo")
-end
-
--- Scratchpad terminal, toggled with SUPER+ALT+T.
-local function ensure_scratchpad()
-    ensure_in_special(scratchpadClass, "scratch", scratchpad)
-end
-
-hl.on("config.reloaded", ensure_hyprtodo)
-hl.on("config.reloaded", ensure_scratchpad)
+hl.on("config.reloaded", on_reload(scratchpads.ensure_prespawned))
 
 hl.on("hyprland.start", function()
-    ensure_hyprtodo()
-    ensure_scratchpad()
+    scratchpads.ensure_prespawned()
     hl.exec_cmd("hyprpaper")
     hl.exec_cmd("pgrep -x waybar >/dev/null 2>&1 || waybar &")
     hl.exec_cmd("mako")
     hl.exec_cmd("~/.local/bin/system-monitor-notify &")
     hl.exec_cmd("pgrep -f '[n]ow-playing-notify' >/dev/null 2>&1 || " .. home .. "/.local/bin/now-playing-notify &")
     hl.exec_cmd("command -v hypridle >/dev/null 2>&1 && hypridle")
+    -- Drops the internal panel to 60 Hz on battery and restores 120 Hz on AC.
+    -- Event-driven off udev, so it idles at zero cost. See the script.
+    hl.exec_cmd("pgrep -f '[p]ower-refresh.sh watch' >/dev/null 2>&1 || " .. home .. "/.config/hypr/scripts/power-refresh.sh watch &")
     hl.exec_cmd("command -v wlsunset >/dev/null 2>&1 && wlsunset -t 4000")
     hl.exec_cmd(
         "command -v wl-paste >/dev/null 2>&1 && command -v cliphist >/dev/null 2>&1 && wl-paste --type text --watch "

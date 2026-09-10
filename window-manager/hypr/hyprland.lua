@@ -1,5 +1,6 @@
 -- Main Hyprland entry point. Feature groups live in separate modules:
 --   defaults.lua   - shared variables (terminal, launcher, mainMod)
+--   scratchpads.lua- special-workspace apps (terminal, yazi, music, todo)
 --   monitors.lua   - monitor setup
 --   looknfeel.lua  - gaps, borders, animations
 --   input.lua      - keyboard / touchpad
@@ -16,6 +17,7 @@
 -- LSP stubs for autocompletion: /usr/share/hypr/stubs/
 
 dofile(os.getenv("HOME") .. "/.config/hypr/defaults.lua")
+dofile(os.getenv("HOME") .. "/.config/hypr/scratchpads.lua")
 dofile(os.getenv("HOME") .. "/.config/hypr/monitors.lua")
 dofile(os.getenv("HOME") .. "/.config/hypr/looknfeel.lua")
 dofile(os.getenv("HOME") .. "/.config/hypr/input.lua")

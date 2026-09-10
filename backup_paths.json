@@ -98,5 +98,10 @@
     "path": "/home/kairav/Justfile",
     "category": "custom",
     "description": "Custom backup: Justfile"
+  },
+  {
+    "path": "/home/kairav/docs/research/yazi_keys.md",
+    "category": "custom",
+    "description": "Custom backup: yazi_keys.md"
   }
 ]

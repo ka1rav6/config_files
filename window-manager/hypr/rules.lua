@@ -46,29 +46,36 @@ hl.window_rule({
     center = true,
 })
 
+-- Scratchpads (the SUPER+` terminal, SUPER+E yazi, SUPER+Y music, SUPER+SHIFT+H
+-- todo) pin themselves to a special workspace and float at a fixed size. All of
+-- that is derived from the single registry in scratchpads.lua rather than
+-- written out per app here, so a class can never drift between the rule that
+-- catches the window and the lookup that decides whether to respawn it.
+scratchpads.register_rules()
+
+-- Blur scoping.
+--
+-- Blur is the compositor's most expensive effect, and it is only ever *visible*
+-- through a translucent window. The only translucent windows here are Ghostty
+-- (background-opacity 0.65 in ~/.config/ghostty/config), so everything else is
+-- opted out and the GPU stops blurring behind surfaces you cannot see through.
+--
+-- This is done as catch-all + exception rather than one clever regex because
+-- Hyprland's regex engine does NOT support negative lookahead -- a
+-- "^(?!...ghostty$).*$" pattern silently matches nothing. A later rule DOES
+-- override an earlier one for the same property, so the order of these two
+-- matters: the exception has to come second.
 hl.window_rule({
-    name = "scratchpad-terminal",
-    match = { class = "^com\\.scratchpad\\.ghostty$" },
-    workspace = "special:scratch",
-    float = true,
-    -- Percentages are not parsed by the Lua rule API; pixels are.
-    size = "1200 800",
-    center = true,
+    name = "no-blur-by-default",
+    match = { class = ".*" },
+    no_blur = true,
 })
 
 hl.window_rule({
-    name = "floating-yazi",
-    match = { class = "^com\\.yazi\\.ghostty$" },
-    float = true,
-    -- Percentages are not parsed by the Lua rule API; pixels are.
-    size = "1400 850",
-    center = true,
-})
-
-hl.window_rule({
-    name = "hyprtodo-special-workspace",
-    match = { class = "^hyprtodo$" },
-    workspace = "special:todo",
+    name = "blur-translucent-terminals",
+    -- All three Ghostty flavours: the ordinary one, plus the two scratchpads.
+    match = { class = "^com\\.(mitchellh|scratchpad|yazi)\\.ghostty$" },
+    no_blur = false,
 })
 
 -- Don't let hypridle lock the session while anything is fullscreen.
@@ -105,6 +112,28 @@ hl.window_rule({
 -- sets one of its own, so it inherits gtk-layer-shell's default. Checked
 -- against `hyprctl layers`; nwg-drawer registers under its own name, so this
 -- does not catch the launcher.
+-- Blur the desktop shell surfaces, so the bar, the launcher and notifications
+-- sit on the wallpaper the same way Ghostty does instead of reading as flat
+-- rectangles pasted on top of it.
+--
+-- Worth knowing: blurring a *fully opaque* layer is invisible and pure wasted
+-- work. waybar was already rgba(18,20,24,0.94) and mako is now #121418f0, so
+-- both show it; wofi was solid #111719 and had to be given an alpha channel in
+-- its stylesheet before this rule meant anything.
+--
+-- These are small, mostly-static surfaces, and blur.new_optimizations caches
+-- them between frames, so the cost is nothing like blurring a live window.
+for _, namespace in ipairs({ "waybar", "wofi", "notifications" }) do
+    hl.layer_rule({
+        name = "blur-" .. namespace,
+        match = { namespace = "^" .. namespace .. "$" },
+        blur = true,
+        -- Only blur behind the actually-translucent pixels; without this the
+        -- rounded corners pick up a blurred square halo.
+        ignore_alpha = 0.1,
+    })
+end
+
 hl.layer_rule({
     name = "wlogout-overlay",
     match = { namespace = "^gtk-layer-shell$" },
