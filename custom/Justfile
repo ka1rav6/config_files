@@ -9,8 +9,13 @@ all: backup
 backup:
 	python {{BACKUP}}
 
-add ARGS="":
-	python {{BACKUP}} add {{ARGS}}
+# "$@" (via positional-arguments) passes each path as its own argument, so paths
+# containing spaces survive; `{{PATHS}}` would join them and split on spaces.
+
+# Track one or more paths in the nightly backup:  just add ~/.foo ~/.config/bar
+[positional-arguments]
+add +PATHS:
+	python {{BACKUP}} add "$@"
 
 drive SRC DEST=DEST:
 	fpsync -n 8 \
