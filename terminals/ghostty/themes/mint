@@ -1,0 +1,41 @@
+# mint — the desktop's own palette, as a Ghostty theme.
+#
+# Not one of Ghostty's built-ins: this file exists so `theme = mint` resolves,
+# and so the terminal matches waybar, mako, wofi, wlogout and the Hyprland
+# border gradient exactly. Ghostty reads themes from this directory by filename.
+#
+# Anchors, shared with ~/.config/waybar/style.css:
+#   bg #121418   text #f4f7fa   mint #8ee3c1   amber #f4c47b   coral #ff9b85
+#
+# Regenerate the rest of the desktop from these with:  just theme mint
+
+background = #121418
+foreground = #f4f7fa
+
+cursor-color = #8ee3c1
+cursor-text = #121418
+
+selection-background = #203332
+selection-foreground = #ffffff
+
+# Normal (0-7): the three desktop accents sit at red/green/yellow so that any
+# program using plain ANSI colours — including bat with --theme=ansi — lands on
+# the system palette automatically.
+palette = 0=#1b2527
+palette = 1=#ff9b85
+palette = 2=#8ee3c1
+palette = 3=#f4c47b
+palette = 4=#7fb6d9
+palette = 5=#c4a7e7
+palette = 6=#73d0b0
+palette = 7=#bec7d0
+
+# Bright (8-15)
+palette = 8=#3b4a4d
+palette = 9=#ffb3a0
+palette = 10=#a8ecd0
+palette = 11=#ffd89b
+palette = 12=#9fcaea
+palette = 13=#d6bdf5
+palette = 14=#8fdfc4
+palette = 15=#f4f7fa

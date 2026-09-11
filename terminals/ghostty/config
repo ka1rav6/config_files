@@ -27,7 +27,7 @@ font-size = 13
 #     ghostty +list-themes
 # Preview one without editing this file:
 #     ghostty --theme=<name>
-theme = Adventure
+theme = mint
 
 
 # --- Transparency ------------------------------------------------------------
@@ -61,3 +61,36 @@ copy-on-select = false
 # Faster, at the cost of the safety net — a stray Ctrl+Shift+W will take a
 # long-running build with it. Set to true to get the confirmation dialog back.
 confirm-close-surface = false
+
+
+# --- Startup speed -----------------------------------------------------------
+# THE single biggest win for how fast a new terminal appears.
+#
+# The default is `detect`, which enables single-instance only when Ghostty is
+# launched from its .desktop file. Your terminals are launched from Hyprland
+# keybindings (`terminal = "ghostty"` in ~/.config/hypr/defaults.lua), which is
+# a plain exec — so under `detect` every SUPER+Return paid for a full cold
+# start: snap mount, GPU/OpenGL init, and font discovery, every single time.
+#
+# With this set to `true`, a new window is an IPC message to the Ghostty process
+# that is already running, and appears essentially instantly. Measured: opening
+# a fourth window added zero new processes.
+#
+# Why this is safe for the scratchpads, which is the thing to worry about:
+#   * Windows launched with a distinct --class (the scratchpad terminal in
+#     ~/.config/hypr/scratchpads.lua) still get their OWN process and keep that
+#     class — verified directly. The class is part of the instance identity, so
+#     they form separate instance groups and the window rules keep matching.
+#   * Windows launched with -e (the yazi scratchpad, the tiled file browser)
+#     have single-instance force-disabled by Ghostty itself, precisely so CLI
+#     arguments are honoured.
+#
+# If you ever see a new window inherit the wrong working directory or class,
+# this is the setting to suspect — set it back to `detect`.
+gtk-single-instance = true
+
+# Ghostty is installed as a *snap*, which adds roughly 130 ms of pure launch
+# overhead versus a native binary (measured: 0.16 s vs 0.03 s just to print
+# --version). single-instance above hides that for every window after the
+# first. Removing it entirely means installing Ghostty natively — see the notes
+# from the session that wrote this config.

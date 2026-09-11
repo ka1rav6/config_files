@@ -115,7 +115,7 @@ scratchpads.apps = {
             "chrome-cinhimbnkkaeohfgghhklpknlkffjgod-Profile_1",
             "crx_cinhimbnkkaeohfgghhklpknlkffjgod",
         },
-        command = "/opt/google/chrome/google-chrome --profile-directory=\"Profile 1\""
+        command = '/opt/google/chrome/google-chrome --profile-directory="Profile 1"'
             .. " --app-id=cinhimbnkkaeohfgghhklpknlkffjgod",
         float = true,
         size = "1300 850",

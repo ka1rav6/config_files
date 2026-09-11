@@ -46,10 +46,32 @@ HYPHEN_INSENSITIVE="true"
 
 # Plugins to load from $ZSH/plugins/. Each one costs startup time, so this is
 # kept minimal.
-#   git — ~150 git aliases plus branch/status completion.
-# Worth considering: zsh-autosuggestions (ghost-text completion from history)
-# and zsh-syntax-highlighting (colours commands red until they resolve).
+#   git                      ~150 git aliases plus branch/status completion.
+#   zsh-autosuggestions      greys in a suggestion from history as you type;
+#                            press -> (right arrow) to accept it.
+#   zsh-syntax-highlighting  colours the command line live: green when the
+#                            command exists, red when it does not.
+#
+# ORDER MATTERS for the last one. zsh-syntax-highlighting wraps every zle
+# widget that exists at the moment it loads, so it must be LAST in this list —
+# anything added after it will not be highlighted.
+#
+# Both are cloned into $ZSH/custom/plugins/ (update with `git -C <dir> pull`).
+# Combined cost is roughly 15 ms of startup.
 plugins=(git)
+
+# The two interactive plugins are appended only when a real terminal is
+# attached. Both drive zle (the zsh line editor), which does not exist in a
+# shell that is interactive but has no tty -- `zsh -ic 'cmd' | other`. Loading
+# them there is wasted work with no possible effect.
+#
+# Note: this does NOT silence the two "can't change option: zle" lines that
+# such shells print to stderr. That warning is older than these plugins (it
+# reproduces on a plugin-free .zshrc) and comes from the oh-my-zsh / zoxide
+# init in a no-tty interactive shell. It is invisible in a real terminal.
+if [[ -t 0 && -t 1 ]]; then
+	plugins+=(zsh-autosuggestions zsh-syntax-highlighting)
+fi
 
 # yazi ships shell completions into ~/.local/share/zsh/site-functions rather
 # than the oh-my-zsh tree, so `omz update` can't wipe them. fpath (the search
@@ -340,6 +362,31 @@ function y() {
 # near the top of ~/.zshenv — the -U (unique) flag makes zsh drop repeats
 # automatically, keeping the first occurrence.
 
+# --- Default editor ----------------------------------------------------------
+# Consulted by git (commit messages, interactive rebase), crontab -e, sudoedit,
+# less's `v` key, and most TUI programs. Both names are set because tools are
+# inconsistent about which they read: conventionally VISUAL is for full-screen
+# editors and EDITOR for line editors, and anything modern checks VISUAL first.
+#
+# Without these, git falls back to whatever the distro picked — usually nano.
+export EDITOR="nvim"
+export VISUAL="nvim"
+
+# Route `git diff`/`git log` through the same pager as everything else, with
+# colour preserved (-R) and no paging for output that fits on one screen (-F).
+export LESS="-RF"
+
+# --- Autosuggestion appearance -----------------------------------------------
+# The grey used for the ghost text from zsh-autosuggestions. 8 is the terminal's
+# "bright black"; raise toward 10-12 if it is too dim to read against the
+# Ghostty background, lower it if the suggestion is distracting.
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=8"
+# Suggest from history only. The default also runs the completion engine, which
+# is noticeably slower on every keystroke in a large repository.
+ZSH_AUTOSUGGEST_STRATEGY=(history)
+# Do not try to suggest against an enormous pasted buffer.
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+
 # --- Java --------------------------------------------------------------------
 # default-java is a symlink managed by update-alternatives, so this keeps
 # pointing at whichever JDK is current instead of a hardcoded version.
@@ -354,13 +401,40 @@ export PATH="$PATH:/home/kairav/.local/bin"
 # nvm manages multiple Node versions side by side. Sourcing nvm.sh defines the
 # `nvm` function and puts the selected version's bin directory on PATH.
 #
-# PERFORMANCE: this is by far the most expensive thing in this file — roughly
-# 840 ms of the ~1 s shell startup, mostly nvm_auto resolving the default
-# version. Lazy-loading it (defining stub functions that source nvm.sh on first
-# use of node/npm/npx) removes essentially all of that.
+# LAZY-LOADED. Sourcing nvm.sh eagerly cost ~860 ms of a ~970 ms shell startup
+# — mostly nvm_auto resolving and activating the default Node version. Since
+# most shells never touch Node at all, that was paid on every terminal for
+# nothing.
+#
+# Instead, each Node-related command starts life as a small stub function. The
+# first time you call any of them, the stub deletes all the stubs, sources the
+# real nvm.sh, and re-runs your command through the real binary. From then on
+# the shell behaves exactly as if nvm had been loaded at startup.
+#
+# Measured: 0.97 s -> 0.11 s. The one-time cost moves to your first `node`
+# call in a given shell, where it is ~0.5 s and unnoticeable next to whatever
+# you are actually running.
+#
+# If you ever need nvm loaded eagerly (a script that greps the environment for
+# it, say), just call `nvm --version` first, or restore the two plain lines:
+#     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+#     [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                    # loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # completions
+
+_nvm_load() {
+	# Remove every stub first, so the real definitions from nvm.sh win and a
+	# failed load cannot leave us recursing into ourselves.
+	unset -f nvm node npm npx corepack yarn pnpm 2>/dev/null
+	[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+	[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+}
+
+# One stub per command. Each one loads nvm, then hands off to whatever that
+# name now resolves to.
+for _nvm_cmd in nvm node npm npx corepack yarn pnpm; do
+	eval "${_nvm_cmd}() { _nvm_load; command -v ${_nvm_cmd} >/dev/null && ${_nvm_cmd} \"\$@\"; }"
+done
+unset _nvm_cmd
 
 # --- Other toolchains --------------------------------------------------------
 # ~/bin was merged into ~/.local/bin, which .zshenv already puts on PATH.

@@ -2,6 +2,7 @@ DEST := "/media/kairav/PROJECTS/dev/"
 EXCLUDES := home_directory() / ".config/rsync/excludes.txt"
 BACKUP := home_directory() / ".local/share/config-backup/config_backup.py"
 MAXVOL := "150"
+THEME := home_directory() / ".local/bin/theme-switch"
 
 all: backup
 
@@ -20,3 +21,21 @@ drive SRC DEST=DEST:
 
 loud VOL=MAXVOL:
     wpctl set-volume @DEFAULT_AUDIO_SINK@ {{VOL}}%
+
+# --- Theming ----------------------------------------------------------------
+# Retheme the entire desktop in one step: ghostty, bat, btop, waybar, wofi,
+# wlogout, mako and the Hyprland border gradient.
+#
+#   just theme            list available themes and show the active one
+#   just theme gruvbox    apply a theme everywhere
+#
+# Only the THEME:START/THEME:END blocks in each config are rewritten, so your
+# layout, padding and comments survive every switch.
+
+# Retheme the whole desktop (no arg lists themes)
+theme NAME="--list":
+    @{{THEME}} {{NAME}}
+
+# Show which theme is currently applied
+theme-current:
+    @{{THEME}} --current

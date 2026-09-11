@@ -1,0 +1,433 @@
+#!/usr/bin/env python3
+"""
+theme-switch — retheme the whole desktop in one step.
+
+Usage:
+    theme-switch <name>     apply a theme everywhere
+    theme-switch --list     show available themes
+    theme-switch --current  show the active theme
+
+Normally driven by the Justfile:  just theme <name>
+
+WHAT IT TOUCHES
+    ~/.config/ghostty/config        terminal colours
+    ~/.config/bat/config            `bat` syntax highlighting
+    ~/.config/btop/btop.conf        system monitor
+    ~/.config/waybar/style.css      status bar
+    ~/.config/wofi/style.css        launcher
+    ~/.config/wlogout/style.css     power menu
+    ~/.config/mako/config           notifications
+    ~/.config/hypr/looknfeel.lua    window border gradient
+
+HOW IT IS SAFE
+    Every file has a block delimited by THEME:START / THEME:END markers. Only
+    the inside of that block is ever rewritten; everything else -- your layout,
+    padding, comments, keybindings -- is untouched. If a marker is missing the
+    file is skipped with a warning rather than being guessed at.
+
+    ghostty/bat/btop are single-line settings rather than blocks, so those are
+    matched by key name.
+
+ADDING A THEME
+    Add an entry to THEMES below. The nine core colours are all that is
+    required; every derived shade (translucent bar background, dimmed accent,
+    border alpha) is computed from them, so themes stay internally consistent.
+"""
+
+import os
+import re
+import sys
+import subprocess
+import time
+from pathlib import Path
+
+HOME = Path.home()
+CFG = HOME / ".config"
+STATE = CFG / "current-theme"
+
+# --------------------------------------------------------------------------
+# Theme definitions
+#
+#   ghostty / bat / btop  names of the theme inside each of those programs.
+#       `ghostty +list-themes`, `bat --list-themes`, `ls /usr/share/btop/themes`
+#       bat has only ~23 themes, so several entries use "ansi", which tells bat
+#       to use the terminal's own 16 colours -- i.e. it inherits whatever
+#       ghostty theme is active and always matches automatically.
+#
+#   bg/surface/surface2/border/text/muted   greys, dark to light
+#   a1  primary accent   (normal / good / focused)
+#   a2  secondary accent (warning)
+#   a3  tertiary accent  (critical / error)
+# --------------------------------------------------------------------------
+THEMES = {
+    "mint": {
+        "desc": "the original custom palette — mint/amber/coral on near-black",
+        "ghostty": "mint", "bat": "ansi", "btop": "adapta",
+        "bg": "#121418", "surface": "#1b2527", "surface2": "#203332",
+        "border": "#3b4a4d", "text": "#f4f7fa", "muted": "#bec7d0",
+        "a1": "#8ee3c1", "a2": "#f4c47b", "a3": "#ff9b85",
+    },
+    "catppuccin": {
+        "desc": "Catppuccin Mocha — soft pastels on warm dark purple",
+        "ghostty": "Catppuccin Mocha", "bat": "ansi", "btop": "tokyo-night",
+        "bg": "#1e1e2e", "surface": "#313244", "surface2": "#45475a",
+        "border": "#585b70", "text": "#cdd6f4", "muted": "#a6adc8",
+        "a1": "#a6e3a1", "a2": "#f9e2af", "a3": "#f38ba8",
+    },
+    "tokyonight": {
+        "desc": "TokyoNight Night — deep blue, high contrast",
+        "ghostty": "TokyoNight Night", "bat": "ansi", "btop": "tokyo-night",
+        "bg": "#1a1b26", "surface": "#24283b", "surface2": "#414868",
+        "border": "#565f89", "text": "#c0caf5", "muted": "#9aa5ce",
+        "a1": "#9ece6a", "a2": "#e0af68", "a3": "#f7768e",
+    },
+    "gruvbox": {
+        "desc": "Gruvbox Dark — warm retro earth tones",
+        "ghostty": "Gruvbox Dark", "bat": "gruvbox-dark", "btop": "gruvbox_dark_v2",
+        "bg": "#282828", "surface": "#3c3836", "surface2": "#504945",
+        "border": "#665c54", "text": "#ebdbb2", "muted": "#a89984",
+        "a1": "#b8bb26", "a2": "#fabd2f", "a3": "#fb4934",
+    },
+    "nord": {
+        "desc": "Nord — cool arctic blue-grey, low contrast",
+        "ghostty": "Nord", "bat": "Nord", "btop": "nord",
+        "bg": "#2e3440", "surface": "#3b4252", "surface2": "#434c5e",
+        "border": "#4c566a", "text": "#eceff4", "muted": "#d8dee9",
+        "a1": "#a3be8c", "a2": "#ebcb8b", "a3": "#bf616a",
+    },
+    "dracula": {
+        "desc": "Dracula — vivid neon on dark violet",
+        "ghostty": "Dracula", "bat": "Dracula", "btop": "dracula",
+        "bg": "#282a36", "surface": "#343746", "surface2": "#44475a",
+        "border": "#6272a4", "text": "#f8f8f2", "muted": "#bfbfbf",
+        "a1": "#50fa7b", "a2": "#f1fa8c", "a3": "#ff5555",
+    },
+    "everforest": {
+        "desc": "Everforest Dark Hard — muted forest green, easy on the eyes",
+        "ghostty": "Everforest Dark Hard", "bat": "ansi", "btop": "everforest-dark-hard",
+        "bg": "#2b3339", "surface": "#323d43", "surface2": "#3a464c",
+        "border": "#4a555b", "text": "#d3c6aa", "muted": "#9da9a0",
+        "a1": "#a7c080", "a2": "#dbbc7f", "a3": "#e67e80",
+    },
+    "rosepine": {
+        "desc": "Rose Pine — muted rose and pine on deep plum",
+        "ghostty": "Rose Pine", "bat": "ansi", "btop": "horizon",
+        "bg": "#191724", "surface": "#1f1d2e", "surface2": "#26233a",
+        "border": "#403d52", "text": "#e0def4", "muted": "#908caa",
+        "a1": "#9ccfd8", "a2": "#f6c177", "a3": "#eb6f92",
+    },
+    "kanagawa": {
+        "desc": "Kanagawa Wave — ink-wash palette, muted and warm",
+        "ghostty": "Kanagawa Wave", "bat": "ansi", "btop": "tokyo-storm",
+        "bg": "#1f1f28", "surface": "#2a2a37", "surface2": "#363646",
+        "border": "#54546d", "text": "#dcd7ba", "muted": "#c8c093",
+        "a1": "#98bb6c", "a2": "#e6c384", "a3": "#e46876",
+    },
+}
+
+
+# --------------------------------------------------------------------------
+# Colour helpers
+# --------------------------------------------------------------------------
+def _rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def rgba(h, alpha):
+    """#rrggbb -> 'rgba(r, g, b, a)' for GTK CSS."""
+    r, g, b = _rgb(h)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
+def hexa(h, alpha_byte):
+    """#rrggbb -> 'rrggbbAA' for hyprland/mako, alpha as a 0-255 byte."""
+    return h.lstrip("#") + format(alpha_byte, "02x")
+
+
+def mix(h1, h2, t):
+    """Blend two hex colours; t=0 gives h1, t=1 gives h2."""
+    a, b = _rgb(h1), _rgb(h2)
+    return "#" + "".join(format(round(x + (y - x) * t), "02x") for x, y in zip(a, b))
+
+
+# --------------------------------------------------------------------------
+# File patching
+# --------------------------------------------------------------------------
+def patch_block(path, body, start="THEME:START", end="THEME:END"):
+    """Replace everything between the two markers. Leaves the markers in place."""
+    p = Path(path)
+    if not p.exists():
+        return f"skipped (missing): {p}"
+    s = p.read_text()
+    # The start marker must also carry "generated by". Without that extra
+    # anchor, an ordinary sentence in a header comment that happens to mention
+    # the marker name would be treated as the start of the block, and
+    # everything from there to the real marker would be eaten. That is not
+    # hypothetical -- it happened to wofi/style.css while this was written.
+    pat = re.compile(
+        r"(?P<start>^[^\n]*" + re.escape(start) + r"[^\n]*generated by[^\n]*\n)"
+        r".*?"
+        r"(?P<end>^[^\n]*" + re.escape(end) + r"[^\n]*$)",
+        re.S | re.M,
+    )
+    if not pat.search(s):
+        return f"SKIPPED (no {start} marker): {p}"
+    s2 = pat.sub(lambda m: m.group("start") + body + m.group("end"), s, count=1)
+    p.write_text(s2)
+    return f"themed: {p}"
+
+
+def patch_key(path, key, value, sep=" = ", quote=False):
+    """Replace a single `key = value` line, matched by key name."""
+    p = Path(path)
+    if not p.exists():
+        return f"skipped (missing): {p}"
+    s = p.read_text()
+    v = f'"{value}"' if quote else value
+    pat = re.compile(r"^(\s*)" + re.escape(key) + r"\s*=.*$", re.M)
+    if not pat.search(s):
+        return f"SKIPPED (no '{key}' line): {p}"
+    p.write_text(pat.sub(lambda m: f"{m.group(1)}{key}{sep}{v}", s, count=1))
+    return f"themed: {p}"
+
+
+# --------------------------------------------------------------------------
+# Per-application writers
+# --------------------------------------------------------------------------
+def apply(name):
+    t = THEMES[name]
+    out = []
+
+    # --- waybar --------------------------------------------------------
+    out.append(patch_block(CFG / "waybar/style.css", f"""@define-color bar-bg {rgba(t['bg'], 0.94)};
+@define-color panel-bg rgba(255, 255, 255, 0.07);
+@define-color panel-hover rgba(255, 255, 255, 0.13);
+@define-color text {rgba(t['text'], 0.92)};
+@define-color muted {rgba(t['muted'], 0.62)};
+@define-color mint {t['a1']};
+@define-color amber {t['a2']};
+@define-color coral {t['a3']};
+"""))
+
+    # --- wofi ----------------------------------------------------------
+    out.append(patch_block(CFG / "wofi/style.css", f"""@define-color bga {rgba(t['bg'], 0.92)};
+@define-color surface {t['surface']};
+@define-color surface2 {t['surface2']};
+@define-color border {t['border']};
+@define-color text {t['text']};
+@define-color text-bright {mix(t['text'], '#ffffff', 0.5)};
+@define-color muted {t['muted']};
+@define-color a1 {t['a1']};
+@define-color a1-dim {mix(t['a1'], t['bg'], 0.55)};
+"""))
+
+    # --- wlogout -------------------------------------------------------
+    out.append(patch_block(CFG / "wlogout/style.css", f"""@define-color surface {t['surface']};
+@define-color surface2 {t['surface2']};
+@define-color surface-active {mix(t['a1'], t['bg'], 0.82)};
+@define-color border rgba(255, 255, 255, 0.10);
+@define-color text {rgba(t['text'], 0.88)};
+@define-color text-bright {mix(t['text'], '#ffffff', 0.5)};
+@define-color a1 {t['a1']};
+@define-color a2 {t['a2']};
+@define-color a3 {t['a3']};
+"""))
+
+    # --- mako ----------------------------------------------------------
+    out.append(patch_block(CFG / "mako/config", f"""background-color=#{hexa(t['bg'], 240)}
+text-color={t['text']}
+border-color={t['a1']}
+"""))
+    out.append(patch_block(CFG / "mako/config", f"border-color={t['a3']}\n",
+                           "THEME:CRITICAL:START", "THEME:CRITICAL:END"))
+
+    # --- hyprland border gradient --------------------------------------
+    out.append(patch_block(CFG / "hypr/looknfeel.lua", f"""-- Window border colours. The active border is a 45-degree gradient between the
+-- two accents; the inactive one is a near-background tone so unfocused windows
+-- recede. Alpha is the last byte of each rgba() literal.
+local theme = {{
+    border_active_1 = "rgba({hexa(t['a1'], 238)})",
+    border_active_2 = "rgba({hexa(t['a2'], 170)})",
+    border_inactive = "rgba({hexa(t['surface2'], 136)})",
+}}
+"""))
+
+    # --- ghostty / bat / btop (single-line settings) --------------------
+    out.append(patch_key(CFG / "ghostty/config", "theme", t["ghostty"]))
+
+    bat_cfg = CFG / "bat/config"
+    bat_cfg.parent.mkdir(parents=True, exist_ok=True)
+    bat_cfg.write_text(
+        "# Generated by ~/.local/bin/theme-switch — `just theme <name>` rewrites it.\n"
+        "#\n"
+        '# "ansi" means: use the terminal\'s own 16 colours, so bat inherits\n'
+        "# whatever ghostty theme is active and always matches. Named themes give\n"
+        "# finer-grained syntax colours where bat ships one.\n"
+        "# List them with:  bat --list-themes\n"
+        f'--theme="{t["bat"]}"\n'
+        "\n"
+        "# Show line numbers and git modification markers, but no heavy box drawing.\n"
+        '--style="numbers,changes,header"\n'
+    )
+    out.append(f"themed: {bat_cfg}")
+
+    out.append(patch_key(CFG / "btop/btop.conf", "color_theme",
+                         f"/usr/share/btop/themes/{t['btop']}.theme", quote=True))
+
+    STATE.write_text(name + "\n")
+    return out
+
+
+def _running(name):
+    return subprocess.run(["pgrep", "-x", name],
+                          capture_output=True).returncode == 0
+
+
+def reload_all():
+    """Push the new colours to everything that can reload without a restart.
+
+    waybar is handled specially. It reloads on SIGUSR2, but it does not always
+    survive one -- a reload arriving while it is still redrawing can take the
+    process down, which is easy to hit when switching themes several times in
+    a row. Losing the bar entirely is a much worse failure than a slow reload,
+    so this checks afterwards and brings it back if the signal killed it.
+    """
+    if _running("waybar"):
+        subprocess.run(["killall", "-SIGUSR2", "waybar"],
+                       check=False, capture_output=True)
+        time.sleep(1.0)
+
+    if _running("waybar"):
+        print("  reloaded waybar")
+    else:
+        subprocess.Popen(
+            ["waybar", "-c", str(CFG / "waybar/config.jsonc"),
+             "-s", str(CFG / "waybar/style.css")],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        time.sleep(1.5)
+        print("  restarted waybar" if _running("waybar")
+              else "  WARNING: waybar is not running and could not be started")
+
+    for label, cmd in (("mako", ["makoctl", "reload"]),
+                       ("hyprland", ["hyprctl", "reload"])):
+        try:
+            subprocess.run(cmd, check=False, capture_output=True, timeout=10)
+            print(f"  reloaded {label}")
+        except Exception as e:                      # noqa: BLE001
+            print(f"  could not reload {label}: {e}")
+
+
+# Every (file, start-marker) pair that apply() relies on. Kept next to the
+# writers so a new themed block cannot be added without also being checkable.
+REQUIRED_MARKERS = [
+    ("waybar/style.css", "THEME:START"),
+    ("wofi/style.css", "THEME:START"),
+    ("wlogout/style.css", "THEME:START"),
+    ("mako/config", "THEME:START"),
+    ("mako/config", "THEME:CRITICAL:START"),
+    ("hypr/looknfeel.lua", "THEME:START"),
+]
+REQUIRED_KEYS = [
+    ("ghostty/config", "theme"),
+    ("btop/btop.conf", "color_theme"),
+]
+
+
+def check():
+    """Verify every marker and key the applier needs, without writing anything.
+
+    This exists because a themed block that loses its marker fails *silently
+    per file* -- apply() warns, but only if someone reads the output. Run this
+    after editing any themed config.
+    """
+    bad = []
+    for rel, marker in REQUIRED_MARKERS:
+        p = CFG / rel
+        if not p.exists():
+            bad.append(f"missing file: {p}")
+            continue
+        s = p.read_text()
+        # Must match exactly what patch_block() looks for: the marker AND the
+        # "generated by" anchor on the same line.
+        starts = [ln for ln in s.splitlines()
+                  if marker in ln and "generated by" in ln]
+        end = marker.replace(":START", ":END")
+        ends = [ln for ln in s.splitlines() if end in ln]
+        if len(starts) != 1:
+            bad.append(f"{rel}: found {len(starts)} usable '{marker}' lines "
+                       f"(need exactly 1, with 'generated by' on the same line)")
+        if len(ends) != 1:
+            bad.append(f"{rel}: found {len(ends)} '{end}' lines (need exactly 1)")
+    for rel, key in REQUIRED_KEYS:
+        p = CFG / rel
+        if not p.exists():
+            bad.append(f"missing file: {p}")
+        elif not re.search(r"^\s*" + re.escape(key) + r"\s*=", p.read_text(), re.M):
+            bad.append(f"{rel}: no '{key} =' line")
+
+    if bad:
+        print("theme-switch check FAILED:")
+        for b in bad:
+            print("  " + b)
+        return 1
+    print(f"theme-switch check OK — {len(REQUIRED_MARKERS)} marker blocks, "
+          f"{len(REQUIRED_KEYS)} keyed settings, all present.")
+    return 0
+
+
+def main():
+    arg = sys.argv[1] if len(sys.argv) > 1 else "--list"
+
+    if arg in ("--check", "check"):
+        return check()
+
+    if arg in ("--list", "-l", "list", ""):
+        cur = STATE.read_text().strip() if STATE.exists() else "(unknown)"
+        print(f"Active theme: {cur}\n")
+        print("Available themes:")
+        for k, v in THEMES.items():
+            print(f"  {k:<12} {v['desc']}")
+        print("\nApply with:  just theme <name>")
+        return 0
+
+    if arg in ("--current", "-c"):
+        print(STATE.read_text().strip() if STATE.exists() else "(unknown)")
+        return 0
+
+    if arg not in THEMES:
+        print(f"Unknown theme: {arg}\n", file=sys.stderr)
+        print("Available: " + ", ".join(THEMES), file=sys.stderr)
+        return 1
+
+    # Verify the markers BEFORE touching anything, so a broken config is
+    # reported up front instead of leaving a half-applied theme behind.
+    if check() != 0:
+        print("\nRefusing to apply a theme while a marker is missing.",
+              file=sys.stderr)
+        return 1
+
+    print(f"\nApplying theme: {arg} — {THEMES[arg]['desc']}\n")
+    problems = []
+    for line in apply(arg):
+        print("  " + line)
+        if line.startswith("SKIPPED"):
+            problems.append(line)
+    print()
+    reload_all()
+
+    print(f"\nDone. Active theme: {arg}")
+    print("Ghostty does not hot-reload the theme: press Ctrl+Shift+, in an open")
+    print("window, or open a new one. btop picks it up on next launch.")
+    if problems:
+        print("\nWarnings:")
+        for p in problems:
+            print("  " + p)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
