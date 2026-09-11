@@ -5,8 +5,14 @@
 # with non-legacy parsers. Use eval."), so everything here goes through
 # `hyprctl eval` with the Lua API.
 #
-# Deliberately does NOT touch waybar, hyprpaper, or monitor hotplug events.
-# It only changes the layout, nothing is backgrounded, and it holds no locks.
+# AFTER CHANGING THE LAYOUT it runs two repair steps (see settle() below).
+# This used to deliberately do nothing but change the layout, on the assumption
+# that Hyprland's monitor.added / monitor.removed handlers in monitors.lua would
+# pick up the rest. They do not: entering and leaving MIRROR mode fires neither
+# event -- verified by watching ~/.config/hypr/scripts/relayer.sh's log across
+# several toggles, which stayed completely silent. So nothing reassigned the
+# workspaces and nothing checked the bar, and the damage accumulated across
+# toggles until waybar was killed by hand.
 #
 # Usage:
 #   display-layout.sh toggle-mirror
@@ -59,6 +65,30 @@ apply() {
     ev "hl.monitor({ output = \"$EXTERNAL\", disabled = false, mirror = \"none\", mode = \"preferred\", position = \"$ext_pos\", scale = \"auto\" })"
 }
 
+# Re-establish everything that depends on the monitor layout.
+#
+# Backgrounded behind a lock, so the keybinding returns instantly and mashing
+# SUPER+SHIFT+X cannot stack overlapping repair runs on top of each other --
+# which is how the bar ended up duplicated in the first place. flock -n means a
+# second toggle simply skips; the run already in flight will observe the final
+# layout anyway because it re-reads the monitor list after sleeping.
+settle() {
+    (
+        exec 9>"${XDG_RUNTIME_DIR:-/tmp}/hypr-display-settle.lock"
+        flock -n 9 || exit 0
+
+        # Let Hyprland finish applying the mode change before asking it
+        # anything. Enabling, disabling or mirroring an output is not atomic.
+        sleep 1.2
+
+        # Workspace rules AND relocation of workspaces that already exist.
+        "$HOME/.config/hypr/scripts/sync-workspaces.sh" >/dev/null 2>&1
+
+        # Exactly one waybar, one bar per live monitor. A no-op when healthy.
+        "$HOME/.config/hypr/scripts/waybar-ensure.sh" >/dev/null 2>&1
+    ) &
+}
+
 state=$(read_state)
 mode="${state%%:*}"
 placement="${state#*:}"
@@ -73,6 +103,7 @@ case "${1:-status}" in
         fi
         printf '%s:%s\n' "$mode" "$placement" >"$STATE_FILE"
         apply "$mode" "$placement"
+        settle
         ;;
     place)
         placement="${2:-left}"
@@ -80,6 +111,7 @@ case "${1:-status}" in
         printf '%s:%s\n' "$mode" "$placement" >"$STATE_FILE"
         note "External monitor: ${placement} of laptop"
         apply "$mode" "$placement"
+        settle
         ;;
     status)
         printf 'mode=%s placement=%s\n' "$mode" "$placement"

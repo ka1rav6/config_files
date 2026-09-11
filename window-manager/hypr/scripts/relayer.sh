@@ -94,6 +94,16 @@ restart_hyprpaper() {
     fi
 }
 
+# Repair a duplicated or missing bar BEFORE the alignment check below.
+#
+# The alignment check only asks whether each layer surface sits inside its
+# monitor. Duplicate bars are all perfectly aligned -- they are stacked on top
+# of each other in the right place -- so a pile of them reports ALIGNED and
+# takes the early exit below, leaving the pile untouched. waybar-ensure.sh
+# counts surfaces per monitor instead, which is the thing that actually
+# distinguishes healthy from duplicated. It is a no-op when all is well.
+"$HOME/.config/hypr/scripts/waybar-ensure.sh" >/dev/null 2>&1
+
 # A plain `hyprctl reload` also lands here (it re-emits monitor.added) but moves
 # nothing, so bail out before killing a perfectly good bar.
 before=$(layers_aligned) && { echo "$(ts)   before: $before -- nothing to do"; echo "$(ts) done"; exit 0; }
