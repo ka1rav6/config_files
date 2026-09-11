@@ -1,6 +1,34 @@
+# =============================================================================
+# gsimplecal — lightweight pop-up calendar
+# =============================================================================
+# NOTE: gsimplecal is NOT currently installed, and nothing launches it. The
+# waybar clock's on-click runs `~/.cargo/bin/waycal` instead (see
+# ~/.config/waybar/config.jsonc). This file is inert — kept because it is
+# tracked by the dotfiles backup (~/dotfiles/backup_paths.json) and costs
+# nothing. Either `sudo apt install gsimplecal` and point the clock at it, or
+# drop this directory and its backup_paths.json entry.
+#
+# Comments are kept on their own lines throughout: this parser's handling of
+# trailing `#` is untested here, and a swallowed comment would turn a boolean
+# into a garbage string.
+#
+# Full options: man 1 gsimplecal
+# =============================================================================
+
+# Draw the month grid — the entire point of the tool.
 show_calendar = 1
+
+# Hide the clock face; waybar already shows the time.
 show_time = 0
+
+# Hide ISO week numbers in the left gutter.
 show_week_numbers = 0
+
+# Show the "September 2026" month/year header.
 show_heading = 1
+
+# Show the ‹ › arrows for paging between months.
 show_prevnext = 1
+
+# Highlight today's date.
 show_current = 1

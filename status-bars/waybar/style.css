@@ -1,3 +1,33 @@
+/* ==========================================================================
+   waybar stylesheet
+   ==========================================================================
+   Structure and behaviour are in config.jsonc; this file is appearance only.
+
+   waybar renders with GTK3, so this is GTK's CSS subset, NOT web CSS. In
+   particular: no flexbox, no grid, no `gap`, no CSS variables (`var()`) — use
+   `@define-color` as below. Spacing is done with margin/padding alone.
+
+   Selectors follow the module names in config.jsonc, with `/` becoming `-`:
+     "custom/power"          -> #custom-power
+     "pulseaudio#microphone" -> #pulseaudio.microphone
+   waybar also adds state classes at runtime — .warning, .critical, .charging —
+   driven by the thresholds set in config.jsonc.
+
+   Reload after editing:  killall -SIGUSR2 waybar
+   Live-inspect the tree:  GTK_DEBUG=interactive waybar
+   ========================================================================== */
+
+/* --- Palette -------------------------------------------------------------
+   @define-color is GTK's named-colour mechanism; refer to them as @name.
+
+   Shared with the rest of the desktop — the same values appear in
+   ~/.config/mako/config and in the border gradient in
+   ~/.config/hypr/looknfeel.lua. Change one, change all three, or the desktop
+   stops looking like a single design.
+
+   The three accents carry consistent meaning system-wide:
+     mint  = normal / good      amber = warning      coral = critical
+   ------------------------------------------------------------------------ */
 @define-color bar-bg rgba(18, 20, 24, 0.94);
 @define-color panel-bg rgba(255, 255, 255, 0.07);
 @define-color panel-hover rgba(255, 255, 255, 0.13);
@@ -7,6 +37,13 @@
 @define-color amber #f4c47b;
 @define-color coral #ff9b85;
 
+/* Base typography for every module.
+   The Nerd Font is required, not decorative — the module formats in
+   config.jsonc are full of private-use-area glyphs that render as empty boxes
+   without it. "Symbols Nerd Font" is the fallback for any glyph the main
+   family is missing.
+   min-height: 0 overrides a GTK default that otherwise forces every widget to
+   a minimum height and quietly inflates the bar. */
 * {
     font-family: "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
     font-size: 12px;
@@ -14,6 +51,10 @@
     min-height: 0;
 }
 
+/* The bar surface itself.
+   border-radius here is what the margins in config.jsonc make visible: with
+   zero margin the rounded corners would have nothing to round against. The
+   hairline border lifts the bar off a dark wallpaper. */
 window#waybar {
     background: @bar-bg;
     border: 1px solid rgba(255, 255, 255, 0.10);

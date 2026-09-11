@@ -1,12 +1,42 @@
+// ============================================================================
+// waybar — the top status bar
+// ============================================================================
+// Started once at login from ~/.config/hypr/autostart.lua, guarded by a pgrep
+// so `hyprctl reload` does not stack a second bar on top of the first.
+//
+// This file is .jsonc — JSON with Comments. `//` comments are valid here and
+// waybar's parser strips them. That is NOT true of every JSON config on this
+// system: ~/.config/wlogout/layout is parsed in strict mode and breaks
+// outright if a comment is added, which is why its documentation lives in a
+// separate README.md instead.
+//
+// Appearance (colours, radius, spacing) is entirely in style.css alongside
+// this file; this file decides which modules exist and what they do.
+//
+// Reload after editing:  killall -SIGUSR2 waybar
+// Check for errors:      waybar -l debug
+//
+// Module reference: https://github.com/Alexays/Waybar/wiki/Configuration
+// ============================================================================
 {
+    // "top" places the bar in the layer-shell overlay above normal windows.
     "layer": "top",
     "position": "top",
 
     "height": 38,
 
+    // Margins detach the bar from the screen edges so it reads as a floating
+    // pill rather than a docked strip. This is what makes the rounded corners
+    // in style.css visible — with zero margin the radius has nothing to round
+    // against. Hyprland reserves the space automatically, so windows still tile
+    // below it.
     "margin-top": 8,
     "margin-left": 14,
     "margin-right": 14,
+
+    // --- Module layout ------------------------------------------------------
+    // Three independent groups. Order within each array is left-to-right.
+    // A module only renders if it also has a configuration block below.
 
     "modules-left": [
         "custom/launcher",
@@ -34,6 +64,14 @@
         "custom/power"
     ],
 
+    // ========================================================================
+    // LEFT
+    // ========================================================================
+
+    // App-launcher button. nwg-drawer is a full-screen grid launcher — a
+    // heavier, more visual alternative to the wofi menu bound on the keyboard
+    // (see `launcher` in ~/.config/hypr/defaults.lua). Both are kept: this one
+    // for browsing with the mouse, wofi for typing a name.
     "custom/launcher": {
         "format": "󰣇",
         "tooltip": "Applications",
@@ -43,60 +81,74 @@
     "hyprland/workspaces": {
         "format": "{name}",
         "format-icons": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+        // Show every monitor's workspaces on every bar, rather than each bar
+        // showing only its own output's.
         "all-outputs": true,
         "sort-by-number": true,
+        // Click a workspace number to switch to it.
         "on-click": "activate"
     },
 
+    // Todo counter, backed by hyprtodo (~/.config/hyprtodo).
+    //   interval 30 — re-runs the script every 30 s as a fallback poll.
+    //   signal 8    — the cheap path: `pkill -SIGRTMIN+8 waybar` forces an
+    //                 immediate refresh, so adding a todo updates the bar at
+    //                 once instead of waiting up to 30 s.
+    // return-type json lets the script supply text, tooltip and a CSS class
+    // together, so styling can react to whether anything is pending.
     "custom/hyprtodo": {
         "exec": "~/.config/waybar/scripts/waybar-hyprtodo.sh",
         "return-type": "json",
         "interval": 30,
         "signal": 8,
+        // Both dispatches use Lua call syntax. Under Hyprland's Lua config
+        // `hyprctl dispatch` evaluates its argument as Lua, so the older
+        // `togglespecialworkspace todo` string form no longer parses.
         "on-click": "hyprctl dispatch 'hl.dsp.workspace.toggle_special(\"todo\")'",
         "on-click-right": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"special:todo\" })'"
     },
 
+    // Title of the focused window.
     "hyprland/window": {
         "format": "{title}",
+        // Truncate long titles so a verbose browser tab cannot push the centre
+        // clock off its centre.
         "max-length": 45,
+        // Each monitor's bar shows its own focused window rather than a single
+        // global one.
         "separate-outputs": true,
+        // Rewrite rules are regex -> replacement. This one maps the empty title
+        // to empty, which collapses the module on an empty workspace instead of
+        // leaving a gap.
         "rewrite": {
             "": ""
         }
     },
 
-    "backlight": {
-        "device": "intel_backlight",
-        "format": "{icon} {percent}%",
-        "format-icons": ["\udb00\udcde", "\udb00\udcdf", "\udb00\udce0"],
-        "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py brightness",
-        "on-scroll-up": "brightnessctl set 5%+",
-        "on-scroll-down": "brightnessctl set 5%-",
-        "tooltip-format": "Brightness {percent}%\nClick for slider · scroll to adjust"
+    // ========================================================================
+    // CENTER
+    // ========================================================================
+
+    "clock": {
+        // strftime inside {: }. Currently "Fri, 11 Sep  02:53".
+        "format": "󰥔  {:%a, %d %b  %H:%M}",
+        "tooltip-format": "{:%A, %d %B %Y}",
+        // waycal — a small Rust calendar popup, built with cargo and living in
+        // ~/.cargo/bin. Called by absolute path because waybar inherits the
+        // compositor's PATH, and the PATH set in autostart.lua does include
+        // ~/.cargo/bin, but the absolute path removes the dependency entirely.
+        // (Note: ~/.config/gsimplecal exists but gsimplecal is not installed
+        // and nothing points at it — see that file's header.)
+        "on-click": "$HOME/.cargo/bin/waycal"
     },
 
-    "power-profiles-daemon": {
-        "format": "{icon}",
-        "tooltip": true,
-        "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
-        "format-icons": {
-            "default": "\udb80\uddd1",
-            "performance": "\udb81\udcc5",
-            "balanced": "\udb83\udd85",
-            "power-saver": "\udb83\udf2a"
-        }
-    },
-
-    "idle_inhibitor": {
-        "format": "{icon}",
-        "format-icons": {
-            "activated": "\udb80\udd76",
-            "deactivated": "\udb81\uddca"
-        },
-        "tooltip-format-activated": "Idle inhibited \u2014 screen will not lock",
-        "tooltip-format-deactivated": "Idle inhibitor off"
-    },
+    // ========================================================================
+    // RIGHT — system readouts
+    // ========================================================================
+    // The three polled modules below (cpu, memory, network) all use a 10 s
+    // interval. This is the bar's steady-state cost: each tick wakes waybar,
+    // re-reads /proc and repaints. Raising it to 15-30 s is free battery on a
+    // laptop; lowering it to 1-2 s makes the bar a live monitor at real cost.
 
     "cpu": {
         "interval": 10,
@@ -126,36 +178,63 @@
     },
 
     "temperature": {
+        // Absolute path to the CPU package sensor. hwmon numbering is not
+        // stable across reboots, which is why this points at the coretemp
+        // platform device rather than a bare /sys/class/hwmon/hwmonN path.
+        // If the module ever goes blank, re-check with:
+        //   for f in /sys/class/hwmon/hwmon*; do echo "$f $(cat $f/name)"; done
         "hwmon-path-abs": "/sys/devices/platform/coretemp.0/hwmon",
         "input-filename": "temp1_input",
         "format": "󰔏 {temperatureC}°C",
+        // Above this, waybar adds the .critical CSS class — style.css turns the
+        // readout red. mako also has a "Temperature" notification rule.
         "critical-threshold": 85,
         "tooltip": true
     },
 
+    // System tray for apps that provide a status icon (nm-applet and
+    // blueman-applet, both started in autostart.lua).
     "tray": {
-    "icon-size": 16,
-    "spacing": 8
+        "icon-size": 16,
+        "spacing": 8
+    },
+
+    "backlight": {
+        "device": "intel_backlight",
+        "format": "{icon} {percent}%",
+        // Escaped surrogate pairs for Nerd Font glyphs outside the BMP. These
+        // are the same kind of icon as the literal 󰍛 characters used elsewhere
+        // in this file, just written in escaped form — both are fine.
+        "format-icons": ["󐃞", "󐃟", "󐃠"],
+        // setsid -f detaches the popup from waybar. Without it the Python
+        // process is a child of the bar, and killing or reloading waybar would
+        // take the slider with it.
+        "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py brightness",
+        "on-scroll-up": "brightnessctl set 5%+",
+        "on-scroll-down": "brightnessctl set 5%-",
+        "tooltip-format": "Brightness {percent}%\nClick for slider · scroll to adjust"
     },
 
     "pulseaudio": {
         "format": "{icon} {volume}%",
         "format-muted": "󰝟 muted",
         "format-icons": {
-            "default": [
-                "󰕿",
-                "󰖀",
-                "󰕾"
-            ]
+            "default": ["󰕿", "󰖀", "󰕾"]
         },
         "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py volume",
         "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-click-middle": "pavucontrol",
+        // -l 1.0 caps volume at 100%, preventing the software boost above
+        // unity that clips and distorts. The mute toggle and the mic module
+        // below use the same wpctl (PipeWire) interface.
         "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
         "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
         "tooltip-format": "Volume {volume}%\nClick for slider · right-click to mute · middle-click for pavucontrol"
     },
 
+    // Second instance of the pulseaudio module. The "#microphone" suffix is
+    // waybar's syntax for running one module twice with different settings —
+    // here pointed at the source (input) rather than the sink (output).
     "pulseaudio#microphone": {
         "format": "{format_source}",
         "format-source": "󰍬 {volume}%",
@@ -167,28 +246,51 @@
         "tooltip-format": "Mic {volume}%\nClick for slider · right-click to mute"
     },
 
+    // Reads power-profiles-daemon over D-Bus. Click cycles
+    // power-saver -> balanced -> performance. Pairs with
+    // ~/.config/hypr/scripts/power-refresh.sh, which drops the internal panel
+    // to 60 Hz on battery.
+    "power-profiles-daemon": {
+        "format": "{icon}",
+        "tooltip": true,
+        "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
+        "format-icons": {
+            "default": "󰇑",
+            "performance": "󰓅",
+            "balanced": "󰶅",
+            "power-saver": "󰼪"
+        }
+    },
+
+    // Click to suspend the idle timers in ~/.config/hypr/hypridle.conf, so the
+    // screen stays awake through a long video or presentation. Toggles back off
+    // with a second click — it does not reset on its own.
+    "idle_inhibitor": {
+        "format": "{icon}",
+        "format-icons": {
+            "activated": "󰅶",
+            "deactivated": "󰗊"
+        },
+        "tooltip-format-activated": "Idle inhibited — screen will not lock",
+        "tooltip-format-deactivated": "Idle inhibitor off"
+    },
+
     "battery": {
+        // Thresholds add the .warning and .critical CSS classes at these
+        // percentages, which style.css colours amber and red. The separate
+        // ~/.local/bin/system-monitor-notify handles desktop notifications.
         "states": {
             "warning": 30,
             "critical": 15
         },
         "format": "{capacity}% {icon}",
         "format-charging": "{capacity}% 󰂄",
-        "format-icons": [
-            "󰁺",
-            "󰁻",
-            "󰁼",
-            "󰁽",
-            "󰁾"
-        ]
+        // Icons are picked by capacity, spread evenly across this list:
+        // 0-20% takes the first, 80-100% the last.
+        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾"]
     },
 
-    "clock": {
-        "format": "󰥔  {:%a, %d %b  %H:%M}",
-        "tooltip-format": "{:%A, %d %B %Y}",
-        "on-click": "$HOME/.cargo/bin/waycal"
-    },
-
+    // Power menu. The script wraps wlogout — see ~/.config/wlogout/README.md.
     "custom/power": {
         "format": "󰐥",
         "tooltip": "Power",

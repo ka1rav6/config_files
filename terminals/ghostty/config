@@ -1,13 +1,63 @@
+# =============================================================================
+# Ghostty — terminal emulator
+# =============================================================================
+# Ghostty is a GPU-accelerated terminal written in Zig. It renders through
+# OpenGL and runs natively on Wayland, which is why it is the terminal wired
+# into the Hyprland config (`terminal = "ghostty"` in ~/.config/hypr/defaults.lua).
+#
+# Syntax: one `key = value` per line, `#` starts a comment. No quotes needed
+# except where a value contains spaces.
+#
+# Full option list:  ghostty +show-config --default --docs
+# Reload after editing: the config is re-read on launch; open a new window, or
+# press Ctrl+Shift+, to reload in place.
+# -----------------------------------------------------------------------------
+
+
+# --- Font --------------------------------------------------------------------
+# A Nerd Font is required, not optional, for this setup: waybar, yazi, btop and
+# the wlogout menu all draw glyphs from the Nerd Font private-use range. A plain
+# JetBrains Mono renders those as empty boxes.
 font-family = "JetBrainsMono Nerd Font"
 font-size = 13
 
+
+# --- Theme -------------------------------------------------------------------
+# Named theme from Ghostty's built-in collection. List them all with:
+#     ghostty +list-themes
+# Preview one without editing this file:
+#     ghostty --theme=<name>
 theme = Adventure
 
+
+# --- Transparency ------------------------------------------------------------
+# 0.0 fully transparent, 1.0 fully opaque. 0.65 lets the wallpaper show through.
+#
+# This one value is the reason blur is enabled at all in the compositor.
+# ~/.config/hypr/looknfeel.lua turns blur on, and ~/.config/hypr/rules.lua then
+# marks every *other* window `no_blur` — blurring behind an opaque window is
+# pure cost with nothing visible to show for it. If you ever set this back to
+# 1.0, turn blur off in looknfeel.lua at the same time; leaving it on would be
+# paying the compositor's most expensive effect for no visual result.
 background-opacity = 0.65
 
+
+# --- Window padding ----------------------------------------------------------
+# Breathing room in pixels between the window edge and the first cell, so text
+# does not sit flush against the rounded border Hyprland draws (rounding = 8).
 window-padding-x = 6
 window-padding-y = 6
 
+
+# --- Selection behaviour -----------------------------------------------------
+# false: selecting text does NOT copy it automatically. Copy explicitly with
+# Ctrl+Shift+C. Middle-click paste of the X11 primary selection still works.
+# Set to true if you prefer the traditional Unix select-to-copy behaviour.
 copy-on-select = false
 
+
+# --- Close confirmation ------------------------------------------------------
+# false: closing a window or tab with a running process does not prompt.
+# Faster, at the cost of the safety net — a stray Ctrl+Shift+W will take a
+# long-running build with it. Set to true to get the confirmation dialog back.
 confirm-close-surface = false

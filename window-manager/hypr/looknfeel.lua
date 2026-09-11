@@ -89,6 +89,16 @@ hl.config({
         -- back.
         enable_swallow = true,
         swallow_regex = "^com\\.mitchellh\\.ghostty$",
+
+        -- Safety net for the lock screen. If hyprlock ever dies while holding
+        -- the session lock -- a crash, an OOM kill, a bad config flag -- the
+        -- session stays locked with no app drawing on it, and you get
+        -- Hyprland's blue "lockscreen app died" fallback with no password
+        -- prompt. Recovering that normally means switching to another TTY.
+        --
+        -- With this on, a freshly launched hyprlock can take over the orphaned
+        -- lock, so `hyprlock` from a terminal is enough to get a prompt back.
+        allow_session_lock_restore = true,
     },
 
     debug = {

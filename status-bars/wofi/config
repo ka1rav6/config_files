@@ -1,12 +1,50 @@
+# =============================================================================
+# wofi — application launcher (the SUPER+D / SUPER+Space menu)
+# =============================================================================
+# wofi is a GTK-based launcher for Wayland, in the same family as rofi/dmenu.
+# Hyprland invokes it through the `launcher` variable in
+# ~/.config/hypr/defaults.lua, which passes both this file and style.css
+# explicitly, so those paths must stay where they are.
+#
+# Appearance is entirely separate — see ~/.config/wofi/style.css.
+# Syntax: `key=value`, one per line, `#` for comments. No spaces around `=`.
+# Full option list: man 5 wofi
+# -----------------------------------------------------------------------------
+
+# Which mode to open in. `drun` reads .desktop files from /usr/share/applications
+# and ~/.local/share/applications, so it lists installed *applications* with
+# their proper names and icons. (The alternative, `run`, lists raw executables
+# on PATH — every binary, no icons, no friendly names.)
 show=drun
+
+# Render each application's icon next to its name. Costs a little launch time on
+# first open while icons are read; the icon cache makes later opens fast.
 allow_images=true
+
+# Case-insensitive matching, so "fire" finds Firefox.
 insensitive=true
-hide_scroll=true
-term=ghostty
+
+# Placeholder text in the search box before you type anything.
 prompt=Launch applications
+
+# Hide the scrollbar. Purely cosmetic — scrolling still works.
+hide_scroll=true
+
+# Terminal used to launch applications whose .desktop file sets Terminal=true.
+# Keep this matching `terminal` in ~/.config/hypr/defaults.lua.
+term=ghostty
+
+# --- Geometry ----------------------------------------------------------------
+# A 960x720 grid, 6 icons across by 3 rows, centred on screen — a launchpad-style
+# grid rather than a vertical list. lines/columns and width/height interact: if
+# entries look cramped or clipped, change both together.
 width=960
 height=720
 lines=3
 columns=6
 location=center
+
+# Suppress .desktop "actions" (the extra entries like "Firefox → New Private
+# Window"). With a 6-wide grid those extras crowd out actual applications.
+# Set to false if you want them back.
 no_actions=true

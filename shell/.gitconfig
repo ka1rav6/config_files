@@ -1,5 +1,65 @@
+# =============================================================================
+# ~/.gitconfig — global git configuration
+# =============================================================================
+# Applies to every repository for this user. Precedence, lowest to highest:
+#   /etc/gitconfig  (system)  ->  ~/.gitconfig  (this file)  ->  .git/config (per-repo)
+#
+# So a per-repository setting always wins. To use a different identity for work
+# repositories, override user.email inside that repo's .git/config, or use
+# conditional includes (see the commented block at the end).
+#
+# Inspect where any setting comes from:  git config --show-origin --get user.email
+# List everything in effect:             git config --list --show-origin
+# =============================================================================
+
+# --- Identity ----------------------------------------------------------------
+# Stamped into every commit you author. These are recorded permanently in the
+# commit object and cannot be changed later without rewriting history, so they
+# are worth getting right before the first commit on a machine.
 [user]
 	email = kairavdutta@gmail.com
 	name = Kairav
+
+# --- Repository defaults -----------------------------------------------------
 [init]
+	# Branch name used by `git init`. Git's built-in default is still `master`
+	# and it prints a warning on every init until this is set explicitly;
+	# setting it to main both silences that and matches GitHub/GitLab defaults.
 	defaultBranch = main
+
+# =============================================================================
+# Suggested additions — none of these are active. Uncomment what you want.
+# =============================================================================
+#
+# [pull]
+# 	# `git pull` with divergent branches errors out until you pick a strategy.
+# 	# rebase=true replays your local commits on top of the fetched ones instead
+# 	# of creating a merge commit, keeping history linear.
+# 	rebase = true
+#
+# [push]
+# 	# `git push` on a new branch sets up the matching upstream automatically,
+# 	# instead of failing with "no upstream branch" and a command to copy.
+# 	autoSetupRemote = true
+#
+# [core]
+# 	# Send diff and log output through a pager with syntax highlighting.
+# 	# Requires delta (`cargo install git-delta`), which is not installed here.
+# 	pager = delta
+#
+# [rerere]
+# 	# "Reuse recorded resolution": remembers how you resolved a given conflict
+# 	# and replays it automatically next time the same one appears. Pays for
+# 	# itself the first time you rebase a long-lived branch twice.
+# 	enabled = true
+#
+# [alias]
+# 	# Compact graph log:  git lg
+# 	lg = log --graph --pretty=format:'%C(auto)%h%d %s %C(dim)(%cr) <%an>' --abbrev-commit
+# 	# Amend without reopening the editor:  git amend
+# 	amend = commit --amend --no-edit
+#
+# [includeIf "gitdir:~/work/"]
+# 	# Per-directory identity: any repo under ~/work/ picks up a different
+# 	# user.email from this extra file, so personal and work commits never mix.
+# 	path = ~/.gitconfig-work
