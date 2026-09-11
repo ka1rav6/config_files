@@ -40,7 +40,7 @@
 # [push]
 # 	# `git push` on a new branch sets up the matching upstream automatically,
 # 	# instead of failing with "no upstream branch" and a command to copy.
-# 	autoSetupRemote = true
+    autoSetupRemote = true
 #
 # [core]
 # 	# Send diff and log output through a pager with syntax highlighting.

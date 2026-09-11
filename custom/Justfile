@@ -24,7 +24,7 @@ loud VOL=MAXVOL:
 
 # --- Theming ----------------------------------------------------------------
 # Retheme the entire desktop in one step: ghostty, bat, btop, waybar, wofi,
-# wlogout, mako and the Hyprland border gradient.
+# wlogout, mako, tmux and the Hyprland border gradient.
 #
 #   just theme            list available themes and show the active one
 #   just theme gruvbox    apply a theme everywhere

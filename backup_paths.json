@@ -103,5 +103,20 @@
     "path": "/home/kairav/docs/research/yazi_keys.md",
     "category": "custom",
     "description": "Custom backup: yazi_keys.md"
+  },
+  {
+    "path": "/home/kairav/.local/share/applications/nvim-ghostty.desktop",
+    "category": "custom",
+    "description": "Custom backup: nvim-ghostty.desktop"
+  },
+  {
+    "path": "/home/kairav/.selected_editor",
+    "category": "custom",
+    "description": "Custom backup: .selected_editor"
+  },
+  {
+    "path": "/home/kairav/.config/wlogout",
+    "category": "wlogout",
+    "description": "Custom backup: wlogout"
   }
 ]

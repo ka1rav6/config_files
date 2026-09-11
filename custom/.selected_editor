@@ -1,0 +1,17 @@
+# Used by sensible-editor, which is what `crontab -e` and similar fall back to
+# when neither $VISUAL nor $EDITOR is set. Both ARE set to nvim in ~/.zshrc, so
+# this file is only consulted by shells that never sourced it (cron jobs,
+# systemd units, a session started before that change).
+#
+# Originally written by /usr/bin/select-editor as /usr/bin/vim.tiny, chosen at
+# the `crontab -e` prompt. vim.tiny has no +eval and no +syntax, which is what
+# made ~/.vimrc throw E319 there. The vimrc is now tiny-safe either way, but
+# pointing this at nvim means you get the real editor regardless.
+#
+# Change it any time with:  select-editor
+#
+# ~/.local/bin/nvim is a symlink into ~/.local/opt/nvim, the unpacked copy of
+# the Neovim AppImage. Running it directly skips the FUSE mount the AppImage
+# does on every launch (~94 ms -> ~19 ms bare startup). The original AppImage
+# is still at /usr/local/bin/nvim; ~/.local/bin comes first in PATH.
+SELECTED_EDITOR="/home/kairav/.local/bin/nvim"

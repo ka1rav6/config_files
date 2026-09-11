@@ -18,6 +18,7 @@ WHAT IT TOUCHES
     ~/.config/wlogout/style.css     power menu
     ~/.config/mako/config           notifications
     ~/.config/hypr/looknfeel.lua    window border gradient
+    ~/.tmux.conf                    status bar, pane borders, messages
 
 HOW IT IS SAFE
     Every file has a block delimited by THEME:START / THEME:END markers. Only
@@ -44,6 +45,9 @@ from pathlib import Path
 HOME = Path.home()
 CFG = HOME / ".config"
 STATE = CFG / "current-theme"
+# The one themed file outside ~/.config. An absolute path is fine in
+# REQUIRED_MARKERS below: `CFG / <absolute path>` yields the absolute path.
+TMUX_CONF = HOME / ".tmux.conf"
 
 # --------------------------------------------------------------------------
 # Theme definitions
@@ -62,66 +66,138 @@ STATE = CFG / "current-theme"
 THEMES = {
     "mint": {
         "desc": "the original custom palette — mint/amber/coral on near-black",
-        "ghostty": "mint", "bat": "ansi", "btop": "adapta",
-        "bg": "#121418", "surface": "#1b2527", "surface2": "#203332",
-        "border": "#3b4a4d", "text": "#f4f7fa", "muted": "#bec7d0",
-        "a1": "#8ee3c1", "a2": "#f4c47b", "a3": "#ff9b85",
+        "ghostty": "mint",
+        "bat": "ansi",
+        "btop": "adapta",
+        "bg": "#121418",
+        "surface": "#1b2527",
+        "surface2": "#203332",
+        "border": "#3b4a4d",
+        "text": "#f4f7fa",
+        "muted": "#bec7d0",
+        "a1": "#8ee3c1",
+        "a2": "#f4c47b",
+        "a3": "#ff9b85",
     },
     "catppuccin": {
         "desc": "Catppuccin Mocha — soft pastels on warm dark purple",
-        "ghostty": "Catppuccin Mocha", "bat": "ansi", "btop": "tokyo-night",
-        "bg": "#1e1e2e", "surface": "#313244", "surface2": "#45475a",
-        "border": "#585b70", "text": "#cdd6f4", "muted": "#a6adc8",
-        "a1": "#a6e3a1", "a2": "#f9e2af", "a3": "#f38ba8",
+        "ghostty": "Catppuccin Mocha",
+        "bat": "ansi",
+        "btop": "tokyo-night",
+        "bg": "#1e1e2e",
+        "surface": "#313244",
+        "surface2": "#45475a",
+        "border": "#585b70",
+        "text": "#cdd6f4",
+        "muted": "#a6adc8",
+        "a1": "#a6e3a1",
+        "a2": "#f9e2af",
+        "a3": "#f38ba8",
     },
     "tokyonight": {
         "desc": "TokyoNight Night — deep blue, high contrast",
-        "ghostty": "TokyoNight Night", "bat": "ansi", "btop": "tokyo-night",
-        "bg": "#1a1b26", "surface": "#24283b", "surface2": "#414868",
-        "border": "#565f89", "text": "#c0caf5", "muted": "#9aa5ce",
-        "a1": "#9ece6a", "a2": "#e0af68", "a3": "#f7768e",
+        "ghostty": "TokyoNight Night",
+        "bat": "ansi",
+        "btop": "tokyo-night",
+        "bg": "#1a1b26",
+        "surface": "#24283b",
+        "surface2": "#414868",
+        "border": "#565f89",
+        "text": "#c0caf5",
+        "muted": "#9aa5ce",
+        "a1": "#9ece6a",
+        "a2": "#e0af68",
+        "a3": "#f7768e",
     },
     "gruvbox": {
         "desc": "Gruvbox Dark — warm retro earth tones",
-        "ghostty": "Gruvbox Dark", "bat": "gruvbox-dark", "btop": "gruvbox_dark_v2",
-        "bg": "#282828", "surface": "#3c3836", "surface2": "#504945",
-        "border": "#665c54", "text": "#ebdbb2", "muted": "#a89984",
-        "a1": "#b8bb26", "a2": "#fabd2f", "a3": "#fb4934",
+        "ghostty": "Gruvbox Dark",
+        "bat": "gruvbox-dark",
+        "btop": "gruvbox_dark_v2",
+        "bg": "#282828",
+        "surface": "#3c3836",
+        "surface2": "#504945",
+        "border": "#665c54",
+        "text": "#ebdbb2",
+        "muted": "#a89984",
+        "a1": "#b8bb26",
+        "a2": "#fabd2f",
+        "a3": "#fb4934",
     },
     "nord": {
         "desc": "Nord — cool arctic blue-grey, low contrast",
-        "ghostty": "Nord", "bat": "Nord", "btop": "nord",
-        "bg": "#2e3440", "surface": "#3b4252", "surface2": "#434c5e",
-        "border": "#4c566a", "text": "#eceff4", "muted": "#d8dee9",
-        "a1": "#a3be8c", "a2": "#ebcb8b", "a3": "#bf616a",
+        "ghostty": "Nord",
+        "bat": "Nord",
+        "btop": "nord",
+        "bg": "#2e3440",
+        "surface": "#3b4252",
+        "surface2": "#434c5e",
+        "border": "#4c566a",
+        "text": "#eceff4",
+        "muted": "#d8dee9",
+        "a1": "#a3be8c",
+        "a2": "#ebcb8b",
+        "a3": "#bf616a",
     },
     "dracula": {
         "desc": "Dracula — vivid neon on dark violet",
-        "ghostty": "Dracula", "bat": "Dracula", "btop": "dracula",
-        "bg": "#282a36", "surface": "#343746", "surface2": "#44475a",
-        "border": "#6272a4", "text": "#f8f8f2", "muted": "#bfbfbf",
-        "a1": "#50fa7b", "a2": "#f1fa8c", "a3": "#ff5555",
+        "ghostty": "Dracula",
+        "bat": "Dracula",
+        "btop": "dracula",
+        "bg": "#282a36",
+        "surface": "#343746",
+        "surface2": "#44475a",
+        "border": "#6272a4",
+        "text": "#f8f8f2",
+        "muted": "#bfbfbf",
+        "a1": "#50fa7b",
+        "a2": "#f1fa8c",
+        "a3": "#ff5555",
     },
     "everforest": {
         "desc": "Everforest Dark Hard — muted forest green, easy on the eyes",
-        "ghostty": "Everforest Dark Hard", "bat": "ansi", "btop": "everforest-dark-hard",
-        "bg": "#2b3339", "surface": "#323d43", "surface2": "#3a464c",
-        "border": "#4a555b", "text": "#d3c6aa", "muted": "#9da9a0",
-        "a1": "#a7c080", "a2": "#dbbc7f", "a3": "#e67e80",
+        "ghostty": "Everforest Dark Hard",
+        "bat": "ansi",
+        "btop": "everforest-dark-hard",
+        "bg": "#2b3339",
+        "surface": "#323d43",
+        "surface2": "#3a464c",
+        "border": "#4a555b",
+        "text": "#d3c6aa",
+        "muted": "#9da9a0",
+        "a1": "#a7c080",
+        "a2": "#dbbc7f",
+        "a3": "#e67e80",
     },
     "rosepine": {
         "desc": "Rose Pine — muted rose and pine on deep plum",
-        "ghostty": "Rose Pine", "bat": "ansi", "btop": "horizon",
-        "bg": "#191724", "surface": "#1f1d2e", "surface2": "#26233a",
-        "border": "#403d52", "text": "#e0def4", "muted": "#908caa",
-        "a1": "#9ccfd8", "a2": "#f6c177", "a3": "#eb6f92",
+        "ghostty": "Rose Pine",
+        "bat": "ansi",
+        "btop": "horizon",
+        "bg": "#191724",
+        "surface": "#1f1d2e",
+        "surface2": "#26233a",
+        "border": "#403d52",
+        "text": "#e0def4",
+        "muted": "#908caa",
+        "a1": "#9ccfd8",
+        "a2": "#f6c177",
+        "a3": "#eb6f92",
     },
     "kanagawa": {
         "desc": "Kanagawa Wave — ink-wash palette, muted and warm",
-        "ghostty": "Kanagawa Wave", "bat": "ansi", "btop": "tokyo-storm",
-        "bg": "#1f1f28", "surface": "#2a2a37", "surface2": "#363646",
-        "border": "#54546d", "text": "#dcd7ba", "muted": "#c8c093",
-        "a1": "#98bb6c", "a2": "#e6c384", "a3": "#e46876",
+        "ghostty": "Kanagawa Wave",
+        "bat": "ansi",
+        "btop": "tokyo-storm",
+        "bg": "#1f1f28",
+        "surface": "#2a2a37",
+        "surface2": "#363646",
+        "border": "#54546d",
+        "text": "#dcd7ba",
+        "muted": "#c8c093",
+        "a1": "#98bb6c",
+        "a2": "#e6c384",
+        "a3": "#e46876",
     },
 }
 
@@ -131,7 +207,7 @@ THEMES = {
 # --------------------------------------------------------------------------
 def _rgb(h):
     h = h.lstrip("#")
-    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
 
 
 def rgba(h, alpha):
@@ -200,58 +276,108 @@ def apply(name):
     out = []
 
     # --- waybar --------------------------------------------------------
-    out.append(patch_block(CFG / "waybar/style.css", f"""@define-color bar-bg {rgba(t['bg'], 0.94)};
+    out.append(
+        patch_block(
+            CFG / "waybar/style.css",
+            f"""@define-color bar-bg {rgba(t["bg"], 0.94)};
 @define-color panel-bg rgba(255, 255, 255, 0.07);
 @define-color panel-hover rgba(255, 255, 255, 0.13);
-@define-color text {rgba(t['text'], 0.92)};
-@define-color muted {rgba(t['muted'], 0.62)};
-@define-color mint {t['a1']};
-@define-color amber {t['a2']};
-@define-color coral {t['a3']};
-"""))
+@define-color text {rgba(t["text"], 0.92)};
+@define-color muted {rgba(t["muted"], 0.62)};
+@define-color mint {t["a1"]};
+@define-color amber {t["a2"]};
+@define-color coral {t["a3"]};
+""",
+        )
+    )
 
     # --- wofi ----------------------------------------------------------
-    out.append(patch_block(CFG / "wofi/style.css", f"""@define-color bga {rgba(t['bg'], 0.92)};
-@define-color surface {t['surface']};
-@define-color surface2 {t['surface2']};
-@define-color border {t['border']};
-@define-color text {t['text']};
-@define-color text-bright {mix(t['text'], '#ffffff', 0.5)};
-@define-color muted {t['muted']};
-@define-color a1 {t['a1']};
-@define-color a1-dim {mix(t['a1'], t['bg'], 0.55)};
-"""))
+    out.append(
+        patch_block(
+            CFG / "wofi/style.css",
+            f"""@define-color bga {rgba(t["bg"], 0.92)};
+@define-color surface {t["surface"]};
+@define-color surface2 {t["surface2"]};
+@define-color border {t["border"]};
+@define-color text {t["text"]};
+@define-color text-bright {mix(t["text"], "#ffffff", 0.5)};
+@define-color muted {t["muted"]};
+@define-color a1 {t["a1"]};
+@define-color a1-dim {mix(t["a1"], t["bg"], 0.55)};
+""",
+        )
+    )
 
     # --- wlogout -------------------------------------------------------
-    out.append(patch_block(CFG / "wlogout/style.css", f"""@define-color surface {t['surface']};
-@define-color surface2 {t['surface2']};
-@define-color surface-active {mix(t['a1'], t['bg'], 0.82)};
+    out.append(
+        patch_block(
+            CFG / "wlogout/style.css",
+            f"""@define-color surface {t["surface"]};
+@define-color surface2 {t["surface2"]};
+@define-color surface-active {mix(t["a1"], t["bg"], 0.82)};
 @define-color border rgba(255, 255, 255, 0.10);
-@define-color text {rgba(t['text'], 0.88)};
-@define-color text-bright {mix(t['text'], '#ffffff', 0.5)};
-@define-color a1 {t['a1']};
-@define-color a2 {t['a2']};
-@define-color a3 {t['a3']};
-"""))
+@define-color text {rgba(t["text"], 0.88)};
+@define-color text-bright {mix(t["text"], "#ffffff", 0.5)};
+@define-color a1 {t["a1"]};
+@define-color a2 {t["a2"]};
+@define-color a3 {t["a3"]};
+""",
+        )
+    )
 
     # --- mako ----------------------------------------------------------
-    out.append(patch_block(CFG / "mako/config", f"""background-color=#{hexa(t['bg'], 240)}
-text-color={t['text']}
-border-color={t['a1']}
-"""))
-    out.append(patch_block(CFG / "mako/config", f"border-color={t['a3']}\n",
-                           "THEME:CRITICAL:START", "THEME:CRITICAL:END"))
+    out.append(
+        patch_block(
+            CFG / "mako/config",
+            f"""background-color=#{hexa(t["bg"], 240)}
+text-color={t["text"]}
+border-color={t["a1"]}
+""",
+        )
+    )
+    out.append(
+        patch_block(
+            CFG / "mako/config",
+            f"border-color={t['a3']}\n",
+            "THEME:CRITICAL:START",
+            "THEME:CRITICAL:END",
+        )
+    )
 
     # --- hyprland border gradient --------------------------------------
-    out.append(patch_block(CFG / "hypr/looknfeel.lua", f"""-- Window border colours. The active border is a 45-degree gradient between the
+    out.append(
+        patch_block(
+            CFG / "hypr/looknfeel.lua",
+            f"""-- Window border colours. The active border is a 45-degree gradient between the
 -- two accents; the inactive one is a near-background tone so unfocused windows
 -- recede. Alpha is the last byte of each rgba() literal.
 local theme = {{
-    border_active_1 = "rgba({hexa(t['a1'], 238)})",
-    border_active_2 = "rgba({hexa(t['a2'], 170)})",
-    border_inactive = "rgba({hexa(t['surface2'], 136)})",
+    border_active_1 = "rgba({hexa(t["a1"], 238)})",
+    border_active_2 = "rgba({hexa(t["a2"], 170)})",
+    border_inactive = "rgba({hexa(t["surface2"], 136)})",
 }}
-"""))
+""",
+        )
+    )
+
+    # --- tmux ----------------------------------------------------------
+    out.append(
+        patch_block(
+            TMUX_CONF,
+            f"""set -g status-style "bg={t["surface"]},fg={t["text"]}"
+setw -g window-status-style "fg={t["muted"]}"
+setw -g window-status-current-style "bg={t["a1"]},fg={t["bg"]},bold"
+set -g pane-border-style "fg={t["border"]}"
+set -g pane-active-border-style "fg={t["a1"]}"
+set -g message-style "bg={t["a1"]},fg={t["bg"]}"
+set -g message-command-style "bg={t["a2"]},fg={t["bg"]}"
+set -g mode-style "bg={t["surface2"]},fg={t["text"]}"
+set -g display-panes-active-colour "{t["a1"]}"
+set -g display-panes-colour "{t["muted"]}"
+setw -g clock-mode-colour "{t["a1"]}"
+""",
+        )
+    )
 
     # --- ghostty / bat / btop (single-line settings) --------------------
     out.append(patch_key(CFG / "ghostty/config", "theme", t["ghostty"]))
@@ -272,16 +398,21 @@ local theme = {{
     )
     out.append(f"themed: {bat_cfg}")
 
-    out.append(patch_key(CFG / "btop/btop.conf", "color_theme",
-                         f"/usr/share/btop/themes/{t['btop']}.theme", quote=True))
+    out.append(
+        patch_key(
+            CFG / "btop/btop.conf",
+            "color_theme",
+            f"/usr/share/btop/themes/{t['btop']}.theme",
+            quote=True,
+        )
+    )
 
     STATE.write_text(name + "\n")
     return out
 
 
 def _running(name):
-    return subprocess.run(["pgrep", "-x", name],
-                          capture_output=True).returncode == 0
+    return subprocess.run(["pgrep", "-x", name], capture_output=True).returncode == 0
 
 
 def reload_all():
@@ -294,30 +425,57 @@ def reload_all():
     so this checks afterwards and brings it back if the signal killed it.
     """
     if _running("waybar"):
-        subprocess.run(["killall", "-SIGUSR2", "waybar"],
-                       check=False, capture_output=True)
+        subprocess.run(
+            ["killall", "-SIGUSR2", "waybar"], check=False, capture_output=True
+        )
         time.sleep(1.0)
 
     if _running("waybar"):
         print("  reloaded waybar")
     else:
         subprocess.Popen(
-            ["waybar", "-c", str(CFG / "waybar/config.jsonc"),
-             "-s", str(CFG / "waybar/style.css")],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            [
+                "waybar",
+                "-c",
+                str(CFG / "waybar/config.jsonc"),
+                "-s",
+                str(CFG / "waybar/style.css"),
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
         time.sleep(1.5)
-        print("  restarted waybar" if _running("waybar")
-              else "  WARNING: waybar is not running and could not be started")
+        print(
+            "  restarted waybar"
+            if _running("waybar")
+            else "  WARNING: waybar is not running and could not be started"
+        )
 
-    for label, cmd in (("mako", ["makoctl", "reload"]),
-                       ("hyprland", ["hyprctl", "reload"])):
+    for label, cmd in (
+        ("mako", ["makoctl", "reload"]),
+        ("hyprland", ["hyprctl", "reload"]),
+    ):
         try:
             subprocess.run(cmd, check=False, capture_output=True, timeout=10)
             print(f"  reloaded {label}")
-        except Exception as e:                      # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
             print(f"  could not reload {label}: {e}")
+
+    # tmux: re-sourcing the config re-runs every `set -g`, which repaints all
+    # attached sessions. `list-sessions` fails when no server is running, and
+    # then there is nothing to repaint -- the next session reads the file
+    # anyway. (Not `tmux info`: that needs an attached client, so it always
+    # fails when run from a script like this one.)
+    if subprocess.run(["tmux", "list-sessions"], capture_output=True).returncode == 0:
+        r = subprocess.run(
+            ["tmux", "source-file", str(TMUX_CONF)], capture_output=True, text=True
+        )
+        print(
+            "  reloaded tmux"
+            if r.returncode == 0
+            else f"  could not reload tmux: {r.stderr.strip()}"
+        )
 
 
 # Every (file, start-marker) pair that apply() relies on. Kept next to the
@@ -329,6 +487,7 @@ REQUIRED_MARKERS = [
     ("mako/config", "THEME:START"),
     ("mako/config", "THEME:CRITICAL:START"),
     ("hypr/looknfeel.lua", "THEME:START"),
+    (str(TMUX_CONF), "THEME:START"),
 ]
 REQUIRED_KEYS = [
     ("ghostty/config", "theme"),
@@ -352,13 +511,14 @@ def check():
         s = p.read_text()
         # Must match exactly what patch_block() looks for: the marker AND the
         # "generated by" anchor on the same line.
-        starts = [ln for ln in s.splitlines()
-                  if marker in ln and "generated by" in ln]
+        starts = [ln for ln in s.splitlines() if marker in ln and "generated by" in ln]
         end = marker.replace(":START", ":END")
         ends = [ln for ln in s.splitlines() if end in ln]
         if len(starts) != 1:
-            bad.append(f"{rel}: found {len(starts)} usable '{marker}' lines "
-                       f"(need exactly 1, with 'generated by' on the same line)")
+            bad.append(
+                f"{rel}: found {len(starts)} usable '{marker}' lines "
+                f"(need exactly 1, with 'generated by' on the same line)"
+            )
         if len(ends) != 1:
             bad.append(f"{rel}: found {len(ends)} '{end}' lines (need exactly 1)")
     for rel, key in REQUIRED_KEYS:
@@ -373,8 +533,10 @@ def check():
         for b in bad:
             print("  " + b)
         return 1
-    print(f"theme-switch check OK — {len(REQUIRED_MARKERS)} marker blocks, "
-          f"{len(REQUIRED_KEYS)} keyed settings, all present.")
+    print(
+        f"theme-switch check OK — {len(REQUIRED_MARKERS)} marker blocks, "
+        f"{len(REQUIRED_KEYS)} keyed settings, all present."
+    )
     return 0
 
 
@@ -405,8 +567,7 @@ def main():
     # Verify the markers BEFORE touching anything, so a broken config is
     # reported up front instead of leaving a half-applied theme behind.
     if check() != 0:
-        print("\nRefusing to apply a theme while a marker is missing.",
-              file=sys.stderr)
+        print("\nRefusing to apply a theme while a marker is missing.", file=sys.stderr)
         return 1
 
     print(f"\nApplying theme: {arg} — {THEMES[arg]['desc']}\n")

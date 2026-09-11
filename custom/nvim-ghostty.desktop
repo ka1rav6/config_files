@@ -1,0 +1,23 @@
+[Desktop Entry]
+# Opens files in terminal Neovim inside a Ghostty window. It is the default
+# handler for text and source files in ~/.config/mimeapps.list, so
+# double-clicking a .txt/.py/.rs in Nautilus, or `xdg-open file.c`, lands here.
+#
+# Terminal=false plus an explicit `ghostty -e` on purpose: with Terminal=true,
+# GLib picks the terminal itself from ~/.config/xdg-terminals.list, which names
+# GNOME Terminal rather than Ghostty.
+#
+# `-e` hands each %F path to nvim as its own argument (not through a shell), so
+# filenames containing spaces open correctly; several files become one nvim
+# with several buffers.
+Type=Application
+Name=Neovim (Ghostty)
+GenericName=Text Editor
+Comment=Edit text files in Neovim inside a Ghostty terminal
+Exec=/snap/bin/ghostty -e nvim %F
+TryExec=/snap/bin/ghostty
+Icon=accessories-text-editor
+Terminal=false
+Categories=Utility;TextEditor;
+MimeType=text/plain;text/x-log;text/x-csrc;text/x-chdr;text/x-c++src;text/x-c++hdr;text/x-python;text/x-script.python;text/x-rust;text/x-go;text/x-java;text/x-lua;text/x-zig;text/x-makefile;text/x-cmake;text/css;text/csv;text/x-shellscript;application/x-shellscript;application/json;application/x-yaml;application/toml;application/xml;application/javascript;application/x-desktop;
+StartupNotify=false
