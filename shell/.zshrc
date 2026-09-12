@@ -421,6 +421,14 @@ export PATH="$PATH:/home/kairav/.local/bin"
 #     [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 export NVM_DIR="$HOME/.nvm"
 
+# Put the default Node version's bin on PATH directly, without sourcing nvm.sh
+# (~0 ms), so globally installed CLIs — opencode, openclaw, tsc, tsx, … — resolve
+# in every shell. The lazy stubs below are unaffected: they still load real nvm
+# on first use, and a later `nvm use` prepends its own path, so it still wins.
+_nvm_bin=("$NVM_DIR"/versions/node/v$(<"$NVM_DIR/alias/default")*/bin(Nn))
+(( $#_nvm_bin )) && export PATH="${_nvm_bin[-1]}:$PATH"
+unset _nvm_bin
+
 _nvm_load() {
 	# Remove every stub first, so the real definitions from nvm.sh win and a
 	# failed load cannot leave us recursing into ourselves.

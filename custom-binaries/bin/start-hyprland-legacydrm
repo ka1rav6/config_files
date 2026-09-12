@@ -1,0 +1,12 @@
+#!/bin/sh
+# Launches Hyprland with aquamarine's legacy (non-atomic) DRM interface.
+#
+# aquamarine 0.15.0 hangs inside the atomic DRM commit when re-enabling an
+# output that was previously disabled (lid close, or dpms off) -- "Modesetting
+# eDP-1" is the last line it logs, and only a fresh Hyprland recovers the panel.
+# See aquamarine #293 / #304 / #307. The legacy path takes a different code
+# route for that modeset.
+#
+# Remove this session once aquamarine > 0.15.0 reaches the PPA.
+export AQ_NO_ATOMIC=1
+exec /usr/bin/start-hyprland "$@"
