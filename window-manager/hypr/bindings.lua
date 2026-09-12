@@ -137,6 +137,7 @@ local named_workspaces = {
     { key = "M", name = "top", command = tui .. "btop --utf-force" },
     { key = "G", name = "chrome", command = "google-chrome --new-window" },
     { key = "B", name = "brave", command = "brave-browser --new-window" },
+    { key = "C", name = "claude", command = "claude-desktop" },
     { key = "D", name = "debug" },
 }
 
