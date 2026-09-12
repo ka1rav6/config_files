@@ -187,6 +187,12 @@ hl.bind(mod .. " + CTRL + SHIFT + RIGHT", hl.dsp.exec_cmd(display .. "place righ
 hl.bind(mod .. " + CTRL + SHIFT + UP", hl.dsp.exec_cmd(display .. "place up"))
 hl.bind(mod .. " + CTRL + SHIFT + DOWN", hl.dsp.exec_cmd(display .. "place down"))
 
+-- Panel recovery. If the screen is black after a resume but the session is
+-- still alive, this re-enables the output -- it is the only thing that does
+-- (see the note in hypridle.conf). Worth knowing by feel, since by definition
+-- you cannot see the screen when you need it.
+hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"))
+
 -- Applications and utilities.
 hl.bind(mod .. " + S", hl.dsp.exec_cmd(launcher))
 
