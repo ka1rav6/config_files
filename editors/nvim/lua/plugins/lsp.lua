@@ -13,6 +13,16 @@ return {
         ruff = {},
         ts_ls = {},
 
+        rust_analyzer = {
+          settings = {
+            ["rust-analyzer"] = {
+              -- Silences "file not included in the module tree" for scratch/
+              -- standalone .rs files that no crate root declares a `mod` for.
+              diagnostics = { disabled = { "unlinked-file" } },
+            },
+          },
+        },
+
         zls = {
           on_attach = function(client)
             client.server_capabilities.documentFormattingProvider = false

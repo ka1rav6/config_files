@@ -44,3 +44,8 @@ theme NAME="--list":
 # Show which theme is currently applied
 theme-current:
     @{{THEME}} --current
+
+
+browser-cache:
+    pkill -f chrome && pkill -f brave
+    rm -rf ~/.cache/google-chrome/* ~/.cache/BraveSoftware/Brave-Browser/*
