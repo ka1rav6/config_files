@@ -84,7 +84,20 @@ hl.config({
 
     scrolling = { fullscreen_on_one_column = true },
 
-    cursor = { no_hardware_cursors = false, default_monitor = "HDMI-A-1" },
+    -- no_hardware_cursors: draw the cursor into the normal composited frame
+    -- instead of handing it to the DRM cursor plane.
+    --
+    -- Must stay true while defaults.lua sets AQ_NO_ATOMIC=1. On the legacy DRM
+    -- iface a hardware cursor is moved with drmModeSetCursor/drmModeMoveCursor,
+    -- which are NOT part of the primary plane's page flip -- so any repaint can
+    -- land without the cursor plane re-armed and the pointer blinks out until
+    -- the next motion event pushes it back. eDP-1 running at scale 1.5 makes it
+    -- worse: every scaled redraw re-uploads the 256x256 cursor bo (11k+
+    -- "legacy drm: cursor fb" lines in a single session's log).
+    --
+    -- Costs one frame of pointer latency, which at 120Hz is not perceptible.
+    -- Revisit together with the AQ_NO_ATOMIC removal in defaults.lua.
+    cursor = { no_hardware_cursors = true, default_monitor = "HDMI-A-1" },
 
     misc = {
         disable_hyprland_logo = false,
