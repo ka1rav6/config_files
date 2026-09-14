@@ -213,8 +213,12 @@ hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mod .. " + C", hl.dsp.exec_cmd("google-chrome --new-window"))
 hl.bind(mod .. " + V", hl.dsp.exec_cmd("cliphist list | wofi --dmenu | cliphist decode | wl-copy"))
 hl.bind(mod .. " + SHIFT + V", hl.dsp.exec_cmd("code"))
-hl.bind(mod .. " + SHIFT + A", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/minimize-window.sh"))
-hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/restore-window.sh"))
+-- Stash the focused window away and bring it back, on one key. Which of the
+-- two a press means depends on the workspace you are standing on: if it has
+-- anything stashed, the key restores the most recent one, otherwise it stashes
+-- what is focused. Scoped per workspace, so it never reaches across to -- or
+-- drags your focus over to -- something you hid somewhere else.
+hl.bind(mod .. " + SHIFT + A", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/toggle-minimize.sh"))
 hl.bind(mod .. " + ALT + SPACE", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/toggle-waybar.sh"))
 hl.bind(mod .. " + CTRL + N", hl.dsp.exec_cmd("makoctl restore"))
 hl.bind(mod .. " + N", hl.dsp.exec_cmd("ghostty -e ~/.local/bin/mako-fzf-history"))

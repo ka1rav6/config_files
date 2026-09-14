@@ -324,3 +324,85 @@ function scratchpads.register_rules()
         })
     end
 end
+
+-- ---------------------------------------------------------------------------
+-- Stray windows opened from inside a scratchpad
+-- ---------------------------------------------------------------------------
+--
+-- Hyprland maps a new window onto the focused monitor's *active* workspace, and
+-- while a scratchpad is showing that IS the special workspace. So anything you
+-- launch from the scratchpad terminal -- `ghostwriter`, a browser, an editor --
+-- opens onto special:scratch: it tiles there, which on an otherwise-floating
+-- special workspace means it covers the whole monitor, and it vanishes with the
+-- scratchpad on the next toggle because it genuinely lives there.
+--
+-- scratchpads.dismiss_active() already solves this, but only where a caller
+-- remembers to invoke it -- today just yazi's `o` bind. That cannot cover a
+-- command you typed yourself, so catch it at the compositor instead: when a
+-- window opens on a scratchpad's workspace and is not that scratchpad's own
+-- window, it was never meant to be there.
+--
+-- Evicting it means three things, in order: move it out to the real workspace
+-- behind the scratchpad, hide the scratchpad (you asked for the app, not the
+-- terminal), and focus what you just launched.
+
+--- True if `window` is one of `app`'s own windows rather than a stray.
+---
+--- initial_class as well as class because some toolkits set their final app_id
+--- a beat after mapping, and a scratchpad misread as a stray would get evicted
+--- out of its own workspace.
+local function belongs_to(app, window)
+    for _, class in ipairs(app.classes) do
+        if window.class == class or window.initial_class == class then
+            return true
+        end
+    end
+    return false
+end
+
+--- Move a window that opened on a scratchpad workspace out to the real one.
+function scratchpads.evict_stray(window)
+    if window == nil or window.workspace == nil then
+        return
+    end
+
+    local app = scratchpads.by_workspace_name(window.workspace.name)
+    if app == nil or belongs_to(app, window) then
+        return
+    end
+
+    -- The real workspace behind the scratchpad, on the window's own monitor.
+    local monitor = window.monitor
+    local destination = monitor and monitor.active_workspace
+    if destination == nil or destination.special then
+        return
+    end
+
+    -- silent: place it without dragging focus onto a workspace that is still
+    -- hidden behind the scratchpad. Focus is handed over below, once the
+    -- scratchpad is out of the way.
+    hl.dispatch(hl.dsp.window.move({ window = window, workspace = destination.id, silent = true }))
+    hl.dispatch(hl.dsp.workspace.toggle_special(app.workspace))
+    hl.dispatch(hl.dsp.focus({ window = window }))
+end
+
+-- `hyprctl reload` re-runs this file against the same Lua state, so drop the
+-- previous subscription rather than stacking a second handler on every reload.
+--
+-- Held in a global of its own, NOT a field on `scratchpads`: the table is
+-- rebuilt from scratch at the top of this file, so a handle parked on it would
+-- be thrown away on reload and the old subscription would be left running,
+-- unreachable and undismissable, forever. The global also keeps the
+-- subscription rooted against garbage collection.
+-- pcall: a subscription that was already removed by hand (debugging from
+-- `hyprctl eval`, say) throws on a second remove, and an uncaught throw here
+-- would abort the rest of this file and take the scratchpads with it.
+if _scratchpad_stray_subscription then
+    pcall(function()
+        _scratchpad_stray_subscription:remove()
+    end)
+end
+
+_scratchpad_stray_subscription = hl.on("window.open", function(window)
+    scratchpads.evict_stray(window)
+end)
