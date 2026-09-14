@@ -5,6 +5,7 @@ import sys
 import shutil
 import subprocess
 import json
+import traceback
 from datetime import datetime
 from pathlib import Path
 
@@ -12,6 +13,9 @@ from pathlib import Path
 HOME_DIR = Path.home()
 BACKUP_DIR = HOME_DIR / "dotfiles"
 BACKUP_CONFIG_FILE = BACKUP_DIR / "backup_paths.json"
+# Where the cron job redirects its output; named in failure notifications so
+# there is a breadcrumb to follow once the popup is gone.
+LOG_FILE = HOME_DIR / "backup.log"
 
 # Default paths to backup (organized by category)
 DEFAULT_BACKUP_PATHS = [
@@ -120,6 +124,27 @@ EXCLUDE_NAMES = {
 MAX_FILE_MB = 2
 
 
+def notify(summary, body, urgency="normal"):
+    """Show a desktop notification through mako.
+
+    cron hands the job a bare environment with no DBUS_SESSION_BUS_ADDRESS, so
+    notify-send would have no session bus to reach mako on and the run would
+    finish silently. Point it at the user's runtime bus explicitly. Never fatal:
+    a missing daemon must not fail an otherwise good backup.
+    """
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    env = os.environ.copy()
+    env.setdefault("DBUS_SESSION_BUS_ADDRESS", f"unix:path={runtime_dir}/bus")
+    try:
+        subprocess.run(
+            ["notify-send", "--app-name=config-backup", "--icon=drive-harddisk",
+             f"--urgency={urgency}", summary, body],
+            env=env, timeout=10, check=False,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as e:
+        print(f"  \u26a0 Could not send notification: {e}")
+
+
 def is_excluded(path):
     return path.name in EXCLUDE_NAMES
 
@@ -220,17 +245,18 @@ def commit_changes():
         
         if not status_result.stdout.strip():
             print("  ⚠ No changes to commit")
-            return False
+            return "clean"
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         commit_message = f"Backup created at {timestamp}"
         subprocess.run(["git", "commit", "-m", commit_message], cwd=BACKUP_DIR, check=True)
         print(f"  ✓ Committed: {commit_message}")
-        push_changes()
-        return True
+        # A commit that never reaches the remote is still a local-only backup,
+        # so surface a failed push rather than reporting a clean success.
+        return "committed" if push_changes() else "push-failed"
     except subprocess.CalledProcessError as e:
         print(f"  ✗ Git commit failed: {e}")
-        return False
+        return "commit-failed"
 
 def push_changes():
     try:
@@ -335,10 +361,33 @@ def main():
                 copied_count += 1
         
         if copied_count > 0:
-            commit_changes()
+            status = commit_changes()
             print(f"\n✓ Backup completed: {copied_count} files/folders copied")
+            if status == "commit-failed":
+                notify("Config backup FAILED",
+                       f"{copied_count} paths copied but the git commit failed. "
+                       f"See {LOG_FILE}.",
+                       urgency="critical")
+                sys.exit(1)
+            elif status == "push-failed":
+                notify("Config backup only saved locally",
+                       f"{copied_count} paths committed, but the push to origin "
+                       f"failed — no off-machine copy. See {LOG_FILE}.",
+                       urgency="critical")
+                sys.exit(1)
+            notify(
+                "Config backup complete",
+                f"{copied_count} paths backed up, changes pushed"
+                if status == "committed"
+                else f"{copied_count} paths backed up, nothing new to commit",
+            )
         else:
             print("\n✗ No files were backed up")
+            notify("Config backup FAILED",
+                   f"No files were backed up — every tracked path was missing "
+                   f"or skipped. See {LOG_FILE}.",
+                   urgency="critical")
+            sys.exit(1)
     
     elif sys.argv[1] == "add":
         if len(sys.argv) < 3:
@@ -372,4 +421,15 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception:
+        # An unhandled crash is the quietest failure of all: cron swallows the
+        # traceback into the log and nothing on screen says the backup died.
+        traceback.print_exc()
+        notify("Config backup FAILED",
+               f"The backup crashed: {sys.exc_info()[1]}. See {LOG_FILE}.",
+               urgency="critical")
+        sys.exit(1)
