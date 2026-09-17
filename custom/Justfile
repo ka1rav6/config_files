@@ -46,6 +46,8 @@ theme-current:
     @{{THEME}} --current
 
 
-browser-cache:
-    pkill -f chrome && pkill -f brave
-    rm -rf ~/.cache/google-chrome/* ~/.cache/BraveSoftware/Brave-Browser/*
+clean-brave:
+    pkill -f brave
+    rm -rf ~/.cache/BraveSoftware/Brave-Browser/*
+clean-chrome:
+    pkill -f chrome && rm -rf ~/.cache/google-chrome/* 
