@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP_ROOT="${HOME}/.local/share/quickshell-backups"
+mkdir -p "${BACKUP_ROOT}"
+ARCHIVE="${BACKUP_ROOT}/pre-phase1-${STAMP}.tar.gz"
+
+if [[ "${1:-}" == "restore" ]]; then
+  if [[ -z "${2:-}" ]]; then
+    echo "Usage: quickshell-migration-backup restore <archive.tar.gz>" >&2
+    exit 1
+  fi
+  ARCHIVE="${2}"
+  if [[ ! -f "${ARCHIVE}" ]]; then
+    echo "Backup archive not found: ${ARCHIVE}" >&2
+    exit 1
+  fi
+  echo "Restoring from ${ARCHIVE}"
+  tar -xzf "${ARCHIVE}" -C "${HOME}"
+  echo "Restore complete."
+  exit 0
+fi
+
+if [[ "${1:-}" == "list" ]]; then
+  ls -1 "${BACKUP_ROOT}" 2>/dev/null || true
+  exit 0
+fi
+
+if [[ -n "${1:-}" && "${1}" != "--help" ]]; then
+  echo "Unknown argument: ${1}" >&2
+  echo "Usage: quickshell-migration-backup [list|restore <archive.tar.gz>]" >&2
+  exit 1
+fi
+
+tar -czf "${ARCHIVE}" \
+  -C "${HOME}" \
+  .config/hypr \
+  .config/waybar \
+  .config/mako \
+  .config/wofi \
+  .config/hypr/hyprlock.conf \
+  .local/bin \
+  Justfile
+
+echo "Backup created at ${ARCHIVE}"

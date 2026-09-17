@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v qs >/dev/null 2>&1; then
+  qs -c default --reload 2>/dev/null || qs -c default --quit 2>/dev/null || true
+  qs -c default &
+  exit 0
+fi
+
+echo "Quickshell is not installed yet. Nothing to reload." >&2
+exit 1

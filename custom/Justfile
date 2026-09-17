@@ -9,6 +9,19 @@ all: backup
 backup:
 	python {{BACKUP}}
 
+qs-backup:
+	@~/.local/bin/quickshell-migration-backup
+
+qs-restore ARCHIVE:
+	@~/.local/bin/quickshell-migration-restore "{{ARCHIVE}}"
+
+qs-reload:
+	@~/.local/bin/qs-reload
+
+qs-restart:
+	@pkill -f quickshell 2>/dev/null || true
+	@~/.local/bin/qs-reload
+
 # "$@" (via positional-arguments) passes each path as its own argument, so paths
 # containing spaces survive; `{{PATHS}}` would join them and split on spaces.
 
@@ -48,6 +61,7 @@ theme-current:
 
 clean-brave:
     pkill -f brave
-    rm -rf ~/.cache/BraveSoftware/Brave-Browser/*
+    yes | rm -rf ~/.cache/BraveSoftware/Brave-Browser/*
 clean-chrome:
-    pkill -f chrome && rm -rf ~/.cache/google-chrome/* 
+    pkill -f chrome 
+    yes | rm -rf ~/.cache/google-chrome/* 

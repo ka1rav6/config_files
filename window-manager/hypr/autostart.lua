@@ -62,6 +62,26 @@ end
 
 hl.on("config.reloaded", on_reload(scratchpads.ensure_prespawned))
 
+local function quickshell_enabled()
+    local enable = os.getenv("QUICKSHELL_ENABLE") or os.getenv("QS_ENABLE")
+    return enable == "1" or enable == "true" or enable == "yes"
+end
+
+local function start_quickshell_if_enabled()
+    if not quickshell_enabled() then
+        return
+    end
+
+    if os.execute("command -v quickshell >/dev/null 2>&1") == true then
+        hl.exec_cmd("quickshell --config default >/dev/null 2>&1 &")
+        return
+    end
+
+    if os.execute("command -v qs >/dev/null 2>&1") == true then
+        hl.exec_cmd("qs --config default >/dev/null 2>&1 &")
+    end
+end
+
 hl.on("hyprland.start", function()
     scratchpads.ensure_prespawned()
     hl.exec_cmd("hyprpaper")
@@ -87,4 +107,5 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user start hyprpolkitagent.service 2>/dev/null || true")
     hl.exec_cmd("nm-applet --indicator")
     hl.exec_cmd("blueman-applet")
+    start_quickshell_if_enabled()
 end)
