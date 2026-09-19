@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if command -v qs >/dev/null 2>&1; then
-  qs -c default --reload 2>/dev/null || qs -c default --quit 2>/dev/null || true
-  qs -c default &
+if command -v quickshell >/dev/null 2>&1; then
+  pkill -f '/dev/forks/quickshell/build/src/quickshell' 2>/dev/null || true
+  sleep 0.2
+  quickshell -c default &
   exit 0
 fi
 

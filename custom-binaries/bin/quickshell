@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+qt_root="${HOME}/Qt/6.8.3/gcc_64"
+quickshell_root="${HOME}/dev/forks/quickshell"
+binary="${quickshell_root}/build/src/quickshell"
+
+if [[ ! -x "${binary}" ]]; then
+  echo "Quickshell binary not found: ${binary}" >&2
+  exit 1
+fi
+
+export PATH="${qt_root}/bin:${PATH}"
+export LD_LIBRARY_PATH="${qt_root}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export QML2_IMPORT_PATH="${quickshell_root}/build/qml_modules${QML2_IMPORT_PATH:+:${QML2_IMPORT_PATH}}"
+
+exec "${binary}" "$@"
