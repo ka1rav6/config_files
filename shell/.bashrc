@@ -23,7 +23,6 @@
 #   Your ~/.profile sources this file when bash is the login shell.
 # -----------------------------------------------------------------------------
 
-
 # --- Bail out early if this shell is not interactive -------------------------
 #
 # `$-` holds the shell's active option flags; it contains `i` only for
@@ -34,10 +33,9 @@
 # non-interactive bash and break any tool that shells out to `bash -c`, plus
 # scp/rsync, which choke on unexpected output from a remote startup file.
 case $- in
-*i*) ;;  # interactive  -> keep going, fall through to the exec below
-*) return ;;  # anything else -> stop reading this file now
+*i*) ;;      # interactive  -> keep going, fall through to the exec below
+*) return ;; # anything else -> stop reading this file now
 esac
-
 
 # --- Hand the session over to zsh --------------------------------------------
 #
@@ -50,9 +48,8 @@ esac
 # terminates it), which would leave you with no working terminal and no obvious
 # way to fix it. With the guard, a missing zsh simply leaves you in bash.
 if command -v zsh >/dev/null 2>&1; then
-	exec zsh
+    exec zsh
 fi
-
 
 # =============================================================================
 # ============================ DEAD CODE BELOW ================================
@@ -69,20 +66,18 @@ fi
 # If you ever want this block to run again, move it ABOVE the `exec zsh` line.
 # =============================================================================
 
-
 # --- Prompt colour opt-in ----------------------------------------------------
 # Consulted by the stock Ubuntu ~/.bashrc prompt block to decide whether to emit
 # colour escapes. That block was removed from this file, so this now only
 # matters to anything else that happens to read the variable.
 force_color_prompt=yes
 
-
 # --- Modern replacements for the classic coreutils ---------------------------
 # eza: a Rust `ls` with git awareness, tree mode and better colours by default.
 alias ls='eza'
-alias ll='eza -alF'    # long listing, including dotfiles, with type indicators
-alias la='eza -A'      # all entries except . and ..
-alias l='eza -CF'      # brief multi-column listing
+alias ll='eza -alF' # long listing, including dotfiles, with type indicators
+alias la='eza -A'   # all entries except . and ..
+alias l='eza -CF'   # brief multi-column listing
 
 # --color=auto keeps colour when stdout is a terminal and drops it when piped,
 # so `grep x | wc -l` doesn't count escape sequences as characters.
@@ -100,10 +95,11 @@ alias bat='batcat'
 # zoxide's `z`: cd that learns the directories you actually use, so `z proj`
 # jumps to ~/dev/some/deep/project after you've been there once.
 alias cd='z'
+alias ff='fastfetch'
 
 # --- App shortcuts -----------------------------------------------------------
-alias pdf='sioyek'       # Sioyek: keyboard-driven PDF reader tuned for papers
-alias gmd='ghostwriter'  # Markdown editor with live preview
+alias pdf='sioyek'      # Sioyek: keyboard-driven PDF reader tuned for papers
+alias gmd='ghostwriter' # Markdown editor with live preview
 
 # --- General shortcuts -------------------------------------------------------
 alias cls='clear'
@@ -118,18 +114,17 @@ alias getasm='gcc -S -O2 -fverbose-asm'
 # Mounts ./encrypted (ciphertext on disk) onto ./unlocked (plaintext view).
 # Both are relative paths, so cd into the directory holding them first.
 alias unlockssd="gocryptfs ./encrypted ./unlocked"
-alias lockssd="fusermount -u ./unlocked"  # unmount; ciphertext stays put
+alias lockssd="fusermount -u ./unlocked" # unmount; ciphertext stays put
 
 # --- Git shortcuts -----------------------------------------------------------
 alias gs='git status'
-alias ga='git add .'       # NOTE: stages everything under CWD, not just tracked
-alias gc='git commit -m'   # usage: gc "message"
+alias ga='git add .'     # NOTE: stages everything under CWD, not just tracked
+alias gc='git commit -m' # usage: gc "message"
 alias gp='git push'
 alias gl='git pull'
 alias gd='git diff'
 alias gb='git branch'
 alias gco='git checkout'
-
 
 # --- FUNCTIONS ---------------------------------------------------------------
 
@@ -142,28 +137,28 @@ alias gco='git checkout'
 # -O0 is deliberate: optimisation reorders and deletes code until the mapping
 # back to source is unrecognisable, which defeats the purpose when learning.
 r5asm() {
-	if [ -z "$1" ]; then
-		echo "Usage: r5asm <file.c>"
-		return 1
-	fi
+    if [ -z "$1" ]; then
+        echo "Usage: r5asm <file.c>"
+        return 1
+    fi
 
-	file="$1"
-	base="${file%.c}"  # strip the .c extension to build sibling filenames
+    file="$1"
+    base="${file%.c}" # strip the .c extension to build sibling filenames
 
-	# Human-readable assembly, annotated with source variable names.
-	riscv64-linux-gnu-gcc -S -O0 -g -fverbose-asm "$file" -o "${base}.s"
+    # Human-readable assembly, annotated with source variable names.
+    riscv64-linux-gnu-gcc -S -O0 -g -fverbose-asm "$file" -o "${base}.s"
 
-	# Executable with debug symbols — objdump needs these to interleave source.
-	riscv64-linux-gnu-gcc -O0 -g "$file" -o "${base}.out"
+    # Executable with debug symbols — objdump needs these to interleave source.
+    riscv64-linux-gnu-gcc -O0 -g "$file" -o "${base}.out"
 
-	# The interleaved view: -d disassembles, -S pulls in the matching C lines.
-	riscv64-linux-gnu-objdump -d -S "${base}.out" >"${base}.mix"
+    # The interleaved view: -d disassembles, -S pulls in the matching C lines.
+    riscv64-linux-gnu-objdump -d -S "${base}.out" >"${base}.mix"
 
-	echo "Generated:"
-	echo "  ${base}.s   → verbose assembly"
-	echo "  ${base}.mix → C + ASM (best for learning)"
+    echo "Generated:"
+    echo "  ${base}.s   → verbose assembly"
+    echo "  ${base}.mix → C + ASM (best for learning)"
 
-	vim "${base}.mix"
+    vim "${base}.mix"
 }
 
 # pipinst <pkg> — pip install into the system Python on Ubuntu 24.04.
@@ -173,14 +168,13 @@ r5asm() {
 # overrides that. It is the blunt instrument; a venv or `pipx install` is the
 # safe option for anything you intend to keep.
 pipinst() {
-	python -m pip install --break-system-packages "$@"
+    python -m pip install --break-system-packages "$@"
 }
 
 # mkcd <dir> — create a directory (including parents) and cd into it.
 mkcd() {
-	mkdir -p "$1" && cd "$1"
+    mkdir -p "$1" && cd "$1"
 }
-
 
 # --- PROMPT ------------------------------------------------------------------
 #
@@ -196,7 +190,6 @@ mkcd() {
 #   A correct version would be: PS1='\[\e[32m\]kairav/\A:\w\$\[\e[0m\] '
 PS1='\e[32mkairav/\A:\w\$\e[32m '
 
-
 # --- History search on the arrow keys ----------------------------------------
 # Up/Down search history for entries starting with what is already typed,
 # instead of stepping blindly through every past command. Type "git c", press
@@ -204,7 +197,6 @@ PS1='\e[32mkairav/\A:\w\$\e[32m '
 #   \e[A = Up arrow, \e[B = Down arrow
 bind '"\e[A": history-search-backward'
 bind '"\e[B": history-search-forward'
-
 
 # --- Toolchains and PATH -----------------------------------------------------
 

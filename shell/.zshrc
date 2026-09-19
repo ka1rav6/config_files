@@ -215,6 +215,7 @@ alias ls='eza'
 alias ll='eza -alF'  # long listing, dotfiles included, type indicators
 alias la='eza -A'    # all entries except . and ..
 alias l='eza -CF'    # brief multi-column listing
+alias ff='fastfetch'
 
 # --color=auto keeps colour on a terminal and drops it when piped, so escape
 # codes never end up counted by `wc` or matched by a downstream grep.

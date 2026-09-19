@@ -118,5 +118,15 @@
     "path": "/home/kairav/.config/wlogout",
     "category": "wlogout",
     "description": "Custom backup: wlogout"
+  },
+  {
+    "path": "/home/kairav/.config/fastfetch/config.jsonc",
+    "category": "config",
+    "description": "Custom backup: config.jsonc"
+  },
+  {
+    "path": "/home/kairav/.config/fastfetch",
+    "category": "fastfetch",
+    "description": "Custom backup: fastfetch"
   }
 ]

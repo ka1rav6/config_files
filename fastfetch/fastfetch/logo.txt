@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Multicolored ASCII Phoenix — for terminal / fastfetch use
+# Usage: bash phoenix.sh   (or chmod +x phoenix.sh && ./phoenix.sh)
+
+RED='\033[38;5;196m'
+ORANGE='\033[38;5;208m'
+DORANGE='\033[38;5;202m'
+GOLD='\033[38;5;220m'
+YELLOW='\033[38;5;226m'
+WHITE='\033[38;5;231m'
+DRED='\033[38;5;124m'
+RESET='\033[0m'
+
+echo -e "${DRED}                        .,:;+*#%%#*+;:,.
+${RED}                   .,;+*#%%%%%%%%%%%%%#*+;.
+${RED}               .:+#%%%%%%#*++++++*#%%%%%%#+:.
+${DORANGE}            .+#%%%#+:.    ${RED}\\\\${DORANGE}   ${RED}//${DORANGE}    .:+#%%%#+.
+${DORANGE}          :#%%#+:      ${RED}\\\\${DORANGE}   ${GOLD}||${DORANGE}   ${RED}//${DORANGE}      :+#%%#:
+${ORANGE}        +%%#:          ${DORANGE}\\\\ ${GOLD}\\\\ || // ${DORANGE}/${ORANGE}          :#%%+
+${ORANGE}      +%#:               ${GOLD}\\\\\\\\||////${ORANGE}               :#%+
+${ORANGE}    :%#:                  ${GOLD}\\\\\\\\||////${ORANGE}                  :#%:
+${GOLD}   +%+          .:+*#%${YELLOW}@@@@@@@${GOLD}%#*+:.          +%+
+${GOLD}  *%,        :+#%${YELLOW}@@@@@@@@@@@@@@@${GOLD}%#+:        ,%*
+${GOLD} +%,       +#%${YELLOW}@@@@@@${WHITE}@@@@@@@${YELLOW}@@@@@@${GOLD}%#+       ,%+
+${GOLD} %+      +%${YELLOW}@@@@@@@${WHITE}@@   @@${YELLOW}@@@@@@@${GOLD}%+      +%
+${GOLD}:%,     +%${YELLOW}@@@@@@${WHITE}@@  ${DRED}o${WHITE}  ${DRED}o${WHITE}  @@${YELLOW}@@@@@@${GOLD}%+     ,%:
+${GOLD}:%     +%${YELLOW}@@@@@@@${WHITE}@@    ^    @@${YELLOW}@@@@@@@${GOLD}%+     %:
+${GOLD} %+   .%${YELLOW}@@@@@@@@${WHITE}@@   \\\\_/   @@${YELLOW}@@@@@@@@${GOLD}%.   +%
+${GOLD} +%    %${YELLOW}@@@@@@@@@${WHITE}@@@@@@@@@@@${YELLOW}@@@@@@@@@${GOLD}%    %+
+${ORANGE}  *%   %${GOLD}@@@@@@@@@@@${YELLOW}@@@@@@@@@${GOLD}@@@@@@@@@@@${ORANGE}%   %*
+${ORANGE}   #%  '%${GOLD}@@@@@@@@@@@@@@@@@@@@@@@@@@@${ORANGE}%'  %#
+${ORANGE}    #%,  ${GOLD}'%@@@@@@@@@@@@@@@@@@@@@%'${ORANGE}  ,%#
+${RED}      #%+   ${DORANGE}\`'%%@@@@@@@@@@@@@%%'\`${RED}   +%#
+${RED}       '#%+       ${DORANGE}\`\`\`\`\`\`\`\`\`       +%#'
+${DRED}         '#%+                       +%#'
+${DRED}           '#%+.                 .+%#'
+${DRED}              '+#%+.         .+%#+'
+${DRED}                  '+#%*,,,*%#+'
+${DRED}                       \`'''\`
+${RESET}"

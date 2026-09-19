@@ -1,0 +1,30 @@
+{
+    "logo": {
+        "type": "builtin",
+        "source": "linux"
+    },
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+  "modules": [
+    "title",
+    "separator",
+    "os",
+    "host",
+    "kernel",
+    "uptime",
+    "display",
+    "de",
+    "wm",
+    "terminal",
+    "terminalfont",
+    "cpu",
+    "gpu",
+    "memory",
+    "swap",
+    "disk",
+    "wifi",
+    "datetime",
+    "locale",
+    "break",
+    "colors"
+  ]
+}
