@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Antigravity lives in ~/.local/opt rather than on PATH, so this is the shim
+# that makes `antigravity` work as a command and lets other tools launch it by
+# name. The .desktop file calls the real binary directly.
+exec /home/kairav/.local/opt/antigravity/Antigravity-x64/antigravity --no-sandbox "$@"

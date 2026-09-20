@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Godot Engine
+Exec=/home/kairav/Applications/Godot/godot
+Icon=godot
+Type=Application
+Categories=Development;Game;
+Terminal=false

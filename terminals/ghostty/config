@@ -27,7 +27,7 @@ font-size = 13
 #     ghostty +list-themes
 # Preview one without editing this file:
 #     ghostty --theme=<name>
-theme = Rose Pine
+theme = mint
 
 
 # --- Transparency ------------------------------------------------------------
@@ -39,7 +39,7 @@ theme = Rose Pine
 # pure cost with nothing visible to show for it. If you ever set this back to
 # 1.0, turn blur off in looknfeel.lua at the same time; leaving it on would be
 # paying the compositor's most expensive effect for no visual result.
-background-opacity = 0.65
+background-opacity = 0.5
 
 
 # --- Window padding ----------------------------------------------------------
@@ -53,7 +53,7 @@ window-padding-y = 6
 # false: selecting text does NOT copy it automatically. Copy explicitly with
 # Ctrl+Shift+C. Middle-click paste of the X11 primary selection still works.
 # Set to true if you prefer the traditional Unix select-to-copy behaviour.
-copy-on-select = false
+copy-on-select = true
 
 
 # --- Close confirmation ------------------------------------------------------

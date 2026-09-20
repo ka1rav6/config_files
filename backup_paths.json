@@ -123,5 +123,10 @@
     "path": "/home/kairav/.config/quickshell",
     "category": "quickshell",
     "description": "Custom backup: quickshell"
+  },
+  {
+    "path": "/home/kairav/.local/share/applications",
+    "category": "custom",
+    "description": "Custom backup: applications"
   }
 ]

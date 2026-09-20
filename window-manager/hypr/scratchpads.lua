@@ -126,6 +126,29 @@ scratchpads.apps = {
         prespawn = false,
     },
 
+    -- SUPER + O  -- WhatsApp Web, as a Chrome app. Same shape as `music`:
+    -- a PWA that is wanted on top of whatever you are doing, not as a tile.
+    {
+        id = "whatsapp",
+        workspace = "whatsapp",
+        -- Same dual-class story as `music`: Chrome apps report
+        -- `chrome-<app-id>-<Profile>` on Wayland and `crx_<app-id>` when they
+        -- fall back to XWayland. Match both so the toggle cannot lose the
+        -- window and spawn a second copy.
+        classes = {
+            "chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Profile_1",
+            "crx_hnpfjngllnobngcgfapefoaidbinmjnm",
+        },
+        command = '/opt/google/chrome/google-chrome --profile-directory="Profile 1"'
+            .. " --app-id=hnpfjngllnobngcgfapefoaidbinmjnm",
+        float = true,
+        size = "1200 850",
+        -- Not pre-spawned, for the same reason as `music`: a Chrome process
+        -- per login is real memory, and the toggle cold-starts it on first
+        -- press.
+        prespawn = false,
+    },
+
     -- SUPER + SHIFT + H  -- the todo list. Not floated: it gets its special
     -- workspace to itself and is happy filling it.
     {

@@ -52,6 +52,16 @@ Scope {
 
     // Running applications, one entry per window class rather than per window:
     // six browser windows should be one dock icon with a dot, not six icons.
+    // Window classes that never appear in the dock, as substrings.
+    // Settings.dock.exclude is the user-facing list; this is just the guard.
+    function excluded(cls) {
+        if (!cls) return false;
+        for (const fragment of (Settings.dock.exclude || [])) {
+            if (fragment && cls.indexOf(fragment) !== -1) return true;
+        }
+        return false;
+    }
+
     readonly property var running: {
         const seen = {};
         const out = [];
@@ -63,6 +73,12 @@ Scope {
             // own keys; putting them in the dock would be a second, worse way
             // to reach something that already has a binding.
             if (ipc.workspace && ipc.workspace.id < 0) continue;
+
+            // ...and stay excluded even when they are NOT parked, because a
+            // scratchpad dragged onto a real workspace is still a scratchpad.
+            // Matching on class rather than workspace is what makes WhatsApp
+            // and YouTube Music behave the same wherever they happen to be.
+            if (root.excluded(ipc.class)) continue;
 
             const cls = ipc.class;
             if (seen[cls]) {
@@ -229,9 +245,18 @@ Scope {
                 top: false
             }
 
-            // Tall enough for the dock plus its slide-out travel, so the
-            // animation is not clipped by the surface.
-            implicitHeight: dockBar.height + Appearance.screenMargin * 2 + 20
+            // Tall enough for the dock plus its slide-out travel.
+            //
+            // AND MUCH TALLER WHILE THE CONTEXT MENU IS OPEN. The menu is
+            // positioned ABOVE the dock bar, and a layer surface clips its
+            // contents to its own bounds -- so with the normal ~80px height the
+            // menu was laid out correctly and then drawn entirely off-surface.
+            // That is why right-clicking a tile appeared to do nothing at all:
+            // it was working, and invisible. Same class of mistake as the
+            // zero-sized PanelWindow documented in ui/Panel.qml.
+            implicitHeight: menu.open
+                ? dockBar.height + Appearance.screenMargin * 2 + 20 + 360
+                : dockBar.height + Appearance.screenMargin * 2 + 20
 
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "qs-dock"
@@ -246,6 +271,18 @@ Scope {
             readonly property bool revealed: {
                 if (!root.enabled) return false;
                 if (root.visibility === "never") return false;
+
+                // The context menu pins the dock up for as long as it is open.
+                //
+                // Without this the dock slid away the moment you right-clicked
+                // it: opening the menu drops the input mask to the whole
+                // surface, so the pointer is no longer over dockBar, the
+                // HoverHandler goes false, and an `auto` dock hides -- leaving
+                // the menu floating over nothing. A menu that outlives the
+                // thing it belongs to is the clearest possible sign the state
+                // is wrong.
+                if (menu.open) return true;
+
                 if (root.visibility === "always") return true;
                 return panel.hovered;
             }
@@ -301,13 +338,12 @@ Scope {
                 // and dismisses otherwise.
                 z: 20
                 dock: root
-                anchorBottom: dockBar.y + Appearance.screenMargin
-                    + Settings.dock.iconSize + Appearance.md * 2 + Appearance.sm
+                dockBar: dockBar
 
-                // Keeps the dock up while the menu is open, so right-clicking
-                // an auto-hidden dock does not slide it out from under the menu
-                // you just opened.
-                onOpenChanged: panel.hovered = menu.open || panel.hovered
+                // When the menu closes, hand the reveal back to the pointer:
+                // if the cursor is no longer on the dock, it should hide as
+                // usual rather than staying up because the menu once was.
+                onOpenChanged: if (!menu.open) panel.hovered = dockHover.hovered
             }
 
             // --- the dock -----------------------------------------------
@@ -343,9 +379,12 @@ Scope {
                 }
 
                 HoverHandler {
+                    id: dockHover
+
                     // Keeps the dock up while the pointer is on it, so it does
-                    // not slide away mid-click.
-                    onHoveredChanged: panel.hovered = hovered
+                    // not slide away mid-click. Ignored while the menu is open
+                    // -- see `revealed` above.
+                    onHoveredChanged: if (!menu.open) panel.hovered = hovered
                 }
 
                 Row {

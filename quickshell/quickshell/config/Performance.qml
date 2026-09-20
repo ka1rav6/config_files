@@ -105,7 +105,18 @@ Singleton {
     readonly property bool allowVisualizer: {
         if (root.gameMode) return false;
         if (root.chosenProfile === "saver") return false;
-        if (root.saver && !Settings.performance.visualizerOnBattery) return false;
+        // `=== false` and not `!...` ON PURPOSE.
+        //
+        // visualizerOnBattery was added to Settings.qml after settings.json
+        // already existed on this machine. A key the file does not contain
+        // reads back as undefined rather than as its declared default, and
+        // `!undefined` is true -- so this line silently blocked the visualiser
+        // on battery for every existing install, which looked exactly like
+        // "the visualiser stopped working again" with no cause on screen.
+        //
+        // Comparing against false explicitly means only a real, deliberate
+        // `false` suppresses it; a missing key behaves like the default.
+        if (root.saver && Settings.performance.visualizerOnBattery === false) return false;
         return true;
     }
 

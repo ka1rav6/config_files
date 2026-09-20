@@ -19,8 +19,11 @@ Item {
 
     required property var dock
 
-    // Distance from the bottom of the surface to the top of the dock bar.
-    property real anchorBottom: 0
+    // The dock bar this menu hangs above. Anchoring to the real item rather
+    // than computing a y from its height is deliberate: the arithmetic version
+    // put the card at a negative y on a short surface, where it was laid out
+    // correctly and clipped away to nothing. Anchors cannot do that silently.
+    required property Item dockBar
 
     property bool open: false
     property var target: null
@@ -103,14 +106,27 @@ Item {
                       root.targetX - width / 2))
 
         // Sits directly above the dock bar, with the same gap the tooltips use.
-        y: root.height - root.anchorBottom - height
-           - (root.open ? 0 : -10)
+        //
+        // Anchored to THIS item's bottom rather than to dockBar.top, because
+        // dockBar is a sibling of the menu, not of this card -- QML refuses to
+        // anchor across that ("Cannot anchor to an item that isn't a parent or
+        // sibling") and the anchor is silently dropped.
+        //
+        // The margin is still derived from the live dockBar rather than from
+        // constants, so it cannot drift out of step with the dock's height,
+        // and anchoring to parent.bottom guarantees the card stays inside the
+        // surface -- which is the failure this replaces.
+        //
+        // The extra 10px while closed is the slide-down of the exit animation.
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: (root.height - root.dockBar.y)
+            + Appearance.md - (root.open ? 0 : 10)
 
         opacity: root.open ? 1 : 0
         scale: root.open ? 1 : 0.96
         transformOrigin: Item.Bottom
 
-        Behavior on y {
+        Behavior on anchors.bottomMargin {
             enabled: !Appearance.motionless
             NumberAnimation {
                 duration: Appearance.durationNormal

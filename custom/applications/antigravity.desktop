@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Name=Antigravity
+GenericName=IDE
+Comment=Antigravity IDE
+# Was pointing at ~/Downloads/Antigravity, which no longer exists -- the app
+# moved to ~/.local/opt. A .desktop file with a dead Exec launches nothing and
+# reports nothing, which is why it looked like the app "wasn't a real app".
+Exec=/home/kairav/.local/opt/antigravity/Antigravity-x64/antigravity --no-sandbox %U
+Icon=antigravity
+Terminal=false
+Categories=Development;IDE;TextEditor;
+Keywords=antigravity;ide;editor;gemini;
+StartupNotify=true
+# Must match the class Hyprland reports for the window, or the dock cannot tie
+# the running window back to this entry (it would show a second, unnamed tile).
+# Verify with: hyprctl clients -j | grep -i class
+StartupWMClass=antigravity
+MimeType=x-scheme-handler/antigravity;inode/directory;

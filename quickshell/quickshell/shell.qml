@@ -160,6 +160,18 @@ ShellRoot {
         sourceComponent: Launcher {}
     }
 
+    // The workspace carousel. SUPER + SPACE used to open the launcher; wofi is
+    // the launcher now (SUPER + S), by choice, so the key went to this.
+    Loader {
+        active: Settings.features.overview
+        sourceComponent: Overview {}
+    }
+
+    Loader {
+        active: Settings.features.emoji
+        sourceComponent: EmojiPicker {}
+    }
+
     Loader {
         active: Settings.features.dock
         sourceComponent: Dock {}
@@ -249,6 +261,22 @@ ShellRoot {
             widgetLayer.item.resetLayout();
             return "layout reset";
         }
+    }
+
+    IpcHandler {
+        target: "emoji"
+
+        function toggle(): string { return Shell.toggle("emoji") ? "ok" : "emoji picker is disabled"; }
+        function open(): string { return Shell.open("emoji") ? "ok" : "emoji picker is disabled"; }
+        function close(): void { Shell.close("emoji"); }
+    }
+
+    IpcHandler {
+        target: "overview"
+
+        function toggle(): string { return Shell.toggle("overview") ? "ok" : "overview is disabled"; }
+        function open(): string { return Shell.open("overview") ? "ok" : "overview is disabled"; }
+        function close(): void { Shell.close("overview"); }
     }
 
     IpcHandler {

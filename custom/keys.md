@@ -17,9 +17,11 @@ the single source of truth.
 - **Caps Lock and Escape are swapped** (`kb_options = caps:swapescape`), so the
   Caps Lock key sends Escape.
 - Key repeat is fast and eager: 40 Hz after a 250 ms delay.
-- Terminal is Ghostty, file manager is Nautilus. The launcher is the Quickshell
-  one on `Super + Space`; Wofi is still on `Super + S` and is what `Super + V`
-  pipes clipboard history through.
+- Terminal is Ghostty, file manager is Nautilus. **Wofi is the launcher**, on
+  `Super + S`, and is what `Super + V` pipes clipboard history through. The
+  Quickshell launcher still exists and still answers
+  `quickshell ipc call launcher toggle`, but it is deliberately unbound —
+  `Super + Space` went to the workspace overview instead.
 - The desktop shell is Quickshell (`~/.config/quickshell`). Every surface it
   draws can be reached from a key, and every one of them is independently
   switchable off in its Settings app — nothing below is load-bearing.
@@ -161,6 +163,11 @@ history and yazi keeps the directory you left it in.
 | ``Super + ` `` | `special:scratch` | Ghostty | 1200 × 800 | Yes |
 | `Super + E` | `special:files` | yazi in Ghostty | 1400 × 850 | Yes |
 | `Super + Y` | `special:music` | YouTube Music PWA | 1300 × 850 | No — starts on first press |
+| `Super + O` | `special:whatsapp` | WhatsApp Web PWA | 1200 × 850 | No — starts on first press |
+
+None of them appear in the dock, wherever they happen to be sitting —
+`Settings.dock.exclude` matches them by window class, so a scratchpad dragged
+onto a real workspace still stays out of the dock.
 | `Super + Shift + H` | `special:todo` | hyprtodo | fills the workspace | Yes |
 
 Quitting a scratchpad (exiting the shell, `q` in yazi, closing the PWA window)
@@ -171,7 +178,7 @@ you opened before, or a scratchpad you deliberately threw onto a real workspace
 — its key pulls it back onto its special workspace rather than opening a second
 copy.
 
-All four are declared in one table in `~/.config/hypr/scratchpads.lua`; adding
+All five are declared in one table in `~/.config/hypr/scratchpads.lua`; adding
 another is a single entry there, and `prespawn = true` is what decides whether
 it starts at login.
 
@@ -204,7 +211,7 @@ monitor around the laptop panel; the default placement is to its left.
 
 | Shortcut | Action |
 |---|---|
-| `Super + S` | Wofi application launcher (the Quickshell launcher is `Super + Space`) |
+| `Super + S` | Wofi application launcher |
 | `Super + E` | yazi — the floating scratchpad (see [Scratchpads](#scratchpads)) |
 | `Super + Alt + E` | yazi — a fresh **tiled** window, for browsing inside the layout |
 | `Super + Shift + E` | Nautilus, for when a GTK file chooser or thumbnail grid is the better tool |
@@ -212,6 +219,8 @@ monitor around the laptop panel; the default placement is to its left.
 | `Super + Y` | YouTube Music — floating scratchpad |
 | `Super + Shift + V` | VS Code |
 | `Super + I` | Colour picker (hyprpicker) — copies the hex to the clipboard |
+| `Super + F1` | GNOME Calculator |
+| `Super + F2` | Emoji picker — search, categories, favourites |
 | `Super + Alt + Space` | Toggle Waybar |
 | `Super + Shift + A` | Stash the focused window, or bring the last stashed one back — one key, scoped to the current workspace |
 | `Super + ;` | Launch Jcode home |
@@ -228,7 +237,7 @@ opening.
 
 | Shortcut | Action |
 |---|---|
-| `Super + Space` | Launcher — fuzzy app search, recent apps, `Enter` to launch |
+| `Super + Space` | **Workspace overview** — a rotating carousel of every workspace |
 | `Super + A` | **Control Center** — Wi-Fi, Bluetooth, audio, brightness, power profile, night light |
 | `Super + D` | Dashboard — clock, calendar, now playing, CPU/memory/disk/battery |
 | `Super + ,` | Settings — every toggle in the shell, in one window |
@@ -273,6 +282,47 @@ into an already-locked session. `lock_cmd` has to become
 `Escape` closes any of them, and so does clicking outside. Opening one closes
 whichever was already up, so two translucent panels can never overlap.
 
+### Emoji picker
+
+`Super + F2`. A search box, a grid, and a category strip, with a row of
+favourites and recents across the top. 1376 emoji in 8 groups, generated from
+Python's `unicodedata` into `modules/emoji/emoji.json` — regenerate it if the
+system's Unicode version moves on.
+
+| Key / action | Result |
+|---|---|
+| Type | Search by name and keywords; prefix matches rank first |
+| `Enter` | Copy the first result |
+| Click | Copy that emoji |
+| **Right click** | Pin / unpin as a favourite |
+| `Escape` | Clear the search; again to close |
+| Click a category | Browse that group |
+
+Picking an emoji **copies it** — paste it yourself. Copied with `wl-copy`, so
+cliphist keeps it and `Super + V` finds it again. Favourites and recents live
+in `settings.json` under `emoji`.
+
+### Workspace overview
+
+`Super + Space`. Every workspace as a card on a ring seen in perspective. Move
+the pointer to spin it; the card at the front is the selection. Each card shows
+the workspace number, its name, and an icon per window on it — a dot in the
+corner marks a floating window.
+
+Only workspaces actually in use are shown, plus the one you are standing on.
+Special workspaces (the scratchpads) are excluded: they overlay what you are on
+rather than being somewhere you go.
+
+| Key / action | Result |
+|---|---|
+| Move the pointer | Nudge the ring, to peek either side |
+| Scroll (either axis) | Step one workspace |
+| `Left` / `Right` | Step one workspace |
+| `1`–`9`, `0` | Jump straight to that workspace |
+| `Enter` / `Space` | Switch to the front card |
+| Click a card | Select it; click again to switch |
+| `Escape` | Close, change nothing |
+
 ### Inside the dashboard calendar
 
 The calendar takes the arrow keys while the dashboard is open.
@@ -303,7 +353,7 @@ running, which matters most for the power menu.
 | Wi-Fi menu | Control Center | `wifi-menu.sh` (167 lines of shell + wofi) |
 | Clock → calendar | Dashboard (drops down from the clock) | `waycal` |
 | `nwg-dock-hyprland` | Quickshell dock | — |
-| `nwg-drawer` | `Super + Space` launcher | Wofi on `Super + S` |
+| `nwg-drawer` | Wofi on `Super + S` | — |
 | wlogout | Quickshell power menu | wlogout, then wofi |
 
 ## Clipboard and Notifications
@@ -468,11 +518,12 @@ Same letter, different modifier — `Super + Alt + C` launches Chrome,
 `Super + W` `G` goes to its workspace. Today Chrome launches on `C` but its
 workspace is `G`, and Brave has a workspace with no launch key at all.
 
-### 4. Scratchpads sit on four unrelated keys
+### 4. Scratchpads sit on five unrelated keys
 
 `` Super + ` `` (terminal), `Super + E` (files), `Super + Y` (music),
-`Super + Shift + H` (todo). The todo one is the odd one out *and* it is squatting
-on the `hjkl` grid that item 2 needs. `Super + T` is free and would fit the set.
+`Super + O` (WhatsApp), `Super + Shift + H` (todo). The todo one is the odd one
+out *and* it is squatting on the `hjkl` grid that item 2 needs. `Super + T` is
+free and would fit the set.
 
 ### 5. `N` means three different things
 
@@ -487,8 +538,14 @@ keys — maximize / restore would be a natural home.
 
 ### 7. Keys currently free
 
-- **`Super`**: `B O T U X Z`
-- **`Super + Shift`**: `I J K L N O Q U Y Z`
+- **`Super`**: `B T U X Z`
+- **`Super + Shift`**: `D I J K L N O Q U Y Z`
+
+`Super + Shift + D` came free when the dashboard moved to `Super + D`. `O` went
+to the WhatsApp scratchpad, and `Space` to the workspace overview.
+
+Obvious remaining candidates: `T` for the todo scratchpad per item 4, `B` for
+the bar (today `Super + Alt + Space`).
 
 The shell migration took `A` (Control Center), `Space` (launcher), `,`
 (Settings) and `Shift + B/D/G/T/W` (visualizer, dashboard, widgets, theme,

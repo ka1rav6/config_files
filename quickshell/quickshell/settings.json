@@ -1,114 +1,128 @@
 {
-    "appearance": {
-        "blur": true,
-        "density": "comfortable",
-        "font": "Inter",
-        "fontMono": "JetBrainsMono Nerd Font",
-        "fontScale": 1,
-        "motion": 1,
-        "opacity": 0.7594999999999998,
-        "radius": 16,
-        "shadows": true,
-        "spacing": 12
-    },
-    "desktop": {
-        "battery": true,
-        "calendar": false,
-        "clock": true,
-        "cpu": true,
-        "gridSize": 8,
-        "hideOnFullscreen": true,
-        "media": true,
-        "network": true,
-        "ram": true,
-        "snapToGrid": true,
-        "visualizer": true,
-        "widgetLayout": {
-            "cpu": {
-                "x": 0.7230443974630021,
-                "y": 0.558303886925795
-            },
-            "media": {
-                "x": 0.0315955766192733,
-                "y": 0.34402332361516036
-            }
-        }
-    },
-    "dock": {
-        "allWorkspaces": false,
-        "iconSize": 44,
-        "magnify": true,
-        "magnifyScale": 1.35,
-        "pinned": [
-            "ghostty_ghostty",
-            "google-chrome",
-            "brave-browser",
-            "code",
-            "org.gnome.Nautilus"
-        ],
-        "position": "bottom",
-        "spacing": 8,
-        "visibility": "auto"
-    },
-    "features": {
-        "calendar": true,
-        "controlCenter": true,
-        "dashboard": true,
-        "dock": true,
-        "launcher": true,
-        "lockScreen": true,
-        "music": true,
-        "musicVisualizer": true,
-        "notifications": false,
-        "osd": true,
-        "settings": true,
-        "wallpaperManager": true,
-        "widgets": true
-    },
-    "launcher": {
-        "maxResults": 8,
-        "recent": [
-        ],
-        "searchFiles": false,
-        "showClipboard": true,
-        "showPowerActions": true,
-        "showSettings": true,
-        "width": 640
-    },
-    "osd": {
-        "position": "bottom",
-        "showBrightness": true,
-        "showMedia": true,
-        "showMic": true,
-        "showVolume": true,
-        "timeout": 1600
-    },
-    "performance": {
-        "autoSaverOnBattery": true,
-        "gameMode": true,
-        "profile": "visual"
-    },
-    "visualizer": {
-        "bands": 160,
-        "barGap": 2,
-        "barOpacity": 0.55,
-        "barWidth": 0,
-        "framerate": 60,
-        "gateOnPlayback": true,
-        "height": 150,
-        "idleTimeout": 5,
-        "noiseReduction": 60,
-        "offset": 280,
-        "radius": 3,
-        "sensitivity": 1,
-        "smoothing": 0.9041796875,
-        "style": "mirror"
-    },
-    "wallpaper": {
-        "deriveAccents": false,
-        "directory": "/home/kairav/media/pictures/wallpapers",
-        "perMonitor": false,
-        "random": false,
-        "randomInterval": 30
+  "appearance": {
+    "blur": true,
+    "density": "comfortable",
+    "font": "Inter",
+    "fontMono": "JetBrainsMono Nerd Font",
+    "fontScale": 1,
+    "motion": 1,
+    "opacity": 0.7594999999999998,
+    "radius": 16,
+    "shadows": true,
+    "spacing": 12
+  },
+  "desktop": {
+    "battery": true,
+    "calendar": false,
+    "clock": true,
+    "cpu": true,
+    "gridSize": 8,
+    "hideOnFullscreen": true,
+    "media": true,
+    "network": true,
+    "ram": true,
+    "snapToGrid": true,
+    "visualizer": true,
+    "widgetLayout": {
+      "cpu": {
+        "x": 0.7230443974630021,
+        "y": 0.558303886925795
+      },
+      "media": {
+        "x": 0.0315955766192733,
+        "y": 0.34402332361516036
+      }
     }
+  },
+  "dock": {
+    "allWorkspaces": false,
+    "iconSize": 44,
+    "magnify": true,
+    "magnifyScale": 1.35,
+    "pinned": [
+      "ghostty_ghostty",
+      "google-chrome",
+      "brave-browser",
+      "code",
+      "org.gnome.Nautilus"
+    ],
+    "position": "bottom",
+    "spacing": 8,
+    "visibility": "auto",
+    "exclude": [
+      "com.scratchpad.ghostty",
+      "com.yazi.ghostty",
+      "hyprtodo",
+      "cinhimbnkkaeohfgghhklpknlkffjgod",
+      "hnpfjngllnobngcgfapefoaidbinmjnm"
+    ]
+  },
+  "features": {
+    "calendar": true,
+    "controlCenter": true,
+    "dashboard": true,
+    "dock": true,
+    "launcher": true,
+    "lockScreen": true,
+    "music": true,
+    "musicVisualizer": true,
+    "notifications": false,
+    "osd": true,
+    "settings": true,
+    "wallpaperManager": true,
+    "widgets": true,
+    "overview": true,
+    "emoji": true
+  },
+  "launcher": {
+    "maxResults": 8,
+    "recent": [],
+    "searchFiles": false,
+    "showClipboard": true,
+    "showPowerActions": true,
+    "showSettings": true,
+    "width": 640
+  },
+  "osd": {
+    "position": "bottom",
+    "showBrightness": true,
+    "showMedia": true,
+    "showMic": true,
+    "showVolume": true,
+    "timeout": 1600
+  },
+  "performance": {
+    "autoSaverOnBattery": true,
+    "gameMode": true,
+    "profile": "visual",
+    "visualizerOnBattery": true
+  },
+  "visualizer": {
+    "bands": 160,
+    "barGap": 2,
+    "barOpacity": 0.55,
+    "barWidth": 0,
+    "framerate": 60,
+    "gateOnPlayback": true,
+    "height": 150,
+    "idleTimeout": 5,
+    "noiseReduction": 60,
+    "offset": 280,
+    "radius": 3,
+    "sensitivity": 1,
+    "smoothing": 0.9041796875,
+    "style": "mirror",
+    "onlyWhenVisible": true
+  },
+  "wallpaper": {
+    "deriveAccents": false,
+    "directory": "/home/kairav/media/pictures/wallpapers",
+    "perMonitor": false,
+    "random": false,
+    "randomInterval": 30
+  },
+  "emoji": {
+    "favourites": [],
+    "recent": []
+  }
 }

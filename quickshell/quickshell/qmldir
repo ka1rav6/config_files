@@ -119,6 +119,11 @@ WidgetGauge     1.0 modules/widgets/WidgetGauge.qml
 Visualizer      1.0 modules/visualizer/Visualizer.qml
 WallpaperPicker 1.0 modules/wallpaper/WallpaperPicker.qml
 Launcher        1.0 modules/launcher/Launcher.qml
+EmojiPicker     1.0 modules/emoji/EmojiPicker.qml
+EmojiBody       1.0 modules/emoji/EmojiBody.qml
+EmojiCell       1.0 modules/emoji/EmojiCell.qml
+Overview        1.0 modules/overview/Overview.qml
+OverviewCard    1.0 modules/overview/OverviewCard.qml
 Dock            1.0 modules/dock/Dock.qml
 DockItem        1.0 modules/dock/DockItem.qml
 DockMenu        1.0 modules/dock/DockMenu.qml

@@ -128,6 +128,8 @@ Singleton {
             property JsonObject features: JsonObject {
                 property bool dock: true
                 property bool launcher: true
+                property bool overview: true      // workspace carousel, SUPER + SPACE
+                property bool emoji: true         // emoji picker, SUPER + F2
                 property bool osd: true
                 property bool dashboard: true
                 property bool widgets: true
@@ -224,10 +226,31 @@ Singleton {
             }
 
             // =============================================================
+            // emoji — the picker's memory. Favourites are pinned by hand
+            // (right-click in the grid); recents fill themselves in.
+            // =============================================================
+            property JsonObject emoji: JsonObject {
+                property list<string> favourites: []
+                property list<string> recent: []
+            }
+
+            // =============================================================
             // dock
             // =============================================================
             property JsonObject dock: JsonObject {
                 property string position: "bottom"   // bottom | left | right
+
+                // Window classes the dock never shows, matched as substrings.
+                // The scratchpads live here: they have their own keys and their
+                // own special workspaces, so a dock tile would be a second,
+                // worse way to reach something that is already one press away.
+                property list<string> exclude: [
+                    "com.scratchpad.ghostty",
+                    "com.yazi.ghostty",
+                    "hyprtodo",
+                    "cinhimbnkkaeohfgghhklpknlkffjgod",   // YouTube Music PWA
+                    "hnpfjngllnobngcgfapefoaidbinmjnm"    // WhatsApp Web PWA
+                ]
                 property int iconSize: 44
                 property int spacing: 8
 

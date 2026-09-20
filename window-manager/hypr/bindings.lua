@@ -182,6 +182,9 @@ hl.bind(mod .. " + W", hl.dsp.submap("workspaces"))
 -- putting the scratchpad on a key you can hit without leaving the home row.
 hl.bind(mod .. " + grave", scratchpads.toggle("terminal"))
 hl.bind(mod .. " + Y", scratchpads.toggle("music"))
+-- SUPER + O -- WhatsApp Web. O was one of the few free SUPER letters left; W is
+-- the workspace submap leader and H/M/C are all taken.
+hl.bind(mod .. " + O", scratchpads.toggle("whatsapp"))
 hl.bind(mod .. " + SHIFT + H", scratchpads.toggle("todo"))
 
 -- Display layout. X toggles duplicate/extended; CTRL+SHIFT+arrows move the
@@ -306,7 +309,7 @@ hl.bind(mod .. " + bracketright", hl.dsp.group.next())
 --   not "tidy" them into a collision:
 --
 --     SUPER + A          Control Center   (SUPER+SHIFT+A is stash/unstash)
---     SUPER + SPACE      launcher         (SUPER+SHIFT+SPACE floats a window,
+--     SUPER + SPACE      workspaces       (SUPER+SHIFT+SPACE floats a window,
 --                                          SUPER+ALT+SPACE toggles waybar)
 --     SUPER + D          dashboard        (this used to toggle a "desktop"
 --                                          special workspace; that bind and
@@ -331,11 +334,21 @@ end
 
 hl.bind(mod .. " + A", hl.dsp.exec_cmd(qs("controlcenter", "toggle")))
 hl.bind(mod .. " + comma", hl.dsp.exec_cmd(qs("settings", "toggle")))
-hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd(qs("launcher", "toggle")))
+-- SUPER + SPACE is the workspace carousel, NOT the launcher. wofi on SUPER + S
+-- is the launcher by choice, so the Quickshell one is left unbound rather than
+-- competing with it -- it still exists and still answers
+-- `quickshell ipc call launcher toggle` if it is ever wanted back.
+hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd(qs("overview", "toggle")))
 hl.bind(mod .. " + D", hl.dsp.exec_cmd(qs("dashboard", "toggle")))
 hl.bind(mod .. " + SHIFT + W", hl.dsp.exec_cmd(qs("wallpaper", "toggle")))
 hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd(qs("theme", "toggle")))
 hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd(qs("visualizer", "toggle")))
+
+-- Two small utilities on the function row, where nothing else lives.
+--   F1  GNOME Calculator -- the real app, not a prompt
+--   F2  the shell's emoji picker (SUPER + F2, or `quickshell ipc call emoji toggle`)
+hl.bind(mod .. " + F1", hl.dsp.exec_cmd("gnome-calculator"))
+hl.bind(mod .. " + F2", hl.dsp.exec_cmd(qs("emoji", "toggle")))
 -- Arrange the desktop widgets: lifts them above your windows so they can be
 -- dragged. Click the desktop or press Escape to finish. G for "grid" -- E is
 -- the file manager and every other SHIFT combination is already spoken for.

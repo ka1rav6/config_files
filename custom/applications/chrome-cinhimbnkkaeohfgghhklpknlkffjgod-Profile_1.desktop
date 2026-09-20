@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Type=Application
+Name=YouTube Music
+Exec=/opt/google/chrome/google-chrome "--profile-directory=Profile 1" --app-id=cinhimbnkkaeohfgghhklpknlkffjgod
+Icon=/home/kairav/.local/share/icons/hicolor/512x512/apps/chrome-cinhimbnkkaeohfgghhklpknlkffjgod-Profile_1.png
+StartupWMClass=crx_cinhimbnkkaeohfgghhklpknlkffjgod
