@@ -35,8 +35,8 @@ note() { command -v notify-send >/dev/null 2>&1 && notify-send -a Display "Displ
 read_state() { [[ -r "$STATE_FILE" ]] && cat "$STATE_FILE" || echo "extend:left"; }
 
 external_present() {
-    hyprctl monitors all -j 2>/dev/null \
-        | jq -e --arg m "$EXTERNAL" 'any(.[]; .name == $m)' >/dev/null 2>&1
+    hyprctl monitors all -j 2>/dev/null |
+        jq -e --arg m "$EXTERNAL" 'any(.[]; .name == $m)' >/dev/null 2>&1
 }
 
 apply() {
@@ -55,10 +55,22 @@ apply() {
 
     local ext_pos int_pos
     case "$placement" in
-        right) ext_pos="auto-right"; int_pos="0x0" ;;
-        up)    ext_pos="auto-up";    int_pos="0x0" ;;
-        down)  ext_pos="auto-down";  int_pos="0x0" ;;
-        *)     ext_pos="0x0";        int_pos="auto-right" ;;   # left (default)
+    right)
+        ext_pos="auto-right"
+        int_pos="0x0"
+        ;;
+    up)
+        ext_pos="auto-up"
+        int_pos="0x0"
+        ;;
+    down)
+        ext_pos="auto-down"
+        int_pos="0x0"
+        ;;
+    *)
+        ext_pos="0x0"
+        int_pos="auto-right"
+        ;; # left (default)
     esac
 
     ev "hl.monitor({ output = \"$INTERNAL\", disabled = false, mirror = \"none\", mode = \"$INTERNAL_MODE\", position = \"$int_pos\", scale = $INTERNAL_SCALE })"
@@ -95,29 +107,31 @@ placement="${state#*:}"
 [[ "$placement" == "$mode" ]] && placement="left"
 
 case "${1:-status}" in
-    toggle-mirror)
-        if [[ "$mode" == "mirror" ]]; then
-            mode="extend"; note "Extended"
-        else
-            mode="mirror";  note "Duplicated"
-        fi
-        printf '%s:%s\n' "$mode" "$placement" >"$STATE_FILE"
-        apply "$mode" "$placement"
-        settle
-        ;;
-    place)
-        placement="${2:-left}"
+toggle-mirror)
+    if [[ "$mode" == "mirror" ]]; then
         mode="extend"
-        printf '%s:%s\n' "$mode" "$placement" >"$STATE_FILE"
-        note "External monitor: ${placement} of laptop"
-        apply "$mode" "$placement"
-        settle
-        ;;
-    status)
-        printf 'mode=%s placement=%s\n' "$mode" "$placement"
-        ;;
-    *)
-        printf 'Usage: %s [toggle-mirror|place <left|right|up|down>|status]\n' "$0" >&2
-        exit 2
-        ;;
+        note "Extended"
+    else
+        mode="mirror"
+        note "Duplicated"
+    fi
+    printf '%s:%s\n' "$mode" "$placement" >"$STATE_FILE"
+    apply "$mode" "$placement"
+    settle
+    ;;
+place)
+    placement="${2:-left}"
+    mode="extend"
+    printf '%s:%s\n' "$mode" "$placement" >"$STATE_FILE"
+    note "External monitor: ${placement} of laptop"
+    apply "$mode" "$placement"
+    settle
+    ;;
+status)
+    printf 'mode=%s placement=%s\n' "$mode" "$placement"
+    ;;
+*)
+    printf 'Usage: %s [toggle-mirror|place <left|right|up|down>|status]\n' "$0" >&2
+    exit 2
+    ;;
 esac

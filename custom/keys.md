@@ -2,8 +2,14 @@
 
 Everything bound across the Hyprland session and the Wayland tools around it.
 Generated from `~/.config/hypr/bindings.lua`, `~/.config/hypr/scratchpads.lua`,
-`~/.config/hypr/input.lua`, `~/.config/waybar/config.jsonc` and
-`~/.config/mako/config`.
+`~/.config/hypr/input.lua`, `~/.config/waybar/config.jsonc`,
+`~/.config/quickshell/shell.qml` and `~/.config/mako/config`.
+
+Hyprland is still the whole behaviour layer — every key below is declared in
+`bindings.lua` and nowhere else. The Quickshell keys are ordinary
+`exec_cmd` binds that call `quickshell ipc call <target> <function>`, so the
+shell never registers a global shortcut of its own and `hyprctl binds` remains
+the single source of truth.
 
 ## Conventions
 
@@ -11,7 +17,12 @@ Generated from `~/.config/hypr/bindings.lua`, `~/.config/hypr/scratchpads.lua`,
 - **Caps Lock and Escape are swapped** (`kb_options = caps:swapescape`), so the
   Caps Lock key sends Escape.
 - Key repeat is fast and eager: 40 Hz after a 250 ms delay.
-- Terminal is Ghostty, launcher is Wofi, file manager is Nautilus.
+- Terminal is Ghostty, file manager is Nautilus. The launcher is the Quickshell
+  one on `Super + Space`; Wofi is still on `Super + S` and is what `Super + V`
+  pipes clipboard history through.
+- The desktop shell is Quickshell (`~/.config/quickshell`). Every surface it
+  draws can be reached from a key, and every one of them is independently
+  switchable off in its Settings app — nothing below is load-bearing.
 - **Window swallowing is on.** Launch a GUI app from an ordinary Ghostty and the
   terminal hides itself until that app exits. The scratchpads are deliberately
   exempt (they run under their own window classes), so they never vanish.
@@ -134,11 +145,9 @@ strand you in the submap.
 They launch their app if the workspace is empty, and pressing the same sequence
 again returns you to the previous workspace.
 
-Special workspaces overlay the current one instead of replacing it:
-
-| Shortcut | Workspace | Contents |
-|---|---|---|
-| `Super + D` | `special:desktop` | Bare overlay workspace, nothing pre-loaded |
+Special workspaces overlay the current one instead of replacing it. The only
+ones bound now are the scratchpads below — `Super + D` used to toggle a bare
+`special:desktop` overlay and now opens the dashboard instead.
 
 ## Scratchpads
 
@@ -195,7 +204,7 @@ monitor around the laptop panel; the default placement is to its left.
 
 | Shortcut | Action |
 |---|---|
-| `Super + S` | Wofi application launcher |
+| `Super + S` | Wofi application launcher (the Quickshell launcher is `Super + Space`) |
 | `Super + E` | yazi — the floating scratchpad (see [Scratchpads](#scratchpads)) |
 | `Super + Alt + E` | yazi — a fresh **tiled** window, for browsing inside the layout |
 | `Super + Shift + E` | Nautilus, for when a GTK file chooser or thumbnail grid is the better tool |
@@ -204,11 +213,98 @@ monitor around the laptop panel; the default placement is to its left.
 | `Super + Shift + V` | VS Code |
 | `Super + I` | Colour picker (hyprpicker) — copies the hex to the clipboard |
 | `Super + Alt + Space` | Toggle Waybar |
-| `Super + Shift + A` | Minimize the focused window |
-| `Super + Shift + B` | Restore the oldest minimized window |
+| `Super + Shift + A` | Stash the focused window, or bring the last stashed one back — one key, scoped to the current workspace |
 | `Super + ;` | Launch Jcode home |
 | `Super + '` | Launch the last Jcode project |
 | `Super + Shift + '` | Launch the Jcode self-development project |
+
+## Desktop Shell (Quickshell)
+
+The interactive UI layer: panels, the launcher, the dock, the OSD and the
+desktop widgets. Each one is a plain `exec_cmd` bind calling
+`quickshell ipc call`, so these keys keep working exactly as written even if a
+panel is disabled — a disabled target simply answers "unavailable" instead of
+opening.
+
+| Shortcut | Action |
+|---|---|
+| `Super + Space` | Launcher — fuzzy app search, recent apps, `Enter` to launch |
+| `Super + A` | **Control Center** — Wi-Fi, Bluetooth, audio, brightness, power profile, night light |
+| `Super + D` | Dashboard — clock, calendar, now playing, CPU/memory/disk/battery |
+| `Super + ,` | Settings — every toggle in the shell, in one window |
+| `Super + Shift + W` | Wallpaper picker |
+| `Super + Shift + T` | Theme switcher |
+| `Super + Shift + B` | Toggle the desktop audio visualizer |
+| `Super + Shift + G` | Arrange the desktop widgets (drag to move; `Escape` or click the desktop to finish) |
+| `Super + M` | Power menu — log out, suspend, restart, shut down |
+| `Super + Escape` | Lock the screen |
+
+`Super + D` used to toggle a `desktop` special workspace; that bind and the
+workspace are gone.
+
+### Locking
+
+`Super + Escape` goes through `~/.local/bin/lock-session`. **hyprlock is the
+locker.** hypridle also calls hyprlock directly for idle and sleep, so the
+automatic path never depends on the shell.
+
+There is a Quickshell lock screen in the tree, and it is **off**. It was on for
+one afternoon; the session fell over while locked, and under ext-session-lock
+the compositor correctly keeps the screen locked when the lock client dies —
+which meant a TTY to get back in. Three things changed after that:
+
+- the lock screen moved into **its own quickshell process**
+  (`~/.config/quickshell/lock.qml`), so a fault in the dock or the visualiser
+  can no longer take the locker down;
+- `lock-session` **supervises** it — the lock writes a marker on a clean
+  unlock, and if the process exits without one, hyprlock is started
+  automatically;
+- `misc:allow_session_lock_restore` is **set at login** (`autostart.lua`), so a
+  replacement locker can attach to a lock a dead one left behind. The session
+  stays locked and still demands the password; it just no longer needs a TTY.
+
+One blocker remains before it is safe to turn back on. `hypridle.conf` runs
+`pidof hyprlock || hyprlock --grace 5` five minutes into idle; with the
+Quickshell locker holding the session that test fails, so hyprlock launches
+into an already-locked session. `lock_cmd` has to become
+`~/.local/bin/lock-session` first.
+
+
+`Escape` closes any of them, and so does clicking outside. Opening one closes
+whichever was already up, so two translucent panels can never overlap.
+
+### Inside the dashboard calendar
+
+The calendar takes the arrow keys while the dashboard is open.
+
+| Key | Action |
+|---|---|
+| `Left` / `Right` | Previous / next month |
+| `Up` / `Down` | Previous / next year |
+| `Home` or `T` | Back to today |
+| Scroll wheel | Page months |
+
+Up is the past and down is the future, so both "back" directions are up-and-left
+and both "forward" directions are down-and-right. The grid slides in the
+direction of travel rather than swapping in place.
+
+### What replaced what
+
+Nothing below was deleted — each fallback still works if Quickshell is not
+running, which matters most for the power menu.
+
+| Old | Now | Old tool |
+|---|---|---|
+| `blueman-applet` (resident) | Control Center + on-demand pairing | `bt-pair` starts blueman only while pairing |
+| Waybar cpu / memory pills | Dashboard | — |
+| Waybar microphone, idle inhibitor, power profile | Control Center | — |
+| Waybar tray + `nm-applet` | Control Center | `nm-connection-editor` on right-click |
+| Brightness / volume slider popups | Control Center | `slider-popup.py` (433 lines of GTK3) |
+| Wi-Fi menu | Control Center | `wifi-menu.sh` (167 lines of shell + wofi) |
+| Clock → calendar | Dashboard (drops down from the clock) | `waycal` |
+| `nwg-dock-hyprland` | Quickshell dock | — |
+| `nwg-drawer` | `Super + Space` launcher | Wofi on `Super + S` |
+| wlogout | Quickshell power menu | wlogout, then wofi |
 
 ## Clipboard and Notifications
 
@@ -255,33 +351,75 @@ Brightness and volume repeat while held.
 
 ## Waybar (mouse)
 
+The right-hand side is one grouped pill now — network, CPU temperature, volume
+and brightness read as a single unit rather than four separate islands, and
+every one of them opens the same Control Center that `Super + A` does. The bar
+is status; the shell is where you change things.
+
 | Module | Left click | Right click | Middle click | Scroll |
 |---|---|---|---|---|
-| Launcher `󰣇` | nwg-drawer | — | — | — |
+| Launcher `󰣇` | Quickshell launcher | — | — | — |
 | Workspaces | Activate | — | — | — |
 | Todo | Toggle the todo scratchpad | Jump to the todo workspace | — | — |
-| Brightness | Slider popup | — | — | ∓5% |
-| Volume | Slider popup | Toggle mute | pavucontrol | ∓5% (capped at 100%) |
-| Microphone | Slider popup | Toggle mute | — | ∓5% |
-| Network | nm-connection-editor | — | — | — |
-| Clock | waycal | — | — | — |
-| Power `󰐥` | Power menu | — | — | — |
+| Window title | — | — | — | — |
+| Clock | **Dashboard**, dropping down from the clock | — | — | — |
+| Network | Control Center | nm-connection-editor | — | — |
+| Temperature | Control Center | — | — | — |
+| Volume | Control Center | Toggle mute | pavucontrol | ∓5% (capped at 100%) |
+| Brightness | Control Center | — | — | ∓5% |
+| Battery | Control Center | — | — | — |
 
-### Slider popups
+Opened from the clock the dashboard drops straight down out of the bar; opened
+from `Super + Shift + D` it comes in at the top right. Same panel either way —
+only where it lands differs, so the gesture that opened it is the one it appears
+to come from.
 
-Clicking brightness, volume or the microphone opens a slider card under the bar,
-centered on the cursor. Inside it:
+### On-screen display
 
-| Key | Action |
+Volume, brightness and mute changes raise a small OSD rather than a
+notification, whether the change came from a media key, a scroll on the bar or
+the Control Center. It fades on its own and takes no input.
+
+### Dock (mouse)
+
+| Action | Result |
 |---|---|
-| Drag / scroll the slider | Change the level live |
-| `Left` / `Right` | Nudge by 1% |
-| Type a number + `Enter` | Jump to that exact percentage |
-| `M` | Toggle mute (volume and microphone only) |
-| `Escape` or `Enter` | Close |
+| Left click | Launch, or focus the running window |
+| **Right click** | Pin / unpin, reorder a pinned app, open a new window, close all windows |
+| Hover the bottom edge | Reveal the dock (when visibility is `auto`) |
 
-It also closes when you click elsewhere, when you click the same module again,
-or after 5 seconds if you never interact with it.
+Pin order is the order in the dock, and the menu's Move left / Move right
+change it. A pinned app that is also running is still one tile.
+
+### Desktop widgets
+
+Clock, now playing, network, processor, memory and battery sit on the
+wallpaper. They disappear entirely when a window covers the wallpaper, which
+also stops the `/proc` reads behind the gauges.
+
+All of them are click-through except the media widget — a decorative widget
+that eats a click meant for the desktop is worse than no widget, but a play
+button you cannot press is not a player. Only the media widget's rectangle is
+punched out of the click-through mask:
+
+| On the media widget | Action |
+|---|---|
+| Play / pause / skip | Control the player |
+| Drag the seek bar | Scrub; click anywhere on it to jump |
+| Click the artwork | Raise the player's window |
+| Scroll | Volume ∓3% |
+
+`Super + Shift + G` lifts them above your windows so they can be dragged.
+Positions are saved as screen fractions, so a widget parked at the top right of
+the laptop panel is still at the top right of the external monitor.
+
+| Key / click | Action |
+|---|---|
+| Drag a widget | Move it; it snaps to the grid on release |
+| `Escape`, click the desktop, or **Done** | Finish arranging |
+| **Reset** | Put every widget back where it started |
+
+Which widgets exist is Settings → Desktop.
 
 ## Mako notifications (mouse)
 
@@ -349,11 +487,15 @@ keys — maximize / restore would be a natural home.
 
 ### 7. Keys currently free
 
-- **`Super`**: `A B O T U X Z`
-- **`Super + Shift`**: `D G I J K L N O Q R T U W Y Z`
+- **`Super`**: `B O T U X Z`
+- **`Super + Shift`**: `I J K L N O Q U Y Z`
 
-Obvious candidates: `B` for the bar (today `Super + Alt + Space`), `O` for a
-general "open", `T` for the todo scratchpad per item 4.
+The shell migration took `A` (Control Center), `Space` (launcher), `,`
+(Settings) and `Shift + B/D/G/T/W` (visualizer, dashboard, widgets, theme,
+wallpaper), so this drawer is a good deal emptier than it was.
+
+Obvious remaining candidates: `O` for a general "open", `T` for the todo
+scratchpad per item 4.
 
 ### Non-keymap leftovers
 

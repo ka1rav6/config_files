@@ -1,12 +1,74 @@
 #!/usr/bin/env bash
+# =============================================================================
+# qs-reload — restart the Quickshell desktop layer.
+# =============================================================================
+# Driven by the Justfile:  just qs-reload   /   just qs-restart
+#
+# WHEN YOU NEED THIS
+#   Quickshell watches its own QML and hot-reloads on edit, so most changes
+#   need nothing. A full restart is for the cases hot-reload cannot cover:
+#     * a new file added to ~/.config/quickshell/qmldir
+#     * a singleton whose construction order matters
+#     * the shell has wedged and you want a clean process
+#
+# WHY NOT JUST pkill && quickshell
+#   Two reasons, both learned the hard way:
+#
+#   1. `pkill -f quickshell` matches the pkill command's OWN argv, and in some
+#      shells kills the script running it. The bracket trick -- [q]uickshell --
+#      stops the pattern matching itself.
+#
+#   2. Killing and relaunching immediately races: the old instance has not yet
+#      released its Wayland surfaces or its instance lock, so the new one
+#      either exits on -n or comes up with no panels. Hence the wait loop.
+#
+# SAFETY
+#   Never touches Hyprland. If this script fails outright, the desktop keeps
+#   working -- you just have no shell layer until it is run again.
+# -----------------------------------------------------------------------------
 set -euo pipefail
 
-if command -v quickshell >/dev/null 2>&1; then
-  pkill -f '/dev/forks/quickshell/build/src/quickshell' 2>/dev/null || true
-  sleep 0.2
-  quickshell -c default &
-  exit 0
+if ! command -v quickshell >/dev/null 2>&1; then
+    echo "quickshell is not on PATH. Expected the wrapper at ~/.local/bin/quickshell." >&2
+    exit 1
 fi
 
-echo "Quickshell is not installed yet. Nothing to reload." >&2
+# The bracket stops the pattern matching this script's own command line.
+PATTERN='forks/quickshell/build/src/[q]uickshell'
+
+if pgrep -f "$PATTERN" >/dev/null 2>&1; then
+    pkill -f "$PATTERN" || true
+
+    # Wait for the process to actually go, rather than guessing with a sleep.
+    # Two seconds is far longer than it has ever taken; the fallback SIGKILL
+    # is there so a wedged shell cannot make this script hang forever.
+    for _ in $(seq 1 20); do
+        pgrep -f "$PATTERN" >/dev/null 2>&1 || break
+        sleep 0.1
+    done
+
+    if pgrep -f "$PATTERN" >/dev/null 2>&1; then
+        echo "quickshell did not exit on SIGTERM, sending SIGKILL" >&2
+        pkill -9 -f "$PATTERN" || true
+        sleep 0.3
+    fi
+fi
+
+# -n is belt-and-braces: if something else raced us to a launch, exit rather
+# than run two shells. -d detaches so this script can return.
+quickshell -c default -n -d >/dev/null 2>&1
+
+# Confirm it actually came up. A config with a syntax error exits immediately,
+# and reporting success in that case is how you end up debugging the wrong
+# thing for ten minutes.
+for _ in $(seq 1 30); do
+    if quickshell ipc call shell status >/dev/null 2>&1; then
+        quickshell ipc call shell status
+        exit 0
+    fi
+    sleep 0.1
+done
+
+echo "quickshell did not come up. Check the QML for errors:" >&2
+echo "  quickshell -c default          # run in the foreground and watch stderr" >&2
 exit 1

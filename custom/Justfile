@@ -9,17 +9,69 @@ all: backup
 backup:
 	python {{BACKUP}}
 
+# --- Quickshell desktop layer ------------------------------------------------
+# The interactive shell: dock, Control Center, Settings, OSD, desktop widgets
+# and the audio visualiser. Config in ~/.config/quickshell.
+#
+# It is started at login by ~/.config/hypr/autostart.lua and hot-reloads its own
+# QML on edit, so day to day none of these are needed. They are for when a
+# restart is genuinely required (a new file in qmldir), for checking it is alive,
+# and for getting out of trouble.
+#
+# Nothing here can affect Hyprland. Killing the shell loses the panels and
+# nothing else -- windows, workspaces, scratchpads and every keybind survive.
+
+# Snapshot every config this migration can touch, into ~/.local/share/quickshell-backups
 qs-backup:
 	@~/.local/bin/quickshell-migration-backup
 
+# Roll the whole desktop back to a snapshot:  just qs-restore <archive.tar.gz>
 qs-restore ARCHIVE:
 	@~/.local/bin/quickshell-migration-restore "{{ARCHIVE}}"
 
+# Restart the shell and report whether it came back up
 qs-reload:
 	@~/.local/bin/qs-reload
 
-qs-restart:
-	@pkill -f quickshell 2>/dev/null || true
+# Alias for qs-reload. The old version pkill'd first, which qs-reload now does
+# itself -- and did it with a pattern that could match the killing shell.
+
+# Restart the shell (alias for qs-reload)
+qs-restart: qs-reload
+
+# Is the shell alive, and what does it think its state is?
+qs-status:
+	@quickshell ipc call shell status 2>/dev/null || echo "quickshell is not running"
+
+# Useful when wiring a new bind in ~/.config/hypr/bindings.lua.
+
+# List every IPC target the shell exposes to keybindings
+qs-ipc:
+	@quickshell ipc show 2>/dev/null || echo "quickshell is not running"
+
+# THE way to debug a QML change: a config that fails to parse exits
+# immediately and silently when daemonized, so run it where you can see why.
+
+# Run the shell in the foreground with errors on stderr
+qs-debug:
+	@pkill -f 'forks/quickshell/build/src/[q]uickshell' 2>/dev/null || true
+	@sleep 0.3
+	quickshell -c default
+
+# settings.json is rewritten from the defaults in
+# ~/.config/quickshell/config/Settings.qml on the next start.
+# Themes are NOT affected -- those live in theme-switch.
+
+# The visualiser only draws when audio is playing AND a monitor is showing its
+# wallpaper (it lives below every window). This sets up both so you can see it.
+
+# Demo the audio visualiser for N seconds
+qs-viz SECS="30":
+	@~/.local/bin/qs-viz-demo {{SECS}}
+
+# Reset every GUI setting to its defaults
+qs-reset-settings:
+	@rm -f ~/.config/quickshell/settings.json
 	@~/.local/bin/qs-reload
 
 # "$@" (via positional-arguments) passes each path as its own argument, so paths
@@ -46,9 +98,20 @@ loud VOL=MAXVOL:
 #
 #   just theme            list available themes and show the active one
 #   just theme gruvbox    apply a theme everywhere
+#   just theme auto       derive the palette from the current wallpaper
+#   just theme-palette    preview what `auto` would derive, without applying
 #
 # Only the THEME:START/THEME:END blocks in each config are rewritten, so your
 # layout, padding and comments survive every switch.
+#
+# `auto` extracts three accent hues from the wallpaper, transplants them onto
+# the house saturation/value so they stay legible at 11px in a status bar, and
+# lifts any that fall below WCAG AA against the generated background. A
+# greyscale wallpaper has no hue to extract, so it keeps the previous theme's
+# accents and tints only the greys rather than inventing colours from noise.
+#
+# Changing the wallpaper while `auto` is active re-derives the palette
+# automatically -- see ~/.config/hypr/scripts/apply-wallpaper.sh.
 
 # Retheme the whole desktop (no arg lists themes)
 theme NAME="--list":
@@ -57,6 +120,10 @@ theme NAME="--list":
 # Show which theme is currently applied
 theme-current:
     @{{THEME}} --current
+
+# Preview the palette `auto` would derive, with colour swatches
+theme-palette IMAGE="":
+    @{{THEME}} --palette {{IMAGE}}
 
 
 clean-brave:

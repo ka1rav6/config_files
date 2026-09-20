@@ -15,14 +15,14 @@ for bat in /sys/class/power_supply/BAT*; do
     status=$(<"$bat/status" 2>/dev/null)
 
     idx=$((cap / 10))
-    (( idx > 9 )) && idx=9
+    ((idx > 9)) && idx=9
     icon="${icons[$idx]}"
 
     if [[ "$status" == "Charging" || "$status" == "Full" ]]; then
         icon="󰂄"
         color="$MINT"
         suffix='<span foreground="'"$MUTED"'" size="small"> charging</span>'
-    elif (( cap <= 15 )); then
+    elif ((cap <= 15)); then
         color="$CORAL"
         suffix=""
     else

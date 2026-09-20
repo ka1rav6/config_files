@@ -57,21 +57,21 @@ while [ "$i" -lt "$count" ]; do
     lower=$(printf '%s' "$file" | tr '[:upper:]' '[:lower:]')
 
     case "$lower" in
-        *.pdf)
-            spawn sioyek "$file"
-            ;;
-        *.md | *.markdown | *.mdown | *.mkd)
-            spawn ghostwriter "$file"
-            ;;
-        *.doc | *.docx | *.ppt | *.pptx | *.xls | *.xlsx)
-            # Chrome wants an absolute path for a local file; a relative one is
-            # interpreted as a search term.
-            abs=$(realpath "$file" 2>/dev/null || printf '%s' "$file")
-            spawn google-chrome "$abs"
-            ;;
-        *)
-            set -- "$@" "$file"
-            ;;
+    *.pdf)
+        spawn sioyek "$file"
+        ;;
+    *.md | *.markdown | *.mdown | *.mkd)
+        spawn ghostwriter "$file"
+        ;;
+    *.doc | *.docx | *.ppt | *.pptx | *.xls | *.xlsx)
+        # Chrome wants an absolute path for a local file; a relative one is
+        # interpreted as a search term.
+        abs=$(realpath "$file" 2>/dev/null || printf '%s' "$file")
+        spawn google-chrome "$abs"
+        ;;
+    *)
+        set -- "$@" "$file"
+        ;;
     esac
 done
 

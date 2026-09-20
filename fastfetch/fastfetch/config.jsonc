@@ -1,7 +1,7 @@
 {
     "logo": {
-        "type": "builtin",
-        "source": "linux"
+        "type": "file-raw",
+        "source": "~/.config/fastfetch/logo.txt"
     },
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
   "modules": [

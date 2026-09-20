@@ -27,57 +27,57 @@ capacity() {
 }
 
 case "${1:-}" in
-    start)
-        if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+start)
+    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+        exit 0
+    fi
+    setsid "$0" watch >/dev/null 2>&1 </dev/null &
+    ;;
+watch)
+    echo $$ >"$pidfile"
+    # Two traps, not one. A bare `trap 'cleanup' TERM` runs the handler and
+    # then RESUMES the loop -- the watcher would shrug off `stop`, lose its
+    # pidfile so nothing could kill it later, and still suspend the machine
+    # after you had come back. The signal trap must exit explicitly.
+    trap 'rm -f "$pidfile"' EXIT
+    trap 'rm -f "$pidfile"; exit 0' INT TERM
+    while :; do
+        level=$(capacity)
+        # Unreadable battery: fall back to the old unconditional suspend
+        # rather than silently keeping a laptop awake until it dies.
+        if [ -z "$level" ] || [ "$level" -le "$THRESHOLD" ]; then
+            systemctl suspend
             exit 0
         fi
-        setsid "$0" watch >/dev/null 2>&1 </dev/null &
-        ;;
-    watch)
-        echo $$ > "$pidfile"
-        # Two traps, not one. A bare `trap 'cleanup' TERM` runs the handler and
-        # then RESUMES the loop -- the watcher would shrug off `stop`, lose its
-        # pidfile so nothing could kill it later, and still suspend the machine
-        # after you had come back. The signal trap must exit explicitly.
-        trap 'rm -f "$pidfile"' EXIT
-        trap 'rm -f "$pidfile"; exit 0' INT TERM
-        while :; do
-            level=$(capacity)
-            # Unreadable battery: fall back to the old unconditional suspend
-            # rather than silently keeping a laptop awake until it dies.
-            if [ -z "$level" ] || [ "$level" -le "$THRESHOLD" ]; then
-                systemctl suspend
-                exit 0
-            fi
-            sleep "$POLL"
+        sleep "$POLL"
+    done
+    ;;
+stop)
+    if [ -f "$pidfile" ]; then
+        pid=$(cat "$pidfile")
+        # Signal the whole process group (setsid made the watcher its
+        # leader) so the in-flight `sleep` dies too. Signalling just the
+        # shell leaves it blocked in sleep, deferring the trap by up to
+        # POLL seconds before it actually goes away.
+        kill -TERM "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+        # Escalate rather than trust a single TERM. A watcher that outlives
+        # `stop` is the worst failure mode here: it has dropped its pidfile,
+        # so nothing can address it again, and it will suspend the machine
+        # mid-use the next time the battery dips. Give it a moment, then
+        # make sure.
+        i=0
+        while [ "$i" -lt 20 ] && kill -0 "$pid" 2>/dev/null; do
+            i=$((i + 1))
+            sleep 0.1
         done
-        ;;
-    stop)
-        if [ -f "$pidfile" ]; then
-            pid=$(cat "$pidfile")
-            # Signal the whole process group (setsid made the watcher its
-            # leader) so the in-flight `sleep` dies too. Signalling just the
-            # shell leaves it blocked in sleep, deferring the trap by up to
-            # POLL seconds before it actually goes away.
-            kill -TERM "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
-            # Escalate rather than trust a single TERM. A watcher that outlives
-            # `stop` is the worst failure mode here: it has dropped its pidfile,
-            # so nothing can address it again, and it will suspend the machine
-            # mid-use the next time the battery dips. Give it a moment, then
-            # make sure.
-            i=0
-            while [ "$i" -lt 20 ] && kill -0 "$pid" 2>/dev/null; do
-                i=$((i + 1))
-                sleep 0.1
-            done
-            if kill -0 "$pid" 2>/dev/null; then
-                kill -KILL "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
-            fi
-            rm -f "$pidfile"
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -KILL "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
         fi
-        ;;
-    *)
-        echo "Usage: idle-suspend.sh start|stop" >&2
-        exit 2
-        ;;
+        rm -f "$pidfile"
+    fi
+    ;;
+*)
+    echo "Usage: idle-suspend.sh start|stop" >&2
+    exit 2
+    ;;
 esac

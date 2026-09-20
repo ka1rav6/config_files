@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# =============================================================================
+# lock-session — lock the screen, and never leave you stranded doing it.
+# =============================================================================
+# Called from SUPER + ESCAPE (~/.config/hypr/bindings.lua).
+#
+# ORDER OF PREFERENCE
+#   1. The Quickshell lock screen, but ONLY if Settings.features.lockScreen is
+#      true. It runs as its OWN quickshell process, not inside the shell.
+#   2. hyprlock, otherwise -- and hyprlock is also what hypridle calls for idle
+#      and sleep locking, so that path never depends on the shell.
+#
+# -----------------------------------------------------------------------------
+# THE RECOVERY PATH -- THIS IS THE POINT OF THE SCRIPT
+#
+# ext-session-lock keeps the session locked if the lock client dies. That is
+# correct (a lock that fails open is not a lock) but it means a crashed locker
+# used to mean a TTY. That happened once, for real, and this is the answer:
+#
+#   * The lock writes $XDG_RUNTIME_DIR/qs-lock-clean when it unlocks properly.
+#   * This script waits for the lock process and then checks for that marker.
+#   * No marker means it died. hyprlock is started immediately, and because
+#     misc:allow_session_lock_restore is set at login (autostart.lua) it can
+#     take over the lock the dead process left behind.
+#
+# So a crash now looks like "hyprlock appeared" instead of "reboot".
+#
+# The retry loop matters as much as the marker: if hyprlock itself fails to
+# come up, this keeps trying rather than exiting and leaving a blank locked
+# screen with nothing running on it.
+# -----------------------------------------------------------------------------
+#
+# KNOWN LIMITATION, READ BEFORE ENABLING THE QUICKSHELL LOCKER
+#   hypridle's 300 s listener runs `loginctl lock-session`, whose lock_cmd is
+#   `pidof hyprlock || hyprlock --grace 5`. With the Quickshell locker holding
+#   the session that test fails, so hyprlock launches INTO an already-locked
+#   session five minutes in. That is what broke it the first time.
+#
+#   The fix is one line in ~/.config/hypr/hypridle.conf:
+#       lock_cmd = ~/.local/bin/lock-session
+#   That file is on the do-not-touch list, so it has not been changed, and
+#   Settings.features.lockScreen stays OFF until it is.
+# -----------------------------------------------------------------------------
+set -uo pipefail
+
+SETTINGS="$HOME/.config/quickshell/settings.json"
+LOCK_QML="$HOME/.config/quickshell/lock.qml"
+MARKER="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/qs-lock-clean"
+
+start_hyprlock() {
+    # Up to five attempts. A locked session with no locker on it is the one
+    # state this script must never exit in.
+    for _ in 1 2 3 4 5; do
+        pidof hyprlock >/dev/null 2>&1 && return 0
+        hyprlock "$@" >/dev/null 2>&1 &
+        sleep 1
+        pidof hyprlock >/dev/null 2>&1 && { wait; return 0; }
+    done
+    # Everything failed. Say so somewhere it might be seen.
+    notify-send -u critical "Lock screen" \
+        "No locker could be started. Run 'hyprlock' from a TTY." 2>/dev/null
+    return 1
+}
+
+# Already locked by hyprlock? Do not stack a second locker on the first.
+if pidof hyprlock >/dev/null 2>&1; then
+    exit 0
+fi
+
+enabled=$(python3 - "$SETTINGS" <<'PY' 2>/dev/null
+import json, sys
+try:
+    with open(sys.argv[1]) as f:
+        print("1" if json.load(f).get("features", {}).get("lockScreen") else "0")
+except Exception:
+    print("0")
+PY
+)
+
+if [ "${enabled:-0}" != "1" ] || [ ! -f "$LOCK_QML" ] || ! command -v quickshell >/dev/null 2>&1; then
+    start_hyprlock --grace 5
+    exit $?
+fi
+
+rm -f "$MARKER"
+
+# -n: no daemonising, so this script genuinely owns the process and `wait`
+# means what it says.
+quickshell -n -p "$LOCK_QML" >/dev/null 2>&1 &
+lock_pid=$!
+
+# If this script is killed, do not leave the locker orphaned holding the
+# session -- hand over to hyprlock instead.
+trap 'kill "$lock_pid" 2>/dev/null; start_hyprlock' INT TERM
+
+wait "$lock_pid"
+status=$?
+
+if [ -f "$MARKER" ]; then
+    rm -f "$MARKER"
+    exit 0
+fi
+
+# No marker: it died holding the lock.
+echo "lock-session: Quickshell locker exited ($status) without unlocking; starting hyprlock" >&2
+start_hyprlock

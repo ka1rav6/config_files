@@ -31,7 +31,12 @@ hl.bind(mod .. " + M", hl.dsp.exec_cmd(home .. "/.config/waybar/scripts/power-me
 -- Lock lives on ESCAPE, not SHIFT+L. SUPER+L is focus-right, so the old bind
 -- was one slipped finger away from locking the session mid-thought.
 -- Caps Lock sends Escape here (caps:swapescape), so SUPER + CapsLock locks too.
-hl.bind(mod .. " + ESCAPE", hl.dsp.exec_cmd("hyprlock"))
+-- Routed through a script rather than calling a locker directly: it picks the
+-- Quickshell lock screen when that is enabled in Settings AND the shell proves
+-- it actually locked, and falls back to hyprlock on anything else. hypridle
+-- still calls hyprlock directly for idle and sleep, so the automatic path never
+-- depends on the shell being alive.
+hl.bind(mod .. " + ESCAPE", hl.dsp.exec_cmd(home .. "/.local/bin/lock-session"))
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 -- Maximize: fills the monitor but keeps gaps, borders and the bar visible.
 hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
@@ -131,10 +136,12 @@ hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
 -- (The resize submap on SUPER+R is deliberately the opposite: it *stays* armed,
 -- because resizing is something you repeat.)
 local named_workspaces = {
-    { key = "T", name = "tmux", command = "ghostty --title=tmux -e tmux new -A -s default" },
+    -- btop is a TUI, so it needs a terminal to live in -- `exec btop` with no
+    -- tty spawns a process that immediately exits, which looked like the
+    -- workspace opening empty.
+    { key = "T", name = "top", command = tui .. "btop --utf-force" },
     { key = "RETURN", name = "tmux", command = "ghostty --title=tmux -e tmux new -A -s default" },
     { key = "N", name = "nvim", command = tui .. "nvim" },
-    { key = "M", name = "top", command = tui .. "btop --utf-force" },
     { key = "G", name = "chrome", command = "google-chrome --new-window" },
     { key = "B", name = "brave", command = "brave-browser --new-window" },
     { key = "C", name = "claude", command = "claude-desktop" },
@@ -166,8 +173,6 @@ hl.define_submap("workspaces", function()
 end)
 
 hl.bind(mod .. " + W", hl.dsp.submap("workspaces"))
-
-hl.bind(mod .. " + D", hl.dsp.workspace.toggle_special("desktop"))
 
 -- Scratchpads: apps parked on a hidden special workspace that overlay whatever
 -- you are on. Each entry -- its class, command, size and whether it is spawned
@@ -269,3 +274,69 @@ hl.bind(mod .. " + G", hl.dsp.group.toggle())
 hl.bind(mod .. " + ALT + G", hl.dsp.group.lock({ action = "toggle" }))
 hl.bind(mod .. " + bracketleft", hl.dsp.group.prev())
 hl.bind(mod .. " + bracketright", hl.dsp.group.next())
+
+-- ---------------------------------------------------------------------------
+-- Quickshell desktop shell
+-- ---------------------------------------------------------------------------
+--
+-- The interactive UI layer: Control Center, Settings, launcher, dashboard,
+-- wallpaper picker, audio visualiser. Config lives in ~/.config/quickshell and
+-- the process is started at login by autostart.lua.
+--
+-- HOW THIS WORKS
+--   Keys stay declared here, in the one place keys have always been declared.
+--   They do not register themselves from QML -- Quickshell can do that, via
+--   Hyprland's global-shortcuts protocol, and it is deliberately not used,
+--   because then half the desktop's keybindings would live in a file you would
+--   not think to grep.
+--
+--     key -> this file -> `quickshell ipc call <target> <fn>` -> the UI opens
+--
+--   List every target and function the running shell exposes with:
+--       just qs-ipc          (or: quickshell ipc show)
+--
+-- IF QUICKSHELL IS NOT RUNNING
+--   These binds do nothing at all -- no error window, no hung key. The rest of
+--   the session is unaffected, because nothing here is on the path of anything
+--   the compositor does. Bring it back with `just qs-restart`.
+--
+-- WHY NONE OF THE EXISTING BINDS MOVED
+--   Every key below was checked against the rest of this file before it was
+--   chosen. Deliberate near-misses worth knowing about, so a future edit does
+--   not "tidy" them into a collision:
+--
+--     SUPER + A          Control Center   (SUPER+SHIFT+A is stash/unstash)
+--     SUPER + SPACE      launcher         (SUPER+SHIFT+SPACE floats a window,
+--                                          SUPER+ALT+SPACE toggles waybar)
+--     SUPER + D          dashboard        (this used to toggle a "desktop"
+--                                          special workspace; that bind and
+--                                          its workspace are gone)
+--     SUPER + SHIFT + W  wallpapers       (SUPER+W is the workspace submap
+--                                          leader and is untouched)
+--     SUPER + SHIFT + B  visualiser       (chosen over SUPER+SHIFT+V, which is
+--                                          already `code`)
+--     SUPER + SHIFT + T  themes           (SUPER+W then T is the tmux
+--                                          workspace -- different leader,
+--                                          no conflict)
+--
+--   wofi remains on SUPER + S. It is not replaced: it is the fallback for when
+--   the shell is not running, and it is what SUPER+V (cliphist) pipes through.
+
+-- Build the shell command for an IPC call. Going through the binary rather
+-- than a socket write keeps this readable and gives the same behaviour whether
+-- or not the shell happens to be up.
+local function qs(target, fn)
+    return "quickshell ipc call " .. target .. " " .. fn
+end
+
+hl.bind(mod .. " + A", hl.dsp.exec_cmd(qs("controlcenter", "toggle")))
+hl.bind(mod .. " + comma", hl.dsp.exec_cmd(qs("settings", "toggle")))
+hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd(qs("launcher", "toggle")))
+hl.bind(mod .. " + D", hl.dsp.exec_cmd(qs("dashboard", "toggle")))
+hl.bind(mod .. " + SHIFT + W", hl.dsp.exec_cmd(qs("wallpaper", "toggle")))
+hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd(qs("theme", "toggle")))
+hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd(qs("visualizer", "toggle")))
+-- Arrange the desktop widgets: lifts them above your windows so they can be
+-- dragged. Click the desktop or press Escape to finish. G for "grid" -- E is
+-- the file manager and every other SHIFT combination is already spoken for.
+hl.bind(mod .. " + SHIFT + G", hl.dsp.exec_cmd(qs("widgets", "edit")))

@@ -134,6 +134,56 @@ for _, namespace in ipairs({ "waybar", "wofi", "notifications" }) do
     })
 end
 
+-- Quickshell surfaces.
+--
+-- The desktop shell registers every surface under a "qs-<component>" namespace
+-- (see WlrLayershell.namespace in ~/.config/quickshell). Because blur on this
+-- system is opt-in -- the no-blur-by-default catch-all above turns it off for
+-- everything and each translucent surface is re-enabled by name -- a new
+-- Quickshell panel gets NO blur until it is listed here. That is deliberate:
+-- it means adding a panel cannot quietly add GPU cost, and it keeps the blur
+-- budget something you decide rather than something that accumulates.
+--
+-- Listed here are the surfaces that are actually translucent. Deliberately
+-- ABSENT:
+--   qs-visualizer  -- sits on the BOTTOM layer, directly over the wallpaper.
+--                     There is nothing behind it to blur, so a rule would be
+--                     pure wasted work (the same reasoning as the note above
+--                     about blurring behind opaque surfaces).
+--   qs-widgets     -- same: bottom layer, over the wallpaper.
+--
+-- Turning blur off in Settings > Appearance makes the shell paint its surfaces
+-- opaque, at which point these rules become no-ops on their own -- Hyprland
+-- skips blur where ignore_alpha finds nothing translucent.
+for _, component in ipairs({
+    "osd",             -- volume / brightness / mic / media indicator
+    "control-center",  -- the quick-settings panel
+    "settings",        -- the full settings window
+    "launcher",        -- application launcher
+    "dashboard",       -- calendar / system overview
+    "dock",            -- application dock
+    "power",           -- power menu
+    "calendar",        -- calendar popup
+}) do
+    hl.layer_rule({
+        name = "blur-qs-" .. component,
+        match = { namespace = "^qs-" .. component .. "$" },
+        blur = true,
+        ignore_alpha = 0.1,
+    })
+end
+
+-- Dim the desktop behind the modal shell surfaces, the same way wlogout does
+-- below. Separates "a panel I summoned" from "the window I was working in",
+-- which matters most for the two that can change system state.
+for _, component in ipairs({ "launcher", "power" }) do
+    hl.layer_rule({
+        name = "dim-qs-" .. component,
+        match = { namespace = "^qs-" .. component .. "$" },
+        dim_around = true,
+    })
+end
+
 hl.layer_rule({
     name = "wlogout-overlay",
     match = { namespace = "^gtk-layer-shell$" },

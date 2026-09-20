@@ -62,32 +62,70 @@ end
 
 hl.on("config.reloaded", on_reload(scratchpads.ensure_prespawned))
 
-local function start_quickshell_widgets()
+-- ---------------------------------------------------------------------------
+-- Recovery net for a crashed lock screen.
+--
+-- ext-session-lock keeps the session locked if the lock CLIENT dies. That is
+-- correct -- a lock that fails open is not a lock -- but by default Hyprland
+-- lets no replacement locker attach, so the only way back in is a TTY and
+-- `hyprctl --instance 0 keyword misc:allow_session_lock_restore 1`. That
+-- happened here once, for real. Setting it in advance means a replacement
+-- locker (hyprlock, started automatically by ~/.local/bin/lock-session) can
+-- take over a lock left behind by a dead one.
+--
+-- This does NOT weaken the lock. The session stays locked throughout and the
+-- replacement locker still demands the password; it only removes the need for
+-- a TTY to start that replacement.
+--
+-- It lives here rather than in looknfeel.lua's misc block so that file stays
+-- untouched. hl.config merges, so this adds one key and leaves the rest of
+-- misc exactly as looknfeel.lua set it -- verified below by checking that
+-- enable_swallow survives.
+--
+-- NOTE: `hyprctl keyword ...` does NOT work under the Lua parser -- it answers
+-- "keyword can't work with non-legacy parsers. Use eval." An earlier attempt
+-- to set this from an exec_cmd was therefore a silent no-op.
+-- ---------------------------------------------------------------------------
+hl.config({ misc = { allow_session_lock_restore = true } })
+
+-- Quickshell -- the interactive desktop layer.
+--
+-- Hyprland owns compositor behaviour; Quickshell owns presentation. It draws
+-- the dock, the Control Center, Settings, the OSD, the desktop widgets and the
+-- audio visualiser. Its config is ~/.config/quickshell/shell.qml.
+--
+-- WHY -n RATHER THAN A pgrep GUARD
+--   `hyprctl reload` re-runs this file, so an unguarded launch would stack a
+--   second shell on every reload -- the same problem the waybar line below
+--   solves with pgrep. Quickshell has a purpose-built flag for it:
+--
+--     -n / --no-duplicate   exit immediately if this config is already running
+--
+--   That is checked by Quickshell against its own instance registry rather
+--   than by pattern-matching a command line, so it cannot be defeated by the
+--   wrapper script in ~/.local/bin/quickshell exec'ing the real binary under a
+--   different path and argv. The pgrep form this replaced was matching
+--   '[q]uickshell --config default', which stopped being the real argv the
+--   moment the launch switched to the short -c form.
+--
+--   -d daemonizes, so the shell is not a child of the compositor's spawn shell
+--   and survives it exiting.
+--
+-- IF QUICKSHELL IS NOT RUNNING
+--   Nothing here breaks. Waybar, mako, the scratchpads, every keybind and the
+--   compositor itself are independent of it. The keybinds that drive its UI
+--   simply do nothing until it is back. Restart it with `just qs-restart`.
+--
+-- TO DISABLE IT ENTIRELY
+--   Set QUICKSHELL_DISABLE=1 in the environment and reload. Useful for
+--   bisecting a desktop problem: it takes the whole shell layer out of the
+--   picture without editing this file.
+local function start_quickshell()
     if os.getenv("QUICKSHELL_DISABLE") == "1" then
         return
     end
 
-    hl.exec_cmd("pgrep -f '[q]uickshell --config default' >/dev/null 2>&1 || quickshell --config default >/dev/null 2>&1 &")
-end
-
-local function quickshell_enabled()
-    local enable = os.getenv("QUICKSHELL_ENABLE") or os.getenv("QS_ENABLE")
-    return enable == "1" or enable == "true" or enable == "yes"
-end
-
-local function start_quickshell_if_enabled()
-    if not quickshell_enabled() then
-        return
-    end
-
-    if os.execute("command -v quickshell >/dev/null 2>&1") == true then
-        hl.exec_cmd("quickshell --config default >/dev/null 2>&1 &")
-        return
-    end
-
-    if os.execute("command -v qs >/dev/null 2>&1") == true then
-        hl.exec_cmd("qs --config default >/dev/null 2>&1 &")
-    end
+    hl.exec_cmd("command -v quickshell >/dev/null 2>&1 && quickshell -c default -n -d >/dev/null 2>&1")
 end
 
 hl.on("hyprland.start", function()
@@ -113,7 +151,26 @@ hl.on("hyprland.start", function()
             .. "/.config/hypr/scripts/cliphist-store.sh"
     )
     hl.exec_cmd("systemctl --user start hyprpolkitagent.service 2>/dev/null || true")
-    hl.exec_cmd("nm-applet --indicator")
-    hl.exec_cmd("blueman-applet")
-    start_quickshell_widgets()
+    -- nm-applet is gone. Its only job here was a tray icon, and waybar no
+    -- longer has a tray module -- the Wi-Fi UI is the Control Center now
+    -- (SUPER + A, or the network reading on the bar). NetworkManager itself is
+    -- a system service and is entirely unaffected; nm-connection-editor is
+    -- still there on right-click for static IPs, VPNs and saved profiles.
+    --
+    -- blueman-applet is gone too, but for a subtler reason. Its visible job
+    -- (a tray icon) also has nowhere to render, and the invisible one it was
+    -- really here for -- selecting the A2DP card profile so headphones
+    -- actually produce a sink -- is now done by the shell itself
+    -- (~/.config/quickshell/services/Bluetooth.qml, ensureAudioProfile).
+    --
+    -- What it ALSO did is register the BlueZ pairing agent, and BlueZ will not
+    -- pair a NEW device without one. Rather than keep ~125 MiB of Python
+    -- resident year-round for something done a few times a year, the applet is
+    -- now started on demand by ~/.local/bin/bt-pair -- behind the "Pair a new
+    -- device" button on the Control Center's Bluetooth page -- and stopped
+    -- again when the window closes.
+    --
+    -- Reconnecting an already-paired device needs no agent, so headphones,
+    -- mice and keyboards all come back on their own exactly as before.
+    start_quickshell()
 end)

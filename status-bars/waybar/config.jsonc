@@ -49,33 +49,51 @@
         "clock"
     ],
 
+    // The right side is deliberately short now.
+    //
+    // Everything that was an interactive mini-application here has moved into
+    // the Quickshell desktop shell, where it shares one visual language instead
+    // of each module opening its own differently-styled popup:
+    //
+    //   cpu, memory              -> Dashboard          (SUPER + SHIFT + D)
+    //   microphone               -> Control Center     (SUPER + A)
+    //   power-profiles-daemon    -> Control Center
+    //   idle_inhibitor           -> Control Center
+    //   custom/power             -> Power menu         (SUPER + M)
+    //   tray                     -> removed with nm-applet / blueman-applet
+    //
+    // What is left is persistent STATUS -- the four things worth reading
+    // without opening anything. They are grouped so they render as one pill
+    // rather than four separate islands; see #status-group in style.css.
     "modules-right": [
-        "cpu",
-        "memory",
-        "network",
-        "temperature",
-        "tray",
-        "backlight",
-        "pulseaudio",
-        "pulseaudio#microphone",
-        "power-profiles-daemon",
-        "idle_inhibitor",
-        "battery",
-        "custom/power"
+        "group/status",
+        "battery"
     ],
+
+    // One visual unit. `drawer` would collapse it behind a single icon, which
+    // is the opposite of what is wanted here -- these should all be readable
+    // at a glance. "modules" alone just groups them for styling.
+    "group/status": {
+        "orientation": "horizontal",
+        "modules": [
+            "network",
+            "temperature",
+            "pulseaudio",
+            "backlight"
+        ]
+    },
 
     // ========================================================================
     // LEFT
     // ========================================================================
 
-    // App-launcher button. nwg-drawer is a full-screen grid launcher — a
-    // heavier, more visual alternative to the wofi menu bound on the keyboard
-    // (see `launcher` in ~/.config/hypr/defaults.lua). Both are kept: this one
-    // for browsing with the mouse, wofi for typing a name.
+    // App-launcher button. Opens the Quickshell launcher (also SUPER + SPACE).
+    // Replaces nwg-drawer, which is still installed; wofi remains on SUPER + S
+    // and is what SUPER + V pipes cliphist through, so neither is orphaned.
     "custom/launcher": {
         "format": "󰣇",
         "tooltip": "Applications",
-        "on-click": "nwg-drawer -wm hyprland"
+        "on-click": "quickshell ipc call launcher toggle"
     },
 
     "hyprland/workspaces": {
@@ -133,33 +151,14 @@
         // strftime inside {: }. Currently "Fri, 11 Sep  02:53".
         "format": "󰥔  {:%a, %d %b  %H:%M}",
         "tooltip-format": "{:%A, %d %B %Y}",
-        // waycal — a small Rust calendar popup, built with cargo and living in
-        // ~/.cargo/bin. Called by absolute path because waybar inherits the
-        // compositor's PATH, and the PATH set in autostart.lua does include
-        // ~/.cargo/bin, but the absolute path removes the dependency entirely.
-        // (Note: ~/.config/gsimplecal exists but gsimplecal is not installed
-        // and nothing points at it — see that file's header.)
-        "on-click": "$HOME/.cargo/bin/waycal"
-    },
-
-    // ========================================================================
-    // RIGHT — system readouts
-    // ========================================================================
-    // The three polled modules below (cpu, memory, network) all use a 10 s
-    // interval. This is the bar's steady-state cost: each tick wakes waybar,
-    // re-reads /proc and repaints. Raising it to 15-30 s is free battery on a
-    // laptop; lowering it to 1-2 s makes the bar a live monitor at real cost.
-
-    "cpu": {
-        "interval": 10,
-        "format": "󰍛 {usage}%",
-        "tooltip": true
-    },
-
-    "memory": {
-        "interval": 10,
-        "format": "󰘚 {percentage}%",
-        "tooltip": true
+        // Opens the Quickshell dashboard: clock, an interactive calendar,
+        // media and system usage. Replaces waycal (a small Rust calendar popup
+        // in ~/.cargo/bin), which is still installed and still works, but is a
+        // separate application with its own window and its own colours.
+        //
+        // If Quickshell is not running this does nothing at all rather than
+        // erroring, and the calendar is still one `waycal` away.
+        "on-click": "quickshell ipc call dashboard dropdown"
     },
 
     "network": {
@@ -169,11 +168,11 @@
         "format-disconnected": "󰖪 offline",
         "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ifname}: {ipaddr}/{cidr}\nDown: {bandwidthDownBytes}\nUp: {bandwidthUpBytes}",
         "tooltip-format": "{ifname}: {ipaddr}/{cidr}\nDown: {bandwidthDownBytes}\nUp: {bandwidthUpBytes}",
-        // Left click scans for networks in range and joins one, including
-        // networks never connected to before. nm-connection-editor, the old
-        // left-click target, only lists already-saved connections, so it moves
-        // to right click for the things it is actually good at.
-        "on-click": "$HOME/.config/waybar/scripts/wifi-menu.sh",
+        // Opens the Control Center. Replaced wifi-menu.sh (167 lines of shell
+        // driving wofi), now deleted -- it is in the dotfiles git history.
+        // nm-connection-editor keeps the right click for the things a quick
+        // panel should not try to be -- static IPs, VPNs, saved profiles.
+        "on-click": "quickshell ipc call controlcenter toggle",
         "on-click-right": "nm-connection-editor"
     },
 
@@ -189,30 +188,31 @@
         // Above this, waybar adds the .critical CSS class — style.css turns the
         // readout red. mako also has a "Temperature" notification rule.
         "critical-threshold": 85,
-        "tooltip": true
-    },
-
-    // System tray for apps that provide a status icon (nm-applet and
-    // blueman-applet, both started in autostart.lua).
-    "tray": {
-        "icon-size": 16,
-        "spacing": 8
+        "tooltip": true,
+        // Every reading in the status group opens the same Control Center
+        // (SUPER + A), so the whole right side of the bar is one target.
+        "on-click": "quickshell ipc call controlcenter toggle"
     },
 
     "backlight": {
         "device": "intel_backlight",
         "format": "{icon} {percent}%",
-        // Escaped surrogate pairs for Nerd Font glyphs outside the BMP. These
-        // are the same kind of icon as the literal 󰍛 characters used elsewhere
-        // in this file, just written in escaped form — both are fine.
-        "format-icons": ["󐃞", "󐃟", "󐃠"],
+        // md-brightness_{4,6,7}. These were previously written as escaped
+        // surrogate pairs and rendered as tofu boxes — the escapes pointed at
+        // codepoints the font does not have. Verified against
+        // ~/.local/share/fonts/JetBrainsMonoNerdFont-Regular.ttf; the same
+        // glyphs are used by the shell's Icon.qml.
+        "format-icons": ["󰃝", "󰃟", "󰃠"],
         // setsid -f detaches the popup from waybar. Without it the Python
         // process is a child of the bar, and killing or reloading waybar would
         // take the slider with it.
-        "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py brightness",
+        // The Control Center has the slider now, in the shell's own visual
+        // language. slider-popup.py (433 lines of GTK3) has been removed; it
+        // is still in the dotfiles git history if it is ever wanted back.
+        "on-click": "quickshell ipc call controlcenter toggle",
         "on-scroll-up": "brightnessctl set 5%+",
         "on-scroll-down": "brightnessctl set 5%-",
-        "tooltip-format": "Brightness {percent}%\nClick for slider · scroll to adjust"
+        "tooltip-format": "Brightness {percent}%\nClick for the Control Center · scroll to adjust"
     },
 
     "pulseaudio": {
@@ -221,7 +221,7 @@
         "format-icons": {
             "default": ["󰕿", "󰖀", "󰕾"]
         },
-        "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py volume",
+        "on-click": "quickshell ipc call controlcenter toggle",
         "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-click-middle": "pavucontrol",
         // -l 1.0 caps volume at 100%, preventing the software boost above
@@ -229,50 +229,7 @@
         // below use the same wpctl (PipeWire) interface.
         "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
         "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
-        "tooltip-format": "Volume {volume}%\nClick for slider · right-click to mute · middle-click for pavucontrol"
-    },
-
-    // Second instance of the pulseaudio module. The "#microphone" suffix is
-    // waybar's syntax for running one module twice with different settings —
-    // here pointed at the source (input) rather than the sink (output).
-    "pulseaudio#microphone": {
-        "format": "{format_source}",
-        "format-source": "󰍬 {volume}%",
-        "format-source-muted": "󰍭 muted",
-        "on-click": "setsid -f $HOME/.config/waybar/scripts/slider-popup.py mic",
-        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
-        "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SOURCE@ 5%+",
-        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-",
-        "tooltip-format": "Mic {volume}%\nClick for slider · right-click to mute"
-    },
-
-    // Reads power-profiles-daemon over D-Bus. Click cycles
-    // power-saver -> balanced -> performance. Pairs with
-    // ~/.config/hypr/scripts/power-refresh.sh, which drops the internal panel
-    // to 60 Hz on battery.
-    "power-profiles-daemon": {
-        "format": "{icon}",
-        "tooltip": true,
-        "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
-        "format-icons": {
-            "default": "󰇑",
-            "performance": "󰓅",
-            "balanced": "󰶅",
-            "power-saver": "󰼪"
-        }
-    },
-
-    // Click to suspend the idle timers in ~/.config/hypr/hypridle.conf, so the
-    // screen stays awake through a long video or presentation. Toggles back off
-    // with a second click — it does not reset on its own.
-    "idle_inhibitor": {
-        "format": "{icon}",
-        "format-icons": {
-            "activated": "󰅶",
-            "deactivated": "󰗊"
-        },
-        "tooltip-format-activated": "Idle inhibited — screen will not lock",
-        "tooltip-format-deactivated": "Idle inhibitor off"
+        "tooltip-format": "Volume {volume}%\nClick for the Control Center · right-click to mute · middle-click for pavucontrol"
     },
 
     "battery": {
@@ -287,13 +244,9 @@
         "format-charging": "{capacity}% 󰂄",
         // Icons are picked by capacity, spread evenly across this list:
         // 0-20% takes the first, 80-100% the last.
-        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾"]
-    },
-
-    // Power menu. The script wraps wlogout — see ~/.config/wlogout/README.md.
-    "custom/power": {
-        "format": "󰐥",
-        "tooltip": "Power",
-        "on-click": "~/.config/waybar/scripts/power-menu.sh"
+        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾"],
+        // Same target as the status group -- the Control Center (SUPER + A).
+        "on-click": "quickshell ipc call controlcenter toggle",
+        "tooltip-format": "{capacity}% · {time}"
     }
 }

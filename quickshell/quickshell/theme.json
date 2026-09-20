@@ -1,0 +1,13 @@
+{
+  "name": "auto",
+  "desc": "derived from wallpaper10.jpg",
+  "bg": "#141516",
+  "surface": "#202325",
+  "surface2": "#2c3134",
+  "border": "#4a5054",
+  "text": "#edf3f7",
+  "muted": "#bec6cc",
+  "a1": "#7fb5db",
+  "a2": "#7970e0",
+  "a3": "#ccc05c"
+}

@@ -1,0 +1,114 @@
+{
+  "themes": [
+    {
+      "id": "mint",
+      "label": "Mint",
+      "desc": "the original custom palette \u2014 mint/amber/coral on near-black",
+      "bg": "#121418",
+      "surface": "#1b2527",
+      "text": "#f4f7fa",
+      "a1": "#8ee3c1",
+      "a2": "#f4c47b",
+      "a3": "#ff9b85"
+    },
+    {
+      "id": "catppuccin",
+      "label": "Catppuccin",
+      "desc": "Catppuccin Mocha \u2014 soft pastels on warm dark purple",
+      "bg": "#1e1e2e",
+      "surface": "#313244",
+      "text": "#cdd6f4",
+      "a1": "#a6e3a1",
+      "a2": "#f9e2af",
+      "a3": "#f38ba8"
+    },
+    {
+      "id": "tokyonight",
+      "label": "Tokyonight",
+      "desc": "TokyoNight Night \u2014 deep blue, high contrast",
+      "bg": "#1a1b26",
+      "surface": "#24283b",
+      "text": "#c0caf5",
+      "a1": "#9ece6a",
+      "a2": "#e0af68",
+      "a3": "#f7768e"
+    },
+    {
+      "id": "gruvbox",
+      "label": "Gruvbox",
+      "desc": "Gruvbox Dark \u2014 warm retro earth tones",
+      "bg": "#282828",
+      "surface": "#3c3836",
+      "text": "#ebdbb2",
+      "a1": "#b8bb26",
+      "a2": "#fabd2f",
+      "a3": "#fb4934"
+    },
+    {
+      "id": "nord",
+      "label": "Nord",
+      "desc": "Nord \u2014 cool arctic blue-grey, low contrast",
+      "bg": "#2e3440",
+      "surface": "#3b4252",
+      "text": "#eceff4",
+      "a1": "#a3be8c",
+      "a2": "#ebcb8b",
+      "a3": "#bf616a"
+    },
+    {
+      "id": "dracula",
+      "label": "Dracula",
+      "desc": "Dracula \u2014 vivid neon on dark violet",
+      "bg": "#282a36",
+      "surface": "#343746",
+      "text": "#f8f8f2",
+      "a1": "#50fa7b",
+      "a2": "#f1fa8c",
+      "a3": "#ff5555"
+    },
+    {
+      "id": "everforest",
+      "label": "Everforest",
+      "desc": "Everforest Dark Hard \u2014 muted forest green, easy on the eyes",
+      "bg": "#2b3339",
+      "surface": "#323d43",
+      "text": "#d3c6aa",
+      "a1": "#a7c080",
+      "a2": "#dbbc7f",
+      "a3": "#e67e80"
+    },
+    {
+      "id": "rosepine",
+      "label": "Rosepine",
+      "desc": "Rose Pine \u2014 muted rose and pine on deep plum",
+      "bg": "#191724",
+      "surface": "#1f1d2e",
+      "text": "#e0def4",
+      "a1": "#9ccfd8",
+      "a2": "#f6c177",
+      "a3": "#eb6f92"
+    },
+    {
+      "id": "kanagawa",
+      "label": "Kanagawa",
+      "desc": "Kanagawa Wave \u2014 ink-wash palette, muted and warm",
+      "bg": "#1f1f28",
+      "surface": "#2a2a37",
+      "text": "#dcd7ba",
+      "a1": "#98bb6c",
+      "a2": "#e6c384",
+      "a3": "#e46876"
+    },
+    {
+      "id": "auto",
+      "label": "Wallpaper",
+      "desc": "derived from wallpaper10.jpg",
+      "bg": "#141516",
+      "surface": "#202325",
+      "text": "#edf3f7",
+      "a1": "#7fb5db",
+      "a2": "#7970e0",
+      "a3": "#ccc05c"
+    }
+  ]
+}

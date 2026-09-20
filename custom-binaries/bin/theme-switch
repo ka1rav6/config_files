@@ -35,6 +35,8 @@ ADDING A THEME
     border alpha) is computed from them, so themes stay internally consistent.
 """
 
+import colorsys
+import json
 import os
 import re
 import sys
@@ -48,6 +50,21 @@ STATE = CFG / "current-theme"
 # The one themed file outside ~/.config. An absolute path is fine in
 # REQUIRED_MARKERS below: `CFG / <absolute path>` yields the absolute path.
 TMUX_CONF = HOME / ".tmux.conf"
+
+# Quickshell reads its colours from this file and repaints live when it
+# changes. See ~/.config/quickshell/services/Theme.qml -- that file is a
+# consumer of this one, never a second source of colours.
+QS_THEME = CFG / "quickshell/theme.json"
+
+# Where the wallpaper path lives. Shared with hyprpaper and hyprlock; see the
+# header of that file. `theme-switch auto` derives a palette from whatever
+# image it points at.
+WALLPAPER_CONF = CFG / "hypr/wallpaper.conf"
+
+# Records what `auto` last derived, so the Settings GUI can show which image a
+# palette came from and so a re-apply is reproducible without re-reading the
+# image. Not the source of truth for the active theme -- STATE still is.
+AUTO_STATE = CFG / "current-theme-auto.json"
 
 # --------------------------------------------------------------------------
 # Theme definitions
@@ -228,6 +245,417 @@ def mix(h1, h2, t):
 
 
 # --------------------------------------------------------------------------
+# Wallpaper-derived palettes  (`theme-switch auto`)
+# --------------------------------------------------------------------------
+# Derives the same nine colours every other theme defines, from the current
+# wallpaper, and then feeds them through the exact same apply() path. That is
+# the whole design: this is a PALETTE GENERATOR, not a second theme system.
+# Nothing downstream -- waybar, mako, Hyprland, Quickshell, ghostty -- can tell
+# whether the nine colours it received were hand-picked or extracted.
+#
+# HOW THE ACCENTS ARE CHOSEN
+#   1. Downscale to 160px. Colour proportion survives; the cost does not.
+#   2. Weight every pixel by saturation^1.5 * value. A photograph is mostly
+#      desaturated mid-tones, and an unweighted average of one is always mud.
+#      The exponent biases hard towards the few genuinely colourful pixels,
+#      which is what the eye actually reads as "the colour of that image".
+#   3. Histogram the weights into 36 hue buckets and smooth circularly, so a
+#      hue sitting on a bucket boundary is not split in half and beaten by a
+#      weaker one that happens to be centred.
+#   4. Take the strongest bucket, then the strongest at least 50 degrees away,
+#      then the strongest 50 degrees from both. The separation is what stops
+#      three near-identical blues being returned as "three accents".
+#
+# WHY THE ACCENTS ARE THEN NORMALISED
+#   The extracted hue is kept; the saturation and value are NOT. Every built-in
+#   theme here uses light, slightly-desaturated accents on a near-black ground,
+#   because that is what stays legible in a status bar at 11px. An accent taken
+#   raw from an image is as likely to be a dark navy as a pastel mint, so the
+#   hue is transplanted onto the house S/V and only the hue varies.
+#
+# WHY CONTRAST IS THEN ENFORCED
+#   Even normalised, some hues (pure blue, deep violet) are intrinsically dark
+#   and land under 4.5:1 against the background. Rather than accept an accent
+#   that cannot be read, each is lightened a step at a time until it passes.
+#   Text is held to 7:1 (WCAG AAA) and accents to 4.5:1 (AA). A generated theme
+#   is therefore never less readable than a hand-written one -- which is the
+#   part most wallpaper-theming tools get wrong.
+#
+# THE GREYSCALE CASE
+#   A black-and-white wallpaper has no hue to extract, and the strongest bucket
+#   is then pure sensor noise -- which is how these tools end up inventing a
+#   teal accent for a monochrome image. `_chromatic_confidence` measures what
+#   fraction of the lit pixels carry real colour; below the threshold the image
+#   is declared achromatic and the accents of the base theme are kept, with
+#   only the neutrals tinted. Honest, and it looks deliberate rather than
+#   random.
+# --------------------------------------------------------------------------
+
+# Fraction of lit pixels that must be meaningfully saturated before the hue
+# histogram is trusted. Measured: a blue/purple space wallpaper scores 0.97, a
+# pure black-and-white one scores 0.00, flat grey scores 0.00.
+CHROMA_CONFIDENCE_MIN = 0.12
+
+# The house style for an accent, as (saturation, value). Taken from the spread
+# of the nine built-in themes -- all of them sit near these.
+ACCENT_SV = ((0.42, 0.86), (0.50, 0.82), (0.55, 0.80))
+
+# Neutrals, as (saturation, value). The tiny saturation is what makes a
+# generated theme feel like it belongs to its wallpaper rather than being grey
+# furniture placed in front of it -- the greys carry a whisper of the dominant
+# hue.
+NEUTRAL_SV = {
+    "bg": (0.10, 0.085),
+    "surface": (0.13, 0.145),
+    "surface2": (0.15, 0.205),
+    "border": (0.12, 0.330),
+    "text": (0.04, 0.970),
+    "muted": (0.07, 0.800),
+}
+
+# WCAG contrast floors, against the generated background.
+CONTRAST_TEXT = 7.0    # AAA for body text
+CONTRAST_MUTED = 4.5   # AA  for secondary text
+CONTRAST_ACCENT = 4.5  # AA  -- accents are used for text and icons, not just fills
+
+
+def _linearise(c):
+    """sRGB channel (0..1) -> linear light, per the sRGB transfer function."""
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def luminance(rgb):
+    """WCAG relative luminance of an (r, g, b) tuple in 0..1."""
+    r, g, b = (_linearise(x) for x in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast_ratio(rgb1, rgb2):
+    """WCAG contrast ratio. 1.0 is identical, 21.0 is black on white."""
+    l1, l2 = luminance(rgb1), luminance(rgb2)
+    if l1 < l2:
+        l1, l2 = l2, l1
+    return (l1 + 0.05) / (l2 + 0.05)
+
+
+def _to_hex(rgb):
+    return "#" + "".join(format(max(0, min(255, round(c * 255))), "02x") for c in rgb)
+
+
+def _from_hex(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i : i + 2], 16) / 255.0 for i in (0, 2, 4))
+
+
+def _hsv(h, s, v):
+    return colorsys.hsv_to_rgb(h % 1.0, max(0.0, min(1.0, s)), max(0.0, min(1.0, v)))
+
+
+def _lift_until(rgb_hsv, background, target):
+    """Raise a colour's value until it clears `target` contrast on `background`.
+
+    Returns the adjusted rgb. Gives up at v=1.0 rather than looping forever --
+    a hue that cannot reach the target even at full brightness is returned as
+    bright as it goes, which is the best available answer.
+    """
+    h, sat, val = rgb_hsv
+    rgb = _hsv(h, sat, val)
+    while contrast_ratio(rgb, background) < target and val < 1.0:
+        val = min(1.0, val + 0.01)
+        rgb = _hsv(h, sat, val)
+    return rgb
+
+
+def _hue_histogram(image_path, bins=36):
+    """Weighted circular hue histogram, plus how chromatic the image is.
+
+    Returns (histogram, chromatic_confidence). Imports are local so that the
+    ordinary `theme-switch <name>` path never pays for loading numpy and
+    Pillow -- they are only needed by `auto`.
+    """
+    import numpy as np
+    from PIL import Image
+
+    image = Image.open(image_path).convert("RGB")
+    # Colour proportions survive a downscale; reading 5 megapixels does not
+    # improve the answer and takes a noticeable fraction of a second.
+    image.thumbnail((160, 160))
+    a = np.asarray(image, dtype=np.float32) / 255.0
+
+    mx = a.max(axis=2)
+    mn = a.min(axis=2)
+    value = mx
+    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0.0)
+
+    # Hue, by the standard max-channel formulation. `delta` is floored to avoid
+    # a divide-by-zero on grey pixels; those are masked out by `mn == mx` after.
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    delta = np.maximum(mx - mn, 1e-6)
+    hue = np.select(
+        [mx == r, mx == g],
+        [((g - b) / delta) % 6, ((b - r) / delta) + 2],
+        ((r - g) / delta) + 4,
+    ) / 6.0
+    hue = np.where(mn == mx, 0.0, hue)
+
+    # "Lit" excludes near-black, where hue is meaningless and noisy.
+    lit = value > 0.15
+    chromatic = (sat > 0.18) & lit
+    confidence = float(chromatic.sum() / max(int(lit.sum()), 1))
+
+    weight = (sat ** 1.5) * value * (value > 0.12) * (sat > 0.10)
+    index = np.clip((hue * bins).astype(int), 0, bins - 1)
+    hist = np.bincount(index.ravel(), weights=weight.ravel(), minlength=bins)
+
+    # Circular 5-tap smooth. Wrapping the ends is what makes it circular --
+    # red at 355 degrees and red at 5 degrees are the same colour and must
+    # reinforce each other rather than landing in opposite ends of the array.
+    kernel = np.array([1.0, 3.0, 5.0, 3.0, 1.0])
+    padded = np.concatenate([hist[-2:], hist, hist[:2]])
+    hist = np.array([float((padded[i : i + 5] * kernel).sum()) for i in range(bins)])
+
+    return hist, confidence
+
+
+def _pick_hues(hist, bins=36, min_separation=5):
+    """The three strongest well-separated hues, as 0..1 floats.
+
+    min_separation is in buckets, so 5 buckets is 50 degrees. Without it the
+    top three are routinely three adjacent buckets of the same colour.
+    """
+    picked = []
+    for i in sorted(range(bins), key=lambda j: hist[j], reverse=True):
+        if hist[i] <= 0:
+            break
+        if all(min(abs(i - j), bins - abs(i - j)) >= min_separation for j in picked):
+            picked.append(i)
+        if len(picked) == 3:
+            break
+    # Bucket centre, not its edge.
+    return [(i + 0.5) / bins for i in picked]
+
+
+def palette_from_wallpaper(image_path, base_theme="mint"):
+    """Derive a full nine-colour palette from an image.
+
+    Returns (palette_dict, notes). `notes` is a list of human-readable lines
+    explaining what was derived and why, printed by main() so the result is
+    never a black box.
+    """
+    base = THEMES[base_theme]
+    notes = []
+
+    hist, confidence = _hue_histogram(image_path)
+    achromatic = confidence < CHROMA_CONFIDENCE_MIN
+
+    if achromatic:
+        # No trustworthy hue in the image. Keep the base theme's accents and
+        # tint the neutrals towards its primary, so the desktop still reads as
+        # a deliberate monochrome rather than as three random colours.
+        notes.append(
+            f"image is effectively greyscale (chroma {confidence:.0%} < "
+            f"{CHROMA_CONFIDENCE_MIN:.0%}) -- keeping {base_theme}'s accents"
+        )
+        accent_hex = [base["a1"], base["a2"], base["a3"]]
+        neutral_hue = colorsys.rgb_to_hsv(*_from_hex(base["a1"]))[0]
+    else:
+        hues = _pick_hues(hist)
+        if not hues:
+            hues = [colorsys.rgb_to_hsv(*_from_hex(base["a1"]))[0]]
+        # Fewer than three separated hues in the image: complete the set
+        # harmonically rather than repeating one. +40 degrees is an analogous
+        # partner, -150 is a split-complement -- both reliably distinct from
+        # the first without clashing with it.
+        while len(hues) < 3:
+            hues.append((hues[0] + (0.11 if len(hues) == 1 else -0.42)) % 1.0)
+
+        notes.append(
+            "dominant hues: "
+            + ", ".join(f"{round(h * 360)}deg" for h in hues)
+            + f" (chroma {confidence:.0%})"
+        )
+        accent_hex = None
+        neutral_hue = hues[0]
+
+    # --- neutrals ---------------------------------------------------------
+    neutral = {k: _hsv(neutral_hue, s, v) for k, (s, v) in NEUTRAL_SV.items()}
+
+    # Text has to clear AAA against the generated background, and `muted` AA.
+    # Both are lightened rather than the background being darkened, because the
+    # background tone is what carries the wallpaper's character.
+    for key, target in (("text", CONTRAST_TEXT), ("muted", CONTRAST_MUTED)):
+        s_, v_ = NEUTRAL_SV[key]
+        neutral[key] = _lift_until((neutral_hue, s_, v_), neutral["bg"], target)
+
+    # --- accents ----------------------------------------------------------
+    if accent_hex is None:
+        accents = []
+        for hue, (s_, v_) in zip(hues, ACCENT_SV):
+            accents.append(_lift_until((hue, s_, v_), neutral["bg"], CONTRAST_ACCENT))
+        accent_hex = [_to_hex(c) for c in accents]
+    else:
+        # Base-theme accents still have to be readable on the *generated*
+        # background, which is not the one they were designed against.
+        lifted = []
+        for hx in accent_hex:
+            h_, s_, v_ = colorsys.rgb_to_hsv(*_from_hex(hx))
+            lifted.append(_to_hex(_lift_until((h_, s_, v_), neutral["bg"], CONTRAST_ACCENT)))
+        accent_hex = lifted
+
+    palette = {k: _to_hex(v) for k, v in neutral.items()}
+    palette["a1"], palette["a2"], palette["a3"] = accent_hex
+
+    # --- the apps that need a NAMED theme, not colours --------------------
+    # ghostty, bat and btop are configured by theme name, so `auto` has to pick
+    # the closest built-in rather than hand them hex. Nearest is measured by
+    # hue distance from the generated primary accent to each theme's, which
+    # keeps the terminal in the same colour family as the desktop.
+    nearest = _nearest_builtin(palette["a1"])
+    palette["ghostty"] = THEMES[nearest]["ghostty"]
+    palette["bat"] = THEMES[nearest]["bat"]
+    palette["btop"] = THEMES[nearest]["btop"]
+    palette["desc"] = f"derived from {Path(image_path).name}"
+    notes.append(f"terminal/btop follow the nearest built-in theme: {nearest}")
+
+    for name, floor in (("text", CONTRAST_TEXT), ("a1", CONTRAST_ACCENT),
+                        ("a2", CONTRAST_ACCENT), ("a3", CONTRAST_ACCENT)):
+        ratio = contrast_ratio(_from_hex(palette[name]), _from_hex(palette["bg"]))
+        flag = "" if ratio >= floor else f"  BELOW {floor}:1 -- hue too dark to lift"
+        notes.append(f"contrast {name}/bg = {ratio:.1f}:1{flag}")
+
+    return palette, notes
+
+
+def write_catalogue():
+    """Emit every theme's palette for the Settings GUI to draw swatches from.
+
+    ~/.config/quickshell/themes.json. Written on every apply, so the GUI's list
+    can never drift from THEMES above -- adding a theme here makes it appear in
+    Settings with no second edit anywhere.
+
+    `auto` is included with the palette it most recently derived, so its swatch
+    shows the wallpaper's actual colours rather than a placeholder.
+    """
+    catalogue = []
+    for name, theme in THEMES.items():
+        catalogue.append({
+            "id": name,
+            "label": name.capitalize(),
+            "desc": theme["desc"],
+            "bg": theme["bg"],
+            "surface": theme["surface"],
+            "text": theme["text"],
+            "a1": theme["a1"],
+            "a2": theme["a2"],
+            "a3": theme["a3"],
+        })
+
+    # `auto` last, so it reads as "and also, derived from your wallpaper".
+    auto = {
+        "id": "auto",
+        "label": "Wallpaper",
+        "desc": "derived from the current wallpaper",
+        "bg": "#141416", "surface": "#202125", "text": "#edf0f7",
+        "a1": "#7f96db", "a2": "#a669d1", "a3": "#5cccc3",
+    }
+    if AUTO_STATE.exists():
+        try:
+            stored = json.loads(AUTO_STATE.read_text()).get("palette")
+            if stored:
+                auto.update({k: stored[k] for k in
+                             ("bg", "surface", "text", "a1", "a2", "a3") if k in stored})
+                auto["desc"] = stored.get("desc", auto["desc"])
+        except (ValueError, OSError, KeyError):
+            pass
+    catalogue.append(auto)
+
+    try:
+        QS_THEME.parent.mkdir(parents=True, exist_ok=True)
+        # A top-level OBJECT, not a bare array: Quickshell's JsonAdapter
+        # deserialises into named properties and refuses an array at the root
+        # ("Failed to deserialize json: not an object").
+        (QS_THEME.parent / "themes.json").write_text(
+            json.dumps({"themes": catalogue}, indent=2) + "\n"
+        )
+        return f"themed: {QS_THEME.parent / 'themes.json'}"
+    except OSError as e:
+        return f"SKIPPED (catalogue): {e}"
+
+
+def _nearest_builtin(accent_hex):
+    """The built-in theme whose primary accent is closest in hue."""
+    target = colorsys.rgb_to_hsv(*_from_hex(accent_hex))[0]
+    best, best_distance = "mint", 2.0
+    for name, theme in THEMES.items():
+        hue = colorsys.rgb_to_hsv(*_from_hex(theme["a1"]))[0]
+        # Circular distance -- hue is an angle, so 0.95 and 0.05 are close.
+        distance = min(abs(hue - target), 1.0 - abs(hue - target))
+        if distance < best_distance:
+            best, best_distance = name, distance
+    return best
+
+
+def current_wallpaper():
+    """The path in ~/.config/hypr/wallpaper.conf, or None.
+
+    That file is the single source of truth for the wallpaper -- hyprpaper and
+    hyprlock both source it. Parsed rather than imported because it is Hyprland
+    config syntax: `$wallpaper = /absolute/path`.
+    """
+    if not WALLPAPER_CONF.exists():
+        return None
+    match = re.search(
+        r"^\s*\$wallpaper\s*=\s*(.+?)\s*$", WALLPAPER_CONF.read_text(), re.M
+    )
+    if not match:
+        return None
+    path = Path(os.path.expanduser(match.group(1)))
+    return path if path.exists() else None
+
+
+def resolve_theme(name):
+    """Return the nine-colour palette for a theme name.
+
+    Every consumer goes through here rather than indexing THEMES directly, so
+    that `auto` -- which has no static entry -- behaves identically to a
+    hand-written theme everywhere downstream.
+    """
+    if name != "auto":
+        return THEMES[name], []
+
+    wallpaper = current_wallpaper()
+    if wallpaper is None:
+        raise SystemExit(
+            f"auto needs a wallpaper, and {WALLPAPER_CONF} does not point at a "
+            f"readable image.\nSet one first:  "
+            f"~/.config/hypr/scripts/apply-wallpaper.sh /path/to/image"
+        )
+
+    # The base theme supplies the accents when the image has no usable hue, and
+    # is whatever named theme was last applied. Recorded separately from STATE
+    # so that applying `auto` twice does not make `auto` its own base.
+    base = "mint"
+    if AUTO_STATE.exists():
+        try:
+            base = json.loads(AUTO_STATE.read_text()).get("base", base)
+        except (ValueError, OSError):
+            pass
+    elif STATE.exists():
+        candidate = STATE.read_text().strip()
+        if candidate in THEMES:
+            base = candidate
+
+    palette, notes = palette_from_wallpaper(wallpaper, base_theme=base)
+    AUTO_STATE.write_text(
+        json.dumps(
+            {"source": str(wallpaper), "base": base, "palette": palette}, indent=2
+        )
+        + "\n"
+    )
+    return palette, notes
+
+
+# --------------------------------------------------------------------------
 # File patching
 # --------------------------------------------------------------------------
 def patch_block(path, body, start="THEME:START", end="THEME:END"):
@@ -271,8 +699,15 @@ def patch_key(path, key, value, sep=" = ", quote=False):
 # --------------------------------------------------------------------------
 # Per-application writers
 # --------------------------------------------------------------------------
-def apply(name):
-    t = THEMES[name]
+def apply(name, t=None):
+    """Write the palette into every themed config.
+
+    `t` is the resolved nine-colour palette. It is passed in rather than looked
+    up here because `auto` has no static entry in THEMES -- see resolve_theme().
+    Defaulting to a lookup keeps any older call site working.
+    """
+    if t is None:
+        t = THEMES[name]
     out = []
 
     # --- waybar --------------------------------------------------------
@@ -407,7 +842,57 @@ setw -g clock-mode-colour "{t["a1"]}"
         )
     )
 
+    # --- quickshell ----------------------------------------------------
+    # The desktop shell. Unlike every other target here this is not a patched
+    # block inside a config the user also edits -- it is a generated file the
+    # shell reads and nothing else writes, so it is emitted whole.
+    #
+    # Quickshell watches it (watchChanges in services/Theme.qml) and repaints
+    # live, so there is nothing to reload in reload_all(). Written even when
+    # Quickshell is not installed or not running: the directory is cheap, and
+    # the file being there means the shell is correctly themed the first time
+    # it ever starts rather than one theme switch later.
+    try:
+        QS_THEME.parent.mkdir(parents=True, exist_ok=True)
+        QS_THEME.write_text(
+            json.dumps(
+                {
+                    "name": name,
+                    "desc": t.get("desc", ""),
+                    "bg": t["bg"],
+                    "surface": t["surface"],
+                    "surface2": t["surface2"],
+                    "border": t["border"],
+                    "text": t["text"],
+                    "muted": t["muted"],
+                    "a1": t["a1"],
+                    "a2": t["a2"],
+                    "a3": t["a3"],
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+        out.append(f"themed: {QS_THEME}")
+    except OSError as e:
+        out.append(f"SKIPPED (quickshell): {e}")
+
+    # Keep the Settings GUI's swatch list in step with THEMES on every apply.
+    out.append(write_catalogue())
+
     STATE.write_text(name + "\n")
+
+    # Remember which named theme to fall back on when `auto` meets a greyscale
+    # wallpaper. Only named themes qualify -- `auto` must never become its own
+    # base, or the accents would drift a little further on every switch.
+    if name != "auto":
+        try:
+            existing = json.loads(AUTO_STATE.read_text()) if AUTO_STATE.exists() else {}
+        except (ValueError, OSError):
+            existing = {}
+        existing["base"] = name
+        AUTO_STATE.write_text(json.dumps(existing, indent=2) + "\n")
+
     return out
 
 
@@ -552,16 +1037,49 @@ def main():
         print("Available themes:")
         for k, v in THEMES.items():
             print(f"  {k:<12} {v['desc']}")
+        print(f"  {'auto':<12} derived from the current wallpaper, live")
+        wallpaper = current_wallpaper()
+        if wallpaper:
+            print(f"               (currently: {wallpaper.name})")
         print("\nApply with:  just theme <name>")
+        return 0
+
+    # Regenerate ~/.config/quickshell/themes.json without applying anything.
+    # The Settings GUI calls this if the file is missing.
+    if arg in ("--catalogue", "--catalog"):
+        print(write_catalogue())
         return 0
 
     if arg in ("--current", "-c"):
         print(STATE.read_text().strip() if STATE.exists() else "(unknown)")
         return 0
 
-    if arg not in THEMES:
+    # Preview what `auto` would derive, without applying it. The fast way to
+    # decide whether a wallpaper is worth theming from:
+    #     theme-switch --palette                 the current wallpaper
+    #     theme-switch --palette ~/pic/foo.jpg   any image
+    if arg in ("--palette", "-p"):
+        image = Path(sys.argv[2]).expanduser() if len(sys.argv) > 2 else current_wallpaper()
+        if image is None or not image.exists():
+            print("No image. Pass one, or set a wallpaper first.", file=sys.stderr)
+            return 1
+        base = STATE.read_text().strip() if STATE.exists() else "mint"
+        palette, notes = palette_from_wallpaper(image, base_theme=base if base in THEMES else "mint")
+        print(f"\nPalette derived from: {image}\n")
+        for line in notes:
+            print(f"  {line}")
+        print()
+        for key in ("bg", "surface", "surface2", "border", "text", "muted", "a1", "a2", "a3"):
+            # A block of the colour itself, so the palette can be judged by eye
+            # in the terminal rather than by reading hex.
+            r, g, b = (int(palette[key].lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+            print(f"  {key:<9} {palette[key]}  \x1b[48;2;{r};{g};{b}m      \x1b[0m")
+        print(f"\nApply with:  just theme auto")
+        return 0
+
+    if arg != "auto" and arg not in THEMES:
         print(f"Unknown theme: {arg}\n", file=sys.stderr)
-        print("Available: " + ", ".join(THEMES), file=sys.stderr)
+        print("Available: " + ", ".join(THEMES) + ", auto", file=sys.stderr)
         return 1
 
     # Verify the markers BEFORE touching anything, so a broken config is
@@ -570,9 +1088,18 @@ def main():
         print("\nRefusing to apply a theme while a marker is missing.", file=sys.stderr)
         return 1
 
-    print(f"\nApplying theme: {arg} — {THEMES[arg]['desc']}\n")
+    # Resolve BEFORE printing the banner: `auto` reads the wallpaper here, and
+    # a missing or unreadable image should fail before anything is written.
+    palette, notes = resolve_theme(arg)
+
+    print(f"\nApplying theme: {arg} — {palette.get('desc', '')}\n")
+    for line in notes:
+        print(f"  {line}")
+    if notes:
+        print()
+
     problems = []
-    for line in apply(arg):
+    for line in apply(arg, palette):
         print("  " + line)
         if line.startswith("SKIPPED"):
             problems.append(line)

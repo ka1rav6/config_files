@@ -40,16 +40,6 @@
     "description": "Custom backup: pipewire"
   },
   {
-    "path": "/home/kairav/.config/nwg-dock-hyprland",
-    "category": "nwg-dock-hyprland",
-    "description": "Custom backup: nwg-dock-hyprland"
-  },
-  {
-    "path": "/home/kairav/.config/nwg-drawer",
-    "category": "nwg-drawer",
-    "description": "Custom backup: nwg-drawer"
-  },
-  {
     "path": "/home/kairav/.config/gtk-3.0",
     "category": "gtk-3",
     "description": "Custom backup: gtk-3.0"
@@ -128,5 +118,10 @@
     "path": "/home/kairav/.config/fastfetch",
     "category": "fastfetch",
     "description": "Custom backup: fastfetch"
+  },
+  {
+    "path": "/home/kairav/.config/quickshell",
+    "category": "quickshell",
+    "description": "Custom backup: quickshell"
   }
 ]

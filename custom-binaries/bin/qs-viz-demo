@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# =============================================================================
+# qs-viz-demo — put the audio visualiser on screen for a look.
+# =============================================================================
+# Usage:  qs-viz-demo [seconds]        (default 30)
+#
+# WHY YOU NEED THIS TO SEE IT
+#   The visualiser deliberately draws nothing unless BOTH of these are true:
+#
+#     1. audio is actually playing   (PipeWire's own peak meter says so)
+#     2. at least one monitor is showing its wallpaper
+#
+#   The second one is the surprising one. The visualiser lives on the BOTTOM
+#   layer -- above the wallpaper, below every window -- so on a tiling
+#   compositor a workspace with a single tiled window on it hides it completely.
+#   Rendering pixels behind an opaque window is the most obviously wasted work a
+#   shell can do, so it stops: no rendering, and no cava process either.
+#
+#   Floating windows do NOT count as covering. They leave the desktop showing
+#   around them, and the scratchpad terminals are translucent, so the bars
+#   genuinely are visible through them.
+#
+#   The upshot is that on a busy workspace the visualiser costs nothing and
+#   shows nothing, which is correct but makes it hard to demo. This script sets
+#   up the conditions.
+#
+# WHAT IT COSTS WHEN IT IS RUNNING
+#   ~15% of one core at 160 bands / 60 Hz, plus ~2.5% for cava. Frame rate
+#   dominates that, not band count; on battery it drops to 30 Hz automatically.
+#   See the benchmark table in ~/.config/quickshell/modules/visualizer/.
+# -----------------------------------------------------------------------------
+set -euo pipefail
+
+SECS="${1:-30}"
+
+if ! quickshell ipc call shell status >/dev/null 2>&1; then
+    echo "Quickshell is not running. Start it with: just qs-restart" >&2
+    exit 1
+fi
+
+# Remember where to go back to.
+previous=$(hyprctl activeworkspace -j | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+
+cleanup() {
+    hyprctl dispatch "hl.dsp.focus({ workspace = ${previous} })" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT INT TERM
+
+echo "Switching to workspace 9 so the wallpaper is visible…"
+hyprctl dispatch 'hl.dsp.focus({ workspace = 9 })' >/dev/null
+sleep 0.6
+
+quickshell ipc call visualizer on >/dev/null 2>&1 || true
+sleep 0.6
+
+echo "Playing a tone for ${SECS}s — Ctrl+C to stop early."
+timeout "$SECS" speaker-test -t sine -f 440 -l 0 >/dev/null 2>&1 || true
+
+echo
+echo -n "visualiser: "
+quickshell ipc call visualizer status 2>/dev/null || true
+echo "Returning to workspace ${previous}."

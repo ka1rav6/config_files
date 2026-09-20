@@ -1,0 +1,127 @@
+# =============================================================================
+# Quickshell module registration
+# =============================================================================
+# Every singleton and shared component in the shell is named here. This is what
+# lets shell.qml write `Settings.features.dock` and a file three directories
+# deep write `import ".."` and get the same object.
+#
+# WHY A SINGLE ROOT qmldir
+#   Quickshell registers the config root as an import path, so one qmldir here
+#   covers the whole tree. The alternative -- a qmldir per directory -- means
+#   every cross-directory reference needs its own import line, and Lucid's
+#   experience of that is a 61 KB single file written to avoid the imports.
+#
+# ORDER DOES NOT MATTER
+#   QML resolves these lazily. A singleton is constructed the first time
+#   something reads it, not when it is listed.
+#
+# ADDING A FILE
+#   Components:  <Name> 1.0 <path>.qml
+#   Singletons:  singleton <Name> 1.0 <path>.qml   (file also needs
+#                `pragma Singleton` on its first line)
+#
+# THE ONE RULE THAT WILL BITE YOU
+#   Only shell.qml gets these names for free, because it sits in the same
+#   directory as this file. EVERY other file in the tree must start with:
+#
+#       import qs
+#
+#   Miss it in a file that uses a component (Card, Icon) and the load fails
+#   loudly with "X is not a type" -- easy. Miss it in a file that only uses a
+#   SINGLETON (Theme, Settings) and there is no load-time error at all: the
+#   shell starts, the component renders, and every reference is `undefined`,
+#   surfacing as zero-width layouts and blank colours with only a
+#   ReferenceError buried in the log. Check the log after adding any file.
+# =============================================================================
+
+# The module name. Declaring one means every file in the tree can reach these
+# names with a single `import qs`, from ANY depth -- rather than counting
+# directory levels with `import ".."` / `import "../.."`, which silently breaks
+# the moment a file is moved one level deeper.
+module qs
+
+# --- Configuration and policy ------------------------------------------------
+# Settings is the persisted user state; Appearance turns it into design tokens;
+# Performance turns it into "may this expensive thing run right now".
+singleton Settings      1.0 config/Settings.qml
+singleton Appearance    1.0 config/Appearance.qml
+singleton Performance   1.0 config/Performance.qml
+
+# --- Services ----------------------------------------------------------------
+# One authoritative instance per system domain. Nothing else in the shell may
+# open its own subscription to NetworkManager, BlueZ, PipeWire or the Hyprland
+# socket -- they come through here, or state gets duplicated.
+singleton Theme         1.0 services/Theme.qml
+singleton Hypr          1.0 services/Hypr.qml
+singleton Audio         1.0 services/Audio.qml
+singleton Media         1.0 services/Media.qml
+singleton Network       1.0 services/Network.qml
+singleton Bluetooth     1.0 services/Bluetooth.qml
+singleton Brightness    1.0 services/Brightness.qml
+singleton Cava          1.0 services/Cava.qml
+singleton Time          1.0 services/Time.qml
+singleton NightLight    1.0 services/NightLight.qml
+singleton Notifications 1.0 services/Notifications.qml
+singleton Shell         1.0 services/Shell.qml
+singleton ThemeCatalogue 1.0 services/ThemeCatalogue.qml
+singleton Wallpaper     1.0 services/Wallpaper.qml
+singleton SysInfo       1.0 services/SysInfo.qml
+
+# --- Design system -----------------------------------------------------------
+# The shared vocabulary. Every surface in the shell is a Card, every switch is a
+# Toggle, every slider is a Slider -- which is what stops the Control Center and
+# Settings looking like two different products.
+Icon            1.0 ui/Icon.qml
+Card            1.0 ui/Card.qml
+Button          1.0 ui/Button.qml
+QuickTile       1.0 ui/QuickTile.qml
+Toggle          1.0 ui/Toggle.qml
+Slider          1.0 ui/Slider.qml
+Panel           1.0 ui/Panel.qml
+
+# --- Modules -----------------------------------------------------------------
+Osd             1.0 modules/osd/Osd.qml
+ControlCenter   1.0 modules/controlcenter/ControlCenter.qml
+CcHeader        1.0 modules/controlcenter/CcHeader.qml
+CcMain          1.0 modules/controlcenter/CcMain.qml
+CcMedia         1.0 modules/controlcenter/CcMedia.qml
+CcWifi          1.0 modules/controlcenter/CcWifi.qml
+CcBluetooth     1.0 modules/controlcenter/CcBluetooth.qml
+CcAudio         1.0 modules/controlcenter/CcAudio.qml
+BtRow           1.0 modules/controlcenter/BtRow.qml
+DeviceRow       1.0 modules/controlcenter/DeviceRow.qml
+PowerMenu       1.0 modules/power/PowerMenu.qml
+PowerTile       1.0 modules/power/PowerTile.qml
+SettingsWindow  1.0 modules/settings/SettingsWindow.qml
+SettingRow      1.0 modules/settings/SettingRow.qml
+SettingsGroup   1.0 modules/settings/SettingsGroup.qml
+ThemeSwatch     1.0 modules/settings/ThemeSwatch.qml
+SettingsAppearance  1.0 modules/settings/SettingsAppearance.qml
+SettingsDesktop     1.0 modules/settings/SettingsDesktop.qml
+SettingsComponents  1.0 modules/settings/SettingsComponents.qml
+SettingsVisualizer  1.0 modules/settings/SettingsVisualizer.qml
+SettingsPerformance 1.0 modules/settings/SettingsPerformance.qml
+SettingsSystem      1.0 modules/settings/SettingsSystem.qml
+SettingsAbout       1.0 modules/settings/SettingsAbout.qml
+SettingsAudio       1.0 modules/settings/SettingsAudio.qml
+SettingsNetwork     1.0 modules/settings/SettingsNetwork.qml
+SettingsShell       1.0 modules/settings/SettingsShell.qml
+Lock            1.0 modules/lock/Lock.qml
+LockSurface     1.0 modules/lock/LockSurface.qml
+LockWidget      1.0 modules/lock/LockWidget.qml
+Widgets         1.0 modules/widgets/Widgets.qml
+DesktopWidget   1.0 modules/widgets/DesktopWidget.qml
+WidgetClock     1.0 modules/widgets/WidgetClock.qml
+WidgetMedia     1.0 modules/widgets/WidgetMedia.qml
+WidgetCalendar  1.0 modules/widgets/WidgetCalendar.qml
+WidgetNetwork   1.0 modules/widgets/WidgetNetwork.qml
+WidgetGauge     1.0 modules/widgets/WidgetGauge.qml
+Visualizer      1.0 modules/visualizer/Visualizer.qml
+WallpaperPicker 1.0 modules/wallpaper/WallpaperPicker.qml
+Launcher        1.0 modules/launcher/Launcher.qml
+Dock            1.0 modules/dock/Dock.qml
+DockItem        1.0 modules/dock/DockItem.qml
+DockMenu        1.0 modules/dock/DockMenu.qml
+Dashboard       1.0 modules/dashboard/Dashboard.qml
+Calendar        1.0 modules/dashboard/Calendar.qml
+StatBar         1.0 modules/dashboard/StatBar.qml
