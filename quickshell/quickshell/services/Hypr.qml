@@ -66,7 +66,57 @@ Singleton {
 
     readonly property var monitors: Hyprland.monitors
     readonly property var workspaces: Hyprland.workspaces
+
+    // -----------------------------------------------------------------
+    // Toplevels
+    //
+    // READ THIS BEFORE USING `lastIpcObject`.
+    //
+    // The header above claims Quickshell "already maintains a live model of
+    // monitors, workspaces and toplevels off the event socket, so almost
+    // nothing here needs to poll". That is true of monitors and workspaces. It
+    // is NOT true of toplevels, and the difference is silent:
+    //
+    //   * Hyprland.toplevels starts EMPTY. The event socket only reports
+    //     changes, so a window that was already open when the shell started is
+    //     never announced and never enters the model.
+    //
+    //   * A toplevel that does enter the model via an event carries only the
+    //     handful of fields the event itself contained (address, title,
+    //     workspace name). Its `lastIpcObject` stays an empty map -- upstream
+    //     documents it as "*not* updated unless the toplevel object is fetched
+    //     again from Hyprland".
+    //
+    // So `toplevel.lastIpcObject.class` -- which is how the dock and
+    // desktopVisibleByMonitor below both identify a window -- is `undefined`
+    // for every window until something calls refreshToplevels(). Nothing did,
+    // which is why the dock showed "No applications" with four windows open.
+    //
+    // The fix is to re-fetch on the events that invalidate the list. That is a
+    // request-socket roundtrip, not a poll: it happens on window open, close,
+    // move and retitle, and never on a timer. Bursts (moving a window emits
+    // several events at once) are coalesced by the debounce below, so dragging
+    // a window across workspaces costs one fetch rather than five.
+    // -----------------------------------------------------------------
+
     readonly property var toplevels: Hyprland.toplevels
+
+    function refreshToplevels() {
+        Hyprland.refreshToplevels();
+    }
+
+    Timer {
+        id: toplevelRefresh
+
+        interval: 50
+        repeat: false
+        onTriggered: Hyprland.refreshToplevels()
+    }
+
+    // Ask for a re-fetch soon. Safe to call as often as you like.
+    function scheduleToplevelRefresh() {
+        toplevelRefresh.restart();
+    }
 
     readonly property var focusedMonitor: Hyprland.focusedMonitor
     readonly property var focusedWorkspace: Hyprland.focusedWorkspace
@@ -122,6 +172,23 @@ Singleton {
             case "closewindow":
                 // The view changed under the flag; re-derive it.
                 root.refreshFullscreen();
+                break;
+            }
+
+            // Anything that changes which windows exist, where they are, or
+            // what they are called invalidates the toplevel model -- see the
+            // note on `toplevels` above for why this is not automatic.
+            switch (event.name) {
+            case "openwindow":
+            case "closewindow":
+            case "movewindow":
+            case "movewindowv2":
+            case "windowtitle":
+            case "windowtitlev2":
+            case "changefloatingmode":
+            case "fullscreen":
+            case "pin":
+                root.scheduleToplevelRefresh();
                 break;
             }
         }
@@ -304,5 +371,11 @@ Singleton {
         // initial fullscreen state once rather than waiting for the first
         // window to toggle it.
         root.refreshFullscreen();
+
+        // Same reasoning, and the more important half: windows that were
+        // already open when the shell started are never announced on the event
+        // socket, so without this the toplevel model begins empty and stays
+        // that way until the user happens to open something new.
+        Hyprland.refreshToplevels();
     }
 }

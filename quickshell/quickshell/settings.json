@@ -50,8 +50,7 @@
             "ghostty_ghostty",
             "google-chrome",
             "brave-browser",
-            "code",
-            "org.gnome.Nautilus"
+            "code"
         ],
         "position": "bottom",
         "spacing": 8,

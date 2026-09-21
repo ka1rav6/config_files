@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Hyprland
 import qs
 
 // =============================================================================
@@ -29,10 +28,14 @@ import qs
 //   tiling compositor is an unpleasant surprise. It floats over instead.
 //
 // COST
-//   The window list comes from the Hyprland toplevel model Quickshell already
-//   maintains off the event socket -- no polling. Icons resolve through the
-//   .desktop cache. Hover magnification is a scale transform, so it is a GPU
-//   property animation and costs nothing measurable.
+//   The window list comes from the Hyprland toplevel model, which Hypr.qml
+//   re-fetches on window open/close/move/retitle -- event-driven, not a poll,
+//   but NOT free the way monitors and workspaces are. See the `toplevels` note
+//   in services/Hypr.qml: lastIpcObject is empty until something asks for it,
+//   and an earlier version of this comment claimed otherwise, which is exactly
+//   why the dock read "No applications" with four windows open.
+//   Icons resolve through the .desktop cache. Hover magnification is a scale
+//   transform, so it is a GPU property animation and costs nothing measurable.
 // =============================================================================
 
 Scope {
@@ -62,11 +65,30 @@ Scope {
         return false;
     }
 
+    // DesktopEntries populates ASYNCHRONOUSLY, and only starting from the
+    // first access -- it reads as empty for roughly a second after startup,
+    // then fills with ~90 entries. byId() and heuristicLookup() are plain
+    // invokable functions, so a binding that only calls them captures NO
+    // dependency on the entry list and is never re-evaluated when it arrives.
+    //
+    // That is a separate bug from the toplevel one documented in Hypr.qml, and
+    // it has the same symptom: `pinned` evaluated once at startup against an
+    // empty list, got null for all five ids, and stayed empty forever. It was
+    // masked only by `pinned` also depending on `running` -- so it would have
+    // looked fixed the moment toplevels worked, and broken again on any
+    // startup where no window happened to open.
+    //
+    // Referencing this property inside those bindings is what gives them the
+    // missing dependency. Do not "simplify" it away.
+    readonly property int entryCount: DesktopEntries.applications.values.length
+
     readonly property var running: {
         const seen = {};
         const out = [];
 
-        for (const toplevel of Hyprland.toplevels.values) {
+        root.entryCount;   // dependency; see above
+
+        for (const toplevel of Hypr.toplevels.values) {
             const ipc = toplevel.lastIpcObject;
             if (!ipc || !ipc.class || ipc.class === "") continue;
             // Scratchpads live on special workspaces and are toggled with their
@@ -78,7 +100,7 @@ Scope {
             // scratchpad dragged onto a real workspace is still a scratchpad.
             // Matching on class rather than workspace is what makes WhatsApp
             // and YouTube Music behave the same wherever they happen to be.
-            if (root.excluded(ipc.class)) continue;
+                if (root.excluded(ipc.class)) continue;
 
             const cls = ipc.class;
             if (seen[cls]) {
@@ -120,6 +142,9 @@ Scope {
 
     readonly property var pinned: {
         const out = [];
+
+        root.entryCount;   // dependency; see the note on entryCount
+
         for (const id of (Settings.dock.pinned || [])) {
             const entry = root.lookup(id);
             if (!entry) continue;                    // uninstalled since pinning
