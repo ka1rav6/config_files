@@ -49,8 +49,7 @@
         "pinned": [
             "ghostty_ghostty",
             "google-chrome",
-            "brave-browser",
-            "code"
+            "brave-browser"
         ],
         "position": "bottom",
         "spacing": 8,
