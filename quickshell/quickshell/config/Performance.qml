@@ -128,21 +128,31 @@ Singleton {
     readonly property bool allowShadows: Settings.appearance.shadows && !root.saver
 
     // Animation duration multiplier. Zero means "jump straight to the end
-    // state", which every Behavior in the shell handles correctly because
-    // ui/Motion.qml routes all of them through this.
+    // state", which every Behavior in the shell handles correctly.
+    //
+    // Routed through config/Appearance.qml's duration() helper -- every
+    // component reads Appearance.durationFast/Normal/Slow/Slower, and those
+    // are multiplied by this. (An earlier note here credited a "ui/Motion.qml"
+    // for that; no such file has ever existed.)
     readonly property real motionScale: {
         if (Settings.appearance.motion <= 0)
             return 0;               // explicit reduced-motion, honoured always
         if (root.gameMode)
             return 0;               // never animate over a game
+        // Saver shortens motion rather than removing it -- but SCALES the
+        // user's setting instead of replacing it. Returning a flat 0.6 threw
+        // away an explicit preference for slower motion (motion = 2, which
+        // some people set for readability, not decoration) and made saver
+        // *faster* than what they asked for.
         if (root.saver)
-            return 0.6;             // shorter, not absent -- still legible
+            return Settings.appearance.motion * 0.6;
         return Settings.appearance.motion;
     }
 
-    // How often widgets that read /proc or shell out may refresh, in ms.
-    // Widgets multiply their natural interval by this rather than picking a
-    // number, so one policy change moves all of them.
+    // How often anything that reads /proc or shells out may refresh, in ms.
+    // This IS the interval -- services/SysInfo.qml binds its Timer straight to
+    // it (`interval: Performance.pollInterval`) rather than scaling a local
+    // number by it, so one policy change here moves every poll in the shell.
     readonly property int pollInterval: {
         if (root.gameMode)
             return 30000;           // effectively parked
@@ -156,10 +166,21 @@ Singleton {
     // Visualizer detail, scaled by profile. The band count is the dominant
     // cost in both cava and the renderer, so saver never gets here (the
     // allowVisualizer gate above stops it first) and visual gets more.
+    // Band detail by profile.
+    //
+    // THE CAP HERE IS A CEILING, NOT A TARGET -- and it used to invert the
+    // profile it was meant to enrich. It read `Math.min(128, base * 1.5)`,
+    // written when Settings.visualizer.bands defaulted to 48. The default
+    // later moved to 160, so "visual" resolved to min(128, 240) = 128 --
+    // FEWER bands than balanced's 160. Settings > Visualizer duly reported
+    // "Running — 128 bands" next to a slider reading 160.
+    //
+    // 256 is cava's own ceiling (services/Cava.qml clamps demands to it), so
+    // the cap can never drag a profile below the user's setting again.
     readonly property int visualizerBands: {
         const base = Settings.visualizer.bands;
         if (root.visual)
-            return Math.min(128, Math.round(base * 1.5));
+            return Math.min(256, Math.max(base, Math.round(base * 1.5)));
         // Running on a battery downshift: fewer bands as well as fewer frames.
         if (root.saver)
             return Math.max(32, Math.round(base * 0.6));

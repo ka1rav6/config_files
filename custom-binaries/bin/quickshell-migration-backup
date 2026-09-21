@@ -1,46 +1,126 @@
 #!/usr/bin/env bash
+# =============================================================================
+# quickshell-migration-backup — snapshot the desktop configuration.
+# =============================================================================
+#   quickshell-migration-backup            take a snapshot
+#   quickshell-migration-backup list       list snapshots
+#   quickshell-migration-backup restore F  restore from snapshot F
+#
+# Run through `just qs-backup` / `just qs-restore`.
+#
+# -----------------------------------------------------------------------------
+# WHAT CHANGED, AND WHY IT MATTERED
+#
+# This used to tar `.local/bin` WHOLESALE. That directory is mostly compiled
+# binaries -- a 155 MB `todo`, 60 MB `uv`, 24 MB `yazi`, 24 MB
+# nwg-dock-hyprland -- so every snapshot was ~207 MB of duplicated executables
+# wrapped around a few hundred KB of actual configuration. Six snapshots taken
+# over two days came to 1.24 GB, and nothing ever pruned them.
+#
+# Worse, it had the scope backwards in both directions:
+#
+#   * `.config/quickshell` -- the configuration this entire migration is about
+#     -- was NOT included. A "roll the whole desktop back" that cannot roll
+#     back the shell.
+#   * `restore` ran `tar -xzf -C $HOME`, so restoring a two-day-old snapshot
+#     OVERWROTE every binary in ~/.local/bin with a two-day-old copy. The
+#     documented recovery path could silently downgrade yazi, uv and just.
+#
+# So: config directories in full, hand-written SCRIPTS from .local/bin by name,
+# and no binaries. A snapshot is now ~100 KB instead of ~207 MB.
+# -----------------------------------------------------------------------------
 set -euo pipefail
 
-STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_ROOT="${HOME}/.local/share/quickshell-backups"
-mkdir -p "${BACKUP_ROOT}"
-ARCHIVE="${BACKUP_ROOT}/pre-phase1-${STAMP}.tar.gz"
+KEEP=10
 
-if [[ "${1:-}" == "restore" ]]; then
-  if [[ -z "${2:-}" ]]; then
-    echo "Usage: quickshell-migration-backup restore <archive.tar.gz>" >&2
-    exit 1
-  fi
-  ARCHIVE="${2}"
-  if [[ ! -f "${ARCHIVE}" ]]; then
-    echo "Backup archive not found: ${ARCHIVE}" >&2
-    exit 1
-  fi
-  echo "Restoring from ${ARCHIVE}"
-  tar -xzf "${ARCHIVE}" -C "${HOME}"
-  echo "Restore complete."
-  exit 0
-fi
-
-if [[ "${1:-}" == "list" ]]; then
-  ls -1 "${BACKUP_ROOT}" 2>/dev/null || true
-  exit 0
-fi
-
-if [[ -n "${1:-}" && "${1}" != "--help" ]]; then
-  echo "Unknown argument: ${1}" >&2
-  echo "Usage: quickshell-migration-backup [list|restore <archive.tar.gz>]" >&2
-  exit 1
-fi
-
-tar -czf "${ARCHIVE}" \
-  -C "${HOME}" \
-  .config/hypr \
-  .config/waybar \
-  .config/mako \
-  .config/wofi \
-  .config/hypr/hyprlock.conf \
-  .local/bin \
+# Config trees. Directories are taken whole -- they are small and entirely
+# hand-written.
+CONFIG_PATHS=(
+  .config/quickshell
+  .config/hypr
+  .config/waybar
+  .config/mako
+  .config/wofi
+  .config/wlogout
   Justfile
+)
 
-echo "Backup created at ${ARCHIVE}"
+# Individual scripts from .local/bin, BY NAME. Never the directory: see above.
+# Add new ones here; anything not listed is assumed to be a binary or something
+# installed by a package manager, and is not ours to back up.
+BIN_SCRIPTS=(
+  theme-switch
+  lock-session
+  bt-pair
+  system-monitor-notify
+  now-playing-notify
+  hypr-log-persist.sh
+  mako-fzf-history
+  quickshell-migration-backup
+)
+
+usage() {
+    echo "Usage: quickshell-migration-backup [list|restore <archive.tar.gz>]" >&2
+}
+
+case "${1:-}" in
+list)
+    find "${BACKUP_ROOT}" -maxdepth 1 -name '*.tar.gz' -printf '%TY-%Tm-%Td %TH:%TM  %8s  %f\n' 2>/dev/null | sort -r
+    exit 0
+    ;;
+restore)
+    ARCHIVE="${2:-}"
+    [[ -z "${ARCHIVE}" ]] && { usage; exit 1; }
+    [[ -f "${ARCHIVE}" ]] || { echo "Backup archive not found: ${ARCHIVE}" >&2; exit 1; }
+
+    echo "This will overwrite the following in ${HOME}:"
+    tar -tzf "${ARCHIVE}" | awk -F/ '{print $1"/"$2}' | sort -u | sed 's/^/  /'
+    echo
+    read -r -p "Restore from $(basename "${ARCHIVE}")? [y/N] " reply
+    [[ "${reply}" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+
+    tar -xzf "${ARCHIVE}" -C "${HOME}"
+    echo "Restore complete. Reload with: hyprctl reload && just qs-restart"
+    exit 0
+    ;;
+"")
+    ;;
+--help|-h)
+    usage; exit 0
+    ;;
+*)
+    echo "Unknown argument: ${1}" >&2
+    usage; exit 1
+    ;;
+esac
+
+mkdir -p "${BACKUP_ROOT}"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+ARCHIVE="${BACKUP_ROOT}/desktop-${STAMP}.tar.gz"
+
+# Only include paths that exist, so a missing optional config is not a failure.
+INCLUDE=()
+for path in "${CONFIG_PATHS[@]}"; do
+    [[ -e "${HOME}/${path}" ]] && INCLUDE+=("${path}")
+done
+for script in "${BIN_SCRIPTS[@]}"; do
+    [[ -f "${HOME}/.local/bin/${script}" ]] && INCLUDE+=(".local/bin/${script}")
+done
+
+tar -czf "${ARCHIVE}" -C "${HOME}" \
+    --exclude='*.tar.gz' \
+    --exclude='__pycache__' \
+    "${INCLUDE[@]}"
+
+# --- retention ---------------------------------------------------------------
+# Nothing pruned these before; they simply accumulated. find+sort rather than
+# `ls -t`, which may be shadowed (eza is installed here and its -t takes a
+# mandatory argument, so `ls -1t DIR` silently means something else).
+find "${BACKUP_ROOT}" -maxdepth 1 -name '*.tar.gz' -type f -printf '%T@\t%p\0' 2>/dev/null \
+    | sort -zrn \
+    | tail -z -n +$((KEEP + 1)) \
+    | cut -z -f2- \
+    | xargs -0 -r rm -f
+
+printf 'Backup created: %s (%s)\n' "${ARCHIVE}" "$(du -h "${ARCHIVE}" | cut -f1)"

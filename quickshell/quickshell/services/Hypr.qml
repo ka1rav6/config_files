@@ -254,8 +254,16 @@ Singleton {
     // -----------------------------------------------------------------
     // Dispatch
     //
-    // See the header note: these take classic string syntax because they go
-    // over the request socket, not through hyprctl.
+    // See the header note: every one of these is a LUA EXPRESSION, because
+    // this machine runs Hyprland's Lua config and the request socket
+    // evaluates dispatches as Lua -- exactly like the hyprctl binary does.
+    //
+    // This block used to claim the opposite ("these take classic string
+    // syntax because they go over the request socket, not through hyprctl"),
+    // which contradicted both the header above and the code below it. That is
+    // the precise trap the header was written to prevent, sitting 150 lines
+    // underneath the warning: the classic form does not fail quietly, it
+    // throws a Lua parse error and every dock click does nothing.
     // -----------------------------------------------------------------
 
     // Raw dispatch. `request` must be a Lua expression -- see the header.

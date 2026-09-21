@@ -32,6 +32,29 @@ FocusScope {
 
     property real value: 0          // 0..1
     property real stepSize: 0.05
+
+    // Decimal places every emitted value is rounded to.
+    //
+    // A drag maps a pixel position to a fraction, which lands on values like
+    // 0.7594999999999998. Those went straight into settings.json, so the file
+    // accumulated long meaningless floats ("opacity": 0.7594999999999998,
+    // "smoothing": 0.9041796875) and every sub-pixel twitch of the mouse was a
+    // genuinely different value -- a distinct property change, a distinct
+    // debounced 400 ms write, and a diff in a file that is meant to be
+    // hand-editable.
+    //
+    // Three places is finer than any of these controls can actually resolve
+    // (a 400 px slider is 0.0025 per pixel) so nothing is lost.
+    property int precision: 3
+
+    // Round to `precision` and clamp. Every path that changes the value goes
+    // through this -- drag, keyboard, scroll -- so no caller can reintroduce
+    // the raw float.
+    function quantise(v) {
+        const clamped = Math.max(0, Math.min(1, v));
+        const factor = Math.pow(10, root.precision);
+        return Math.round(clamped * factor) / factor;
+    }
     property bool enabled: true
 
     // Optional icon drawn inside the track's left end.
@@ -55,12 +78,12 @@ FocusScope {
     function setFromX(x) {
         const w = track.width;
         if (w <= 0) return;
-        root.value = Math.max(0, Math.min(1, x / w));
+        root.value = root.quantise(x / w);
         root.moved(root.value);
     }
 
-    Keys.onLeftPressed: { root.value = Math.max(0, root.value - root.stepSize); root.moved(root.value); root.committed(root.value); }
-    Keys.onRightPressed: { root.value = Math.min(1, root.value + root.stepSize); root.moved(root.value); root.committed(root.value); }
+    Keys.onLeftPressed: { root.value = root.quantise(root.value - root.stepSize); root.moved(root.value); root.committed(root.value); }
+    Keys.onRightPressed: { root.value = root.quantise(root.value + root.stepSize); root.moved(root.value); root.committed(root.value); }
 
     Rectangle {
         id: track
@@ -156,7 +179,7 @@ FocusScope {
         // waybar modules already have (scroll on the volume icon).
         onWheel: (e) => {
             const delta = e.angleDelta.y > 0 ? root.stepSize : -root.stepSize;
-            root.value = Math.max(0, Math.min(1, root.value + delta));
+            root.value = root.quantise(root.value + delta);
             root.moved(root.value);
             root.committed(root.value);
         }

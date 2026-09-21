@@ -17,6 +17,7 @@ THRESHOLD=20
 POLL=60
 battery=/sys/class/power_supply/BAT0
 pidfile="${XDG_RUNTIME_DIR:-/tmp}/hypr-idle-suspend.pid"
+lockfile="${XDG_RUNTIME_DIR:-/tmp}/hypr-idle-suspend.lock"
 
 # Echoes the charge percentage, or nothing if it cannot be read. Only BAT0 is
 # consulted: /sys/class/power_supply also carries the touchpad and the Logitech
@@ -31,9 +32,40 @@ start)
     if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
         exit 0
     fi
+    # A stale pidfile from a SIGKILLed watcher would otherwise block every
+    # later start for the rest of the session.
+    rm -f "$pidfile"
+
     setsid "$0" watch >/dev/null 2>&1 </dev/null &
+
+    # WAIT FOR THE PIDFILE BEFORE RETURNING. This is not tidiness, it closes a
+    # real race.
+    #
+    # The watcher writes its own pidfile (it has to -- setsid means the pid
+    # this shell sees in $! is not necessarily the watcher's). So between this
+    # `start` returning and the watcher writing the file there was a window in
+    # which the pidfile did not exist. hypridle fires `stop` from on-resume,
+    # and a `stop` landing in that window found no pidfile, did nothing, and
+    # returned success -- leaving a watcher running that had then dropped its
+    # own pidfile on exit, so NOTHING could address it again. It would go on to
+    # suspend the machine mid-use the next time the battery dipped below the
+    # threshold. That is the worst failure mode this script has.
+    #
+    # Bounded so a watcher that fails to start can never hang the caller.
+    i=0
+    while [ "$i" -lt 50 ] && [ ! -f "$pidfile" ]; do
+        i=$((i + 1))
+        sleep 0.1
+    done
     ;;
 watch)
+    # Refuse to run two watchers at once. Without this, two overlapping
+    # start/stop cycles could leave a second watcher that the single pidfile
+    # cannot name.
+    exec 9>"$lockfile"
+    if ! flock -n 9; then
+        exit 0
+    fi
     echo $$ >"$pidfile"
     # Two traps, not one. A bare `trap 'cleanup' TERM` runs the handler and
     # then RESUMES the loop -- the watcher would shrug off `stop`, lose its

@@ -30,29 +30,59 @@
 # screen with nothing running on it.
 # -----------------------------------------------------------------------------
 #
-# KNOWN LIMITATION, READ BEFORE ENABLING THE QUICKSHELL LOCKER
-#   hypridle's 300 s listener runs `loginctl lock-session`, whose lock_cmd is
-#   `pidof hyprlock || hyprlock --grace 5`. With the Quickshell locker holding
-#   the session that test fails, so hyprlock launches INTO an already-locked
-#   session five minutes in. That is what broke it the first time.
+# ONE LOCKER AT A TIME -- THE flock IS LOAD-BEARING
 #
-#   The fix is one line in ~/.config/hypr/hypridle.conf:
-#       lock_cmd = ~/.local/bin/lock-session
-#   That file is on the do-not-touch list, so it has not been changed, and
-#   Settings.features.lockScreen stays OFF until it is.
+# hypridle's 300 s listener runs `loginctl lock-session`, and its lock_cmd is
+# this script. But locking by hand with SUPER+ESCAPE does NOT set logind's
+# LockedHint, so logind still considers the session unlocked and WILL fire that
+# listener five minutes later -- re-entering this script while a locker is
+# already holding the session.
+#
+# The old `pidof hyprlock` test did not catch that, because the locker holding
+# the session was Quickshell, not hyprlock. The second invocation then:
+#
+#   1. deleted $MARKER (the clean-unlock marker),
+#   2. ran `quickshell -n`, which EXITS 0 when a duplicate is already running
+#      (it does not fail -- verified), so
+#   3. `wait` returned success with no marker present, which this script reads
+#      as "the locker crashed", and it launched hyprlock on top.
+#
+# Worse orderings existed: if step 1 landed just after a legitimate unlock had
+# written the marker, the FIRST invocation then read a clean unlock as a crash
+# and re-locked an unlocked desktop.
+#
+# The flock below makes all of that unreachable: a second invocation cannot
+# get past it, so it touches no marker and starts no locker. It covers every
+# entry point -- keybind, hypridle, loginctl, wlogout -- without having to
+# recognise which locker is in use.
+#
+# `9>&-` on every long-lived child keeps that lock from being inherited. A
+# locker holding this fd would keep the lock after we exited, permanently
+# wedging every later attempt -- the same bug relayer.sh already carries a
+# warning about.
 # -----------------------------------------------------------------------------
 set -uo pipefail
 
+RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+LOCKFILE="$RUNTIME/lock-session.lock"
+
+# See the header. Exit quietly -- being asked to lock an already-locked session
+# is normal, not an error.
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+    exit 0
+fi
+
 SETTINGS="$HOME/.config/quickshell/settings.json"
 LOCK_QML="$HOME/.config/quickshell/lock.qml"
-MARKER="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/qs-lock-clean"
+MARKER="$RUNTIME/qs-lock-clean"
 
 start_hyprlock() {
     # Up to five attempts. A locked session with no locker on it is the one
     # state this script must never exit in.
     for _ in 1 2 3 4 5; do
         pidof hyprlock >/dev/null 2>&1 && return 0
-        hyprlock "$@" >/dev/null 2>&1 &
+        hyprlock "$@" >/dev/null 2>&1 9>&- &
         sleep 1
         pidof hyprlock >/dev/null 2>&1 && { wait; return 0; }
     done
@@ -86,7 +116,7 @@ rm -f "$MARKER"
 
 # -n: no daemonising, so this script genuinely owns the process and `wait`
 # means what it says.
-quickshell -n -p "$LOCK_QML" >/dev/null 2>&1 &
+quickshell -n -p "$LOCK_QML" >/dev/null 2>&1 9>&- &
 lock_pid=$!
 
 # If this script is killed, do not leave the locker orphaned holding the

@@ -54,6 +54,16 @@ Singleton {
     readonly property alias dock: adapter.dock
     readonly property alias launcher: adapter.launcher
     readonly property alias osd: adapter.osd
+    // `emoji` was the one section declared in the adapter below WITHOUT an
+    // alias here, so `Settings.emoji` was undefined and every read of
+    // `Settings.emoji.favourites` threw. There was no load-time error: the
+    // picker rendered, favourites and recents silently never worked, and the
+    // log filled with ~111 TypeErrors per open (isFavourite() runs per cell).
+    //
+    // ANY new JsonObject section MUST get a line here too. modules/settings
+    // has no way to reach `adapter` otherwise -- it is an id inside the
+    // FileView, not a property of this singleton.
+    readonly property alias emoji: adapter.emoji
     readonly property alias visualizer: adapter.visualizer
     readonly property alias wallpaper: adapter.wallpaper
     readonly property alias performance: adapter.performance

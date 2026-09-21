@@ -66,12 +66,49 @@ Singleton {
     readonly property color accent2: adapter.a2 || "#f4c47b"        // warning
     readonly property color accent3: adapter.a3 || "#ff9b85"        // critical
 
-    // Semantic aliases. Using these rather than accent2/accent3 directly keeps
-    // intent readable at the call site, and means a future theme could break
-    // the warning colour away from the second accent without touching callers.
-    readonly property color success: root.accent
-    readonly property color warning: root.accent2
-    readonly property color error: root.accent3
+    // -----------------------------------------------------------------
+    // Semantic colours -- STATE, not decoration.
+    //
+    // These used to be plain aliases: success = a1, warning = a2, error = a3.
+    // That held only because the nine hand-authored palettes happen to be
+    // written in that order (mint is a green 156 deg, an amber 36 deg and a
+    // coral 11 deg), so the convention was carried by the data rather than by
+    // the code -- and the `auto` palette broke it the moment it existed.
+    //
+    // `theme auto` derives a1/a2/a3 from the WALLPAPER. It enforces WCAG
+    // contrast, which is the hard part, but it has no concept of what a colour
+    // MEANS. Derived from wallpaper10.jpg it produced:
+    //
+    //     a1 #7fb5db  205 deg  blue     -> "success"
+    //     a2 #7970e0  245 deg  purple   -> "warning"
+    //     a3 #ccc05c   54 deg  olive    -> "error"
+    //
+    // so a battery at 9%, a CPU at 90%, a failed password and an armed
+    // Shutdown button all rendered olive-yellow, a charging battery rendered
+    // blue, and every warning was purple. Nothing was unreadable -- contrast
+    // was fine -- it just no longer said anything.
+    //
+    // So the HUE is pinned and everything else is borrowed from the theme.
+    // Saturation and lightness come from the corresponding accent, so a muted
+    // palette gets muted state colours and a vivid one gets vivid ones -- mint
+    // resolves to very nearly its original a1/a2/a3, because those were
+    // already at these hues. Only palettes that had drifted get corrected.
+    //
+    // Lightness is clamped: every theme here is dark-grounded, and a state
+    // colour that lands too dark stops reading against the background.
+    // -----------------------------------------------------------------
+
+    // Re-hue `source` to `hueDegrees`, keeping its saturation and lightness.
+    function semantic(hueDegrees, source) {
+        return Qt.hsla(hueDegrees / 360,
+                       Math.max(0.35, Math.min(1.0, source.hslSaturation)),
+                       Math.max(0.58, Math.min(0.78, source.hslLightness)),
+                       1.0);
+    }
+
+    readonly property color success: root.semantic(145, root.accent)   // green
+    readonly property color warning: root.semantic(40, root.accent2)   // amber
+    readonly property color error: root.semantic(8, root.accent3)      // red
 
     // -----------------------------------------------------------------
     // Derived colours

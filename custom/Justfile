@@ -128,7 +128,7 @@ theme-palette IMAGE="":
 
 clean-brave:
     pkill -f brave
-    yes | rm -rf ~/.cache/BraveSoftware/Brave-Browser/*
+    zsh -c 'setopt LOCAL_OPTIONS RM_STAR_SILENT; rm -rf ~/.cache/BraveSoftware/Brave-Browser/*'
 clean-chrome:
     pkill -f chrome 
-    yes | rm -rf ~/.cache/google-chrome/* 
+    zsh -c 'setopt LOCAL_OPTIONS RM_STAR_SILENT; rm -rf ~/.cache/google-chrome/*'

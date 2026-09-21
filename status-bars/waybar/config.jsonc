@@ -60,6 +60,12 @@
     //   power-profiles-daemon    -> Control Center
     //   idle_inhibitor           -> Control Center
     //   custom/power             -> Power menu         (SUPER + M)
+    //
+    // (SUPER + M genuinely opens the shell's power menu now. Until 2026-09-20
+    // that line was aspirational: the key still ran wlogout via
+    // scripts/power-menu.sh, and modules/power/PowerMenu.qml was built,
+    // registered a `power` IPC target and was never bound to anything. wlogout
+    // is now the fallback for when the shell is not running.)
     //   tray                     -> removed with nm-applet / blueman-applet
     //
     // What is left is persistent STATUS -- the four things worth reading
@@ -87,7 +93,13 @@
     // LEFT
     // ========================================================================
 
-    // App-launcher button. Opens the Quickshell launcher (also SUPER + SPACE).
+    // App-launcher button. Opens the Quickshell launcher.
+    //
+    // NOT "also SUPER + SPACE", which this used to say: SUPER + SPACE is the
+    // workspace overview (bindings.lua says so explicitly), and the Quickshell
+    // launcher is deliberately left unbound because wofi on SUPER + S is the
+    // keyboard launcher by choice. This button is the only thing that opens it.
+    //
     // Replaces nwg-drawer, which is still installed; wofi remains on SUPER + S
     // and is what SUPER + V pipes cliphist through, so neither is orphaned.
     "custom/launcher": {

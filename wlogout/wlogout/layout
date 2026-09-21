@@ -1,6 +1,6 @@
 {
     "label"   : "lock",
-    "action"  : "hyprlock --grace 5",
+    "action"  : "/home/kairav/.local/bin/lock-session",
     "text"    : "󰌾   Lock",
     "keybind" : "l"
 }

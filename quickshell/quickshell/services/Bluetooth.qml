@@ -10,8 +10,16 @@ import qs
 // =============================================================================
 // Bluetooth — BlueZ, event-driven.
 // =============================================================================
-// Replaces blueman-applet + blueman-tray, which between them hold ~43 MiB of
-// PSS and two GTK processes to provide a tray icon and a menu.
+// Replaces blueman-applet + blueman-tray, which between them held 97 MiB
+// resident (52 + 44, measured) and two Python/GTK processes, to provide a tray
+// icon and a menu.
+//
+// The applet is still needed for ONE thing -- registering the BlueZ pairing
+// agent, without which a NEW device cannot be paired -- so ~/.local/bin/bt-pair
+// starts it for the length of a pairing session and stops it again. Note that
+// stopping it means stopping the systemd USER UNIT (it is D-Bus activated) and
+// blueman-tray alongside it; a plain `pkill -x blueman-applet` leaves both
+// resident, which leaked that full 97 MiB after every pair.
 //
 // DISCOVERY IS GATED, FOR THE SAME REASON SCANNING IS IN Network.qml
 //   Bluetooth discovery keeps the radio transmitting and is a genuine battery
@@ -94,14 +102,53 @@ Singleton {
         // rather than quietly ignoring it.
         value: root.scanning && root.enabled
         when: root.available && root.enabled && root.scanning
+
+        // RestoreNone is what actually silenced
+        //     Failed to stop discovery ...: "Operation already in progress"
+        //
+        // A Qt Binding with `when: false` does not merely stop driving the
+        // property -- by default it RESTORES the value the target had before
+        // the binding took effect, i.e. it writes `discovering = false` the
+        // instant `scanning` goes false. That write races BlueZ's own
+        // StartDiscovery, which is still in flight, and BlueZ rejects it.
+        //
+        // The debounced stopDiscovery timer below is the only thing that
+        // should ever issue the stop, so the binding must not write on the way
+        // out. Chasing this in the timer first was wrong: the warning was
+        // never coming from the timer.
+        restoreMode: Binding.RestoreNone
     }
 
     // Stopping needs its own path, since the binding above is not active while
-    // `scanning` is false. Guarded on actually discovering, so it is never the
-    // no-op that produced the warning.
+    // `scanning` is false.
+    //
+    // DEBOUNCED, because BlueZ rejects a stop that arrives while its own
+    // start is still in flight:
+    //
+    //     Failed to stop discovery on adapter ...: "Operation already in
+    //     progress"
+    //
+    // `adapter.discovering` reads true as soon as the start is ISSUED, not
+    // once it has completed, so the existing guard could not tell the two
+    // apart -- opening and immediately closing the Bluetooth page (or the
+    // panel auto-closing behind another one) reliably produced that warning.
+    // A short settle lets the start finish first, and re-checking inside the
+    // timer means a scan that was restarted meanwhile is left alone.
     onScanningChanged: {
-        if (!root.scanning && root.available && root.adapter.discovering)
-            root.adapter.discovering = false;
+        if (root.scanning)
+            stopDiscovery.stop();
+        else
+            stopDiscovery.restart();
+    }
+
+    Timer {
+        id: stopDiscovery
+
+        interval: 350
+        onTriggered: {
+            if (!root.scanning && root.available && root.enabled && root.adapter.discovering)
+                root.adapter.discovering = false;
+        }
     }
 
     function connectDevice(device) {
@@ -177,7 +224,14 @@ Singleton {
         // Pick the highest-priority a2dp profile the card actually lists, and
         // only act when the card is currently off -- never override a profile
         // the user chose deliberately.
-        profileProc.command = ["bash", "-c",
+        // Serialised through the queue below rather than assigned straight to
+        // the Process: `command` and `deviceName` are single properties, so two
+        // devices connecting within a moment of each other (a headset and a
+        // mouse waking together after a resume) had the second overwrite the
+        // first mid-run -- the first device silently never got its profile
+        // selected, which is indistinguishable from the bug this whole section
+        // exists to fix.
+        root.enqueueProfile(device.deviceName || device.name || address, ["bash", "-c",
             'card="$1"\n' +
             'info=$(pactl list cards 2>/dev/null | awk -v c="Name: $card" \'$0 ~ c, /^$/\')\n' +
             '[ -z "$info" ] && exit 0\n' +
@@ -188,8 +242,28 @@ Singleton {
             '    pactl set-card-profile "$card" "$p" && echo "$p" && exit 0\n' +
             '  fi\n' +
             'done\n',
-            "qs-btprofile", card];
-        profileProc.deviceName = device.deviceName || device.name || address;
+            "qs-btprofile", card]);
+    }
+
+    // Pending { name, command } entries. One pactl call runs at a time.
+    property var profileQueue: []
+
+    function enqueueProfile(name, command) {
+        const next = root.profileQueue.slice();
+        next.push({ name: name, command: command });
+        root.profileQueue = next;
+        if (!profileProc.running)
+            root.dequeueProfile();
+    }
+
+    function dequeueProfile() {
+        if (root.profileQueue.length === 0)
+            return;
+        const next = root.profileQueue.slice();
+        const job = next.shift();
+        root.profileQueue = next;
+        profileProc.deviceName = job.name;
+        profileProc.command = job.command;
         profileProc.running = true;
     }
 
@@ -199,6 +273,8 @@ Singleton {
         property string deviceName: ""
 
         running: false
+
+        onExited: root.dequeueProfile()
 
         stdout: SplitParser {
             onRead: (line) => {

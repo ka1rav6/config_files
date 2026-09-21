@@ -1,13 +1,41 @@
 #!/usr/bin/env bash
+# =============================================================================
+# now-playing-notify — a notification when the track changes.
+# =============================================================================
+# Launched at login from ~/.config/hypr/autostart.lua. Event-driven: it blocks
+# in `playerctl --follow` and wakes only when MPRIS metadata actually changes,
+# so it costs nothing between tracks.
+#
+# NOTE: this never ran at all until 2026-09-20. autostart.lua guarded it with
+# `pgrep -f '[n]ow-playing-notify' || ...`, and `pgrep -f` also matches the
+# `sh -c` wrapper launching it -- whose argv contains that very path. The guard
+# matched itself, reported "already running", and the `||` never fired. The
+# guard is gone; the lock below is what actually enforces one instance.
+# -----------------------------------------------------------------------------
+set -uo pipefail
 
-lock_dir="${XDG_RUNTIME_DIR:-/tmp}/now-playing-notify"
-if ! mkdir "$lock_dir" 2>/dev/null; then
-    exit 0
+LOCK_DIR="${XDG_RUNTIME_DIR:-/tmp}/now-playing-notify"
+
+# mkdir is the atomic test-and-set. But a SIGKILLed run (or a crash) never
+# reaches its EXIT trap, leaving the directory behind -- and because
+# $XDG_RUNTIME_DIR survives until logout, that stale directory would block
+# every later start for the rest of the session with nothing to say why. So
+# only defer to a lock whose owner is still alive.
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    if [[ -r "$LOCK_DIR/pid" ]] && kill -0 "$(<"$LOCK_DIR/pid")" 2>/dev/null; then
+        exit 0
+    fi
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || exit 0
 fi
-trap 'rmdir "$lock_dir"' EXIT
+echo $$ >"$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR"' EXIT
+trap 'rm -rf "$LOCK_DIR"; exit 0' INT TERM
+
+command -v playerctl >/dev/null 2>&1 || exit 0
 
 playerctl --follow metadata --format '{{playerName}}|{{title}}|{{artist}}' 2>/dev/null |
 while IFS='|' read -r player title artist; do
-    [ -z "$title" ] && continue
-    notify-send -a "NowPlaying:${player}" -i audio-x-generic "$title" "${artist:-Now Playing}"
+    [[ -z "$title" ]] && continue
+    notify-send -a "NowPlaying:${player}" -i audio-x-generic "$title" "${artist:-Now Playing}" 2>/dev/null
 done

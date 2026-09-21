@@ -51,20 +51,62 @@ Item {
     width: root.contentWidth
     height: root.contentHeight
 
-    // Clamped so a widget can never be dragged (or restored) off screen --
-    // a saved position from a wider monitor would otherwise be unreachable.
-    x: Math.max(0, Math.min((parent ? parent.width : 0) - root.width,
-        Math.round(((root.saved && root.saved.x !== undefined ? root.saved.x : root.defaultX))
-                   * (parent ? parent.width : 0))))
-    y: Math.max(0, Math.min((parent ? parent.height : 0) - root.height,
-        Math.round(((root.saved && root.saved.y !== undefined ? root.saved.y : root.defaultY))
-                   * (parent ? parent.height : 0))))
+    // -----------------------------------------------------------------
+    // POSITION IS ASSIGNED, NOT BOUND -- AND THAT IS DELIBERATE.
+    //
+    // x and y used to be bindings on `saved`. A MouseArea with
+    // `drag.target: root` writes x and y directly, and in QML writing a
+    // property DESTROYS its binding. So the first drag of a session silently
+    // severed the link to the saved layout, and after that:
+    //
+    //   * pressing Reset cleared Settings.desktop.widgetLayout but the widget
+    //     stayed exactly where it was -- the comment on resetLayout() promises
+    //     it animates home, and it did not;
+    //   * plugging in a monitor (which changes the parent's size) no longer
+    //     re-resolved the fraction, so the widget kept a stale pixel position.
+    //
+    // Both came back on the next rebuild of the surface, which happens
+    // whenever the desktop is covered and uncovered, so it looked intermittent.
+    //
+    // Assigning from a function that every relevant change calls keeps the
+    // behaviour a binding was supposed to give, without a binding to break.
+    // The Behaviors on x/y still animate it, so Reset glides home as intended.
+    // -----------------------------------------------------------------
+
+    function applyPosition() {
+        const pw = root.parent ? root.parent.width : 0;
+        const ph = root.parent ? root.parent.height : 0;
+        if (pw <= 0 || ph <= 0)
+            return;
+
+        const fx = (root.saved && root.saved.x !== undefined) ? root.saved.x : root.defaultX;
+        const fy = (root.saved && root.saved.y !== undefined) ? root.saved.y : root.defaultY;
+
+        // Clamped so a widget can never be dragged (or restored) off screen --
+        // a saved position from a wider monitor would otherwise be unreachable.
+        root.x = Math.max(0, Math.min(pw - root.width, Math.round(fx * pw)));
+        root.y = Math.max(0, Math.min(ph - root.height, Math.round(fy * ph)));
+    }
+
+    // Re-resolve whenever the stored layout changes (including Reset, which
+    // empties it) or the surface is resized (monitor hotplug, rotation).
+    onSavedChanged: root.applyPosition()
+    onWidthChanged: root.applyPosition()
+    onHeightChanged: root.applyPosition()
+
+    Connections {
+        target: root.parent
+        enabled: !!root.parent
+        function onWidthChanged() { root.applyPosition(); }
+        function onHeightChanged() { root.applyPosition(); }
+    }
 
     // Entrance: widgets fade up rather than blinking into existence when the
     // desktop becomes visible or a toggle is flipped in Settings.
     opacity: 0
     scale: 0.94
     Component.onCompleted: {
+        root.applyPosition();
         root.opacity = 1;
         root.scale = 1;
     }

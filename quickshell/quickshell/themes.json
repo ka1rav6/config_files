@@ -102,13 +102,13 @@
     {
       "id": "auto",
       "label": "Wallpaper",
-      "desc": "derived from wallpaper10.jpg",
-      "bg": "#141516",
-      "surface": "#202325",
-      "text": "#edf3f7",
-      "a1": "#7fb5db",
-      "a2": "#7970e0",
-      "a3": "#ccc05c"
+      "desc": "derived from wallppr.jpg",
+      "bg": "#141416",
+      "surface": "#202125",
+      "text": "#edf0f7",
+      "a1": "#7f96db",
+      "a2": "#a669d1",
+      "a3": "#5cccc3"
     }
   ]
 }

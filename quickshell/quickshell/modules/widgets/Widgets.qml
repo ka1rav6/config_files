@@ -209,10 +209,24 @@ Scope {
                     editing: root.editing
                 }
 
+                // DEFAULT POSITIONS MUST CLEAR THE VISUALIZER BAND.
+                //
+                // modules/visualizer/Visualizer.qml draws on the same
+                // WlrLayer.Bottom, anchored to the bottom edge with
+                // `margins.bottom = Settings.visualizer.offset` and
+                // `implicitHeight = Settings.visualizer.height`. At the
+                // current 280/150 that is screen y 770..920 on this 1200 px
+                // panel -- and the three gauges plus the network card were all
+                // landing inside it, drawn over by the bars whenever music
+                // played on a visible desktop.
+                //
+                // The gauges now sit as one row at y 0.40, which is clear of
+                // both the visualizer below and the calendar slot above.
+                // Keep new widgets above ~0.48 or below ~0.82.
                 WidgetGauge {
                     widgetId: "cpu"
-                    defaultX: 0.74
-                    defaultY: 0.56
+                    defaultX: 0.62
+                    defaultY: 0.40
                     visible: Settings.desktop.cpu
                     editing: root.editing
 
@@ -226,8 +240,8 @@ Scope {
 
                 WidgetGauge {
                     widgetId: "ram"
-                    defaultX: 0.86
-                    defaultY: 0.56
+                    defaultX: 0.74
+                    defaultY: 0.40
                     visible: Settings.desktop.ram
                     editing: root.editing
 
@@ -242,7 +256,7 @@ Scope {
                 WidgetGauge {
                     widgetId: "battery"
                     defaultX: 0.86
-                    defaultY: 0.78
+                    defaultY: 0.40
                     visible: Settings.desktop.battery && Performance.hasBattery
                     editing: root.editing
 

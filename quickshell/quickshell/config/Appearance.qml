@@ -74,7 +74,10 @@ Singleton {
     readonly property int radius: Settings.appearance.radius          // cards, panels
     readonly property int radiusInner: Math.round(root.radius * 0.6)  // controls in a card
     readonly property int radiusSmall: Math.round(root.radius * 0.35) // chips, bars
-    readonly property int radiusFull: 999                             // pills, avatars
+    // Pills, avatars, anything that should be a capsule regardless of size.
+    // A large constant rather than a computed half-height: Rectangle clamps
+    // radius to half the shorter side, so this is always exactly a pill.
+    readonly property int radiusFull: 999
 
     // -----------------------------------------------------------------
     // Control metrics
@@ -112,7 +115,7 @@ Singleton {
     readonly property int fontLabel: root.size(14)     // control labels
     readonly property int fontTitle: root.size(17)     // card headings
     readonly property int fontHeading: root.size(22)   // panel headings
-    readonly property int fontDisplay: root.size(48)   // the desktop clock
+    readonly property int fontDisplay: root.size(58)   // the desktop clock
 
     // Weights, named so the intent survives a font change. Inter has the full
     // range; the fallback stack degrades gracefully.
@@ -168,7 +171,28 @@ Singleton {
     // blurring behind opaque surfaces).
     // -----------------------------------------------------------------
 
-    readonly property real surfaceOpacity: Math.max(0.35, Math.min(0.98, Settings.appearance.opacity))
+    readonly property real surfaceOpacity: {
+        // BLUR OFF => PAINT OPAQUE. This is what makes the blur switch in
+        // Settings > Appearance (and the saver profile, which drops blur
+        // first) actually do something.
+        //
+        // It did nothing at all before. The chain
+        // Settings.appearance.blur -> Performance.allowBlur -> Appearance.blur
+        // had exactly one reader in the whole shell, and it was a diagnostic
+        // STRING in SettingsPerformance.qml. No surface consulted it, so
+        // turning blur off left every panel just as translucent as before --
+        // and since the Hyprland layer_rules in ~/.config/hypr/rules.lua are
+        // static, the compositor carried on blurring behind them too. The
+        // setting cost nothing and saved nothing.
+        //
+        // rules.lua's own note -- "turning blur off makes the shell paint its
+        // surfaces opaque, at which point these rules become no-ops" -- is now
+        // true rather than aspirational: with no translucent pixels left,
+        // ignore_alpha finds nothing to blur.
+        if (!root.blur)
+            return 1.0;
+        return Math.max(0.35, Math.min(0.98, Settings.appearance.opacity));
+    }
 
     // Cards sitting inside an already-translucent panel must be more opaque
     // than it, or the layers stop reading as layers.

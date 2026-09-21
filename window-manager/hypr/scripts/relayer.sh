@@ -46,13 +46,20 @@ done
 echo "$(ts)   monitors settled: $prev"
 
 # True if every layer surface sits inside the monitor it belongs to.
+# Private temp files -- see the same note in waybar-ensure.sh. The fixed
+# /tmp/.relayer-*.json paths they replace could be read by a concurrent run
+# mid-write, and were guessable names in a world-writable directory.
+RELAYER_MONS=$(mktemp -t relayer-mons.XXXXXX.json) || exit 0
+RELAYER_LAY=$(mktemp -t relayer-lay.XXXXXX.json) || exit 0
+trap 'rm -f "$RELAYER_MONS" "$RELAYER_LAY"' EXIT
+
 layers_aligned() {
-    hyprctl monitors -j > /tmp/.relayer-mons.json 2>/dev/null || return 1
-    hyprctl layers -j  > /tmp/.relayer-lay.json  2>/dev/null || return 1
-    python3 - <<'PY'
-import json, sys
-mons = {m["name"]: m for m in json.load(open("/tmp/.relayer-mons.json"))}
-lay = json.load(open("/tmp/.relayer-lay.json"))
+    hyprctl monitors -j > "$RELAYER_MONS" 2>/dev/null || return 1
+    hyprctl layers -j  > "$RELAYER_LAY"  2>/dev/null || return 1
+    RELAYER_MONS="$RELAYER_MONS" RELAYER_LAY="$RELAYER_LAY" python3 - <<'PY'
+import json, sys, os
+mons = {m["name"]: m for m in json.load(open(os.environ["RELAYER_MONS"]))}
+lay = json.load(open(os.environ["RELAYER_LAY"]))
 bad = []
 for name, v in lay.items():
     m = mons.get(name)

@@ -140,13 +140,32 @@ Singleton {
     // 0..1 per band, smoothed. Read by the renderer.
     property var levels: []
 
+    // Perceptual response curve, precomputed over cava's entire output domain.
+    //
+    // cava is close to linear in amplitude, and linear amplitude looks dead:
+    // ordinary music sits in the bottom third of the range and the bars barely
+    // leave the floor. Raising the value to a power below 1 expands the quiet
+    // end and compresses the loud end -- the same reason audio meters are
+    // drawn in dB. 0.55 was picked by ear at normal listening volume.
+    //
+    // ascii_max_range is 1000, so the input is an integer 0..1000 and the
+    // curve has exactly 1001 possible results. Computing them once turns 9,600
+    // Math.pow calls a second (160 bands x 60 fps) into 9,600 array lookups.
+    readonly property var curveTable: {
+        const table = new Array(1001);
+        for (let i = 0; i <= 1000; i++)
+            table[i] = Math.pow(i / 1000, 0.55);
+        return table;
+    }
+
     // True while the bars are actually moving, as opposed to cava running but
     // the music being between tracks. Lets a widget fade out gracefully.
     property bool active: false
 
-    // What the running process was started with. Compared against `bands` to
-    // decide whether a restart is needed.
+    // What the running process was started with. Compared against the wanted
+    // values to decide whether a restart is needed.
     property int liveBands: 0
+    property string liveConfig: ""
 
     // --- Process ------------------------------------------------------
 
@@ -185,12 +204,18 @@ Singleton {
         if (!root.shouldRun) {
             proc.running = false;
             root.liveBands = 0;
+            root.liveConfig = "";
             return;
         }
-        if (proc.running && root.liveBands === root.bands)
+        // `liveConfig` and not just the band count: a framerate or
+        // noise-reduction change alters the file without altering `bands`, and
+        // comparing only bands made those changes no-ops until the next spawn.
+        const wanted = root.configText(root.bands);
+        if (proc.running && root.liveBands === root.bands && root.liveConfig === wanted)
             return;
 
         root.liveBands = root.bands;
+        root.liveConfig = wanted;
         proc.running = false;
 
         // cava reads the band count only from a file, so write one and exec
@@ -198,11 +223,25 @@ Singleton {
         // half-written. "$2%/*" strips the filename to get the directory.
         proc.command = ["sh", "-c",
             "mkdir -p \"${2%/*}\" && printf '%s' \"$1\" > \"$2\" && exec cava -p \"$2\"",
-            "qs-cava", root.configText(root.bands), root.configPath];
+            "qs-cava", wanted, root.configPath];
         proc.running = true;
     }
 
+    // Consecutive unexpected exits, reset whenever the gate legitimately
+    // re-opens so a later session always gets a fresh set of attempts.
+    property int restartAttempts: 0
+
+    Timer {
+        id: respawnDelay
+
+        // Grows with each attempt: 400 ms, 800, 1200 ... Enough for a sink
+        // switch to settle without hammering a condition that will not clear.
+        interval: 400 * Math.max(1, root.restartAttempts)
+        onTriggered: if (root.shouldRun) root.apply()
+    }
+
     onShouldRunChanged: {
+        root.restartAttempts = 0;
         if (root.shouldRun) {
             // Start immediately -- waiting for the debounce would clip the
             // first second of every track.
@@ -217,6 +256,29 @@ Singleton {
     }
 
     onBandsChanged: restartDelay.restart()
+
+    // cava reads EVERY one of these from the config file at startup and has no
+    // way to be reconfigured while running, so anything that changes
+    // configText() has to respawn it -- not just the band count.
+    //
+    // This was the band count alone, which made two documented behaviours
+    // quietly untrue:
+    //
+    //   * the framerate slider in Settings > Visualizer did nothing until
+    //     cava next happened to restart;
+    //   * Performance.visualizerFramerate halves to 30 on battery, so
+    //     "unplugging halves cava's wakeups" -- the headline battery saving in
+    //     the header above -- did NOT happen if music was already playing when
+    //     the charger came out, which is the exact moment it is meant to.
+    //
+    // Debounced through the same timer as the band count: dragging a slider
+    // walks through every intermediate value, and each one would otherwise be
+    // a process respawn.
+    readonly property int watchedFramerate: Performance.visualizerFramerate
+    readonly property int watchedNoiseReduction: Math.round(Settings.visualizer.noiseReduction)
+
+    onWatchedFramerateChanged: if (proc.running) restartDelay.restart()
+    onWatchedNoiseReductionChanged: if (proc.running) restartDelay.restart()
 
     // Resizing a widget walks the band count through every intermediate value.
     // Settle before respawning.
@@ -235,6 +297,7 @@ Singleton {
             if (!root.shouldRun) {
                 proc.running = false;
                 root.liveBands = 0;
+                root.liveConfig = "";
                 root.levels = [];
                 root.active = false;
             }
@@ -265,11 +328,34 @@ Singleton {
         }
 
         onExited: (code, status) => {
-            // cava exiting while it was meant to be running means something is
-            // wrong -- usually no PipeWire monitor source. Do not respawn in a
-            // tight loop; let the gate re-trigger it.
-            if (root.shouldRun)
-                console.warn("[cava] exited unexpectedly (code", code, ") — visualizer will retry on next playback");
+            if (!root.shouldRun)
+                return;
+
+            // cava exiting while it was meant to be running means something
+            // went wrong -- usually the PipeWire monitor source disappearing
+            // when the default sink changes (plugging in headphones), which is
+            // both common and recoverable.
+            //
+            // The old comment here said "let the gate re-trigger it". It could
+            // not: the gate is onShouldRunChanged, which only fires on a
+            // CHANGE, and shouldRun is still true. So a cava that died
+            // mid-track stayed dead until the music stopped and started again
+            // -- the bars simply never came back and nothing said why.
+            //
+            // Retry with backoff rather than immediately: if cava is failing
+            // because there is genuinely no monitor source, an instant respawn
+            // is a fork bomb against a condition that will not clear.
+            root.liveBands = 0;
+            root.liveConfig = "";
+            root.restartAttempts += 1;
+            if (root.restartAttempts > 5) {
+                console.warn("[cava] exited repeatedly (code", code,
+                             ") — giving up until playback restarts; run `quickshell ipc call shell viz` to diagnose");
+                return;
+            }
+            console.warn("[cava] exited unexpectedly (code", code, ") — retry",
+                         root.restartAttempts, "of 5");
+            respawnDelay.restart();
         }
 
         stdout: SplitParser {
@@ -286,22 +372,20 @@ Singleton {
                 const gain = Settings.visualizer.sensitivity;
                 let moving = false;
 
-                // Perceptual response curve.
-                //
-                // cava's output is close to linear in amplitude, and linear
-                // amplitude looks dead: ordinary music sits in the bottom third
-                // of the range and the bars barely leave the floor. Raising the
-                // value to a power below 1 expands the quiet end and compresses
-                // the loud end -- the same reason audio meters are drawn in dB.
-                //
-                // 0.55 was picked by ear against music at normal listening
-                // volume. `sensitivity` multiplies AFTER the curve, so it
-                // behaves like a gain trim rather than re-shaping the response.
-                const curve = 0.55;
+                // `sensitivity` multiplies AFTER the curve, so it behaves like
+                // a gain trim rather than re-shaping the response.
+                // Precomputed -- see root.curveTable. This inner loop runs
+                // bands x framerate times a second (160 x 60 = 9,600), and
+                // Math.pow is by far the most expensive thing in it. cava's
+                // output is an integer 0..1000, so the whole domain fits in a
+                // 1001-entry table built once.
+                const table = root.curveTable;
 
                 for (let i = 0; i < count; i++) {
-                    const raw = (parseInt(parts[i]) || 0) / 1000;
-                    let value = raw <= 0 ? 0 : Math.pow(raw, curve) * gain;
+                    let raw = parseInt(parts[i]);
+                    if (!(raw >= 0)) raw = 0;          // NaN / undefined / negative
+                    else if (raw > 1000) raw = 1000;
+                    let value = table[raw] * gain;
                     if (value > 1) value = 1;
 
                     const p = previous[i];

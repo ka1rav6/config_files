@@ -52,14 +52,30 @@ fi
 # A surface count that does not match the monitor list means waybar is holding
 # bars for outputs that no longer exist, or has failed to create one for an
 # output that does. Neither self-corrects.
+# PRIVATE temp files, via mktemp.
+#
+# These were fixed paths (/tmp/.wbe-mons.json, /tmp/.wbe-lay.json). This script
+# is called from relayer.sh -- which holds hypr-relayer.lock -- AND from
+# display-layout.sh's settle(), which holds a DIFFERENT lock
+# (hypr-display-settle.lock). Those two locks do not exclude each other, so a
+# monitor hotplug arriving during a mirror toggle ran two copies of this script
+# at once, both writing and reading the same two paths. Each then read the
+# other's half-written JSON, both concluded the bar was broken, and both
+# restarted waybar -- producing exactly the pile of duplicated bars this script
+# exists to repair. Predictable names in a world-writable directory are also a
+# symlink-clobber waiting to happen.
+WBE_MONS=$(mktemp -t wbe-mons.XXXXXX.json) || exit 0
+WBE_LAY=$(mktemp -t wbe-lay.XXXXXX.json) || exit 0
+trap 'rm -f "$WBE_MONS" "$WBE_LAY"' EXIT
+
 read -r monitors surfaces mismatch <<<"$(
-    hyprctl monitors -j 2>/dev/null > /tmp/.wbe-mons.json
-    hyprctl layers -j   2>/dev/null > /tmp/.wbe-lay.json
-    python3 - <<'PY'
-import json
+    hyprctl monitors -j 2>/dev/null > "$WBE_MONS"
+    hyprctl layers -j   2>/dev/null > "$WBE_LAY"
+    WBE_MONS="$WBE_MONS" WBE_LAY="$WBE_LAY" python3 - <<'PY'
+import json, os
 try:
-    mons = [m["name"] for m in json.load(open("/tmp/.wbe-mons.json"))]
-    lay = json.load(open("/tmp/.wbe-lay.json"))
+    mons = [m["name"] for m in json.load(open(os.environ["WBE_MONS"]))]
+    lay = json.load(open(os.environ["WBE_LAY"]))
 except Exception:
     print("0 0 0"); raise SystemExit
 
@@ -79,7 +95,6 @@ bad = any(counts.get(m, 0) != 1 for m in mons) or any(
 print(f"{len(mons)} {total} {1 if bad else 0}")
 PY
 )"
-rm -f /tmp/.wbe-mons.json /tmp/.wbe-lay.json
 
 if [[ "${mismatch:-0}" -eq 1 ]]; then
     log "$monitors monitor(s) but $surfaces waybar surface(s) — restarting"

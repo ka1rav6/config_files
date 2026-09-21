@@ -19,7 +19,7 @@ DesktopWidget {
             text: Time.time
             color: Theme.text
             font.family: Appearance.font
-            font.pixelSize: Appearance.size(58)
+            font.pixelSize: Appearance.fontDisplay
             font.weight: Appearance.weightBold
             font.letterSpacing: Appearance.trackingDisplay
             // Tabular figures so the minute rolling over does not shuffle the

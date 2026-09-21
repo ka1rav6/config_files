@@ -28,13 +28,54 @@
 # -----------------------------------------------------------------------------
 set -uo pipefail
 
+# A signal must not skip the cleanup -- that is another way the applet was
+# being left resident. The trap is installed once started_applet is known, so
+# it can never stop an applet this script did not start.
+trap '[ "${started_applet:-0}" = "1" ] && stop_applet; exit 0' INT TERM HUP
+
 if ! command -v blueman-manager >/dev/null 2>&1; then
     notify-send "Bluetooth" "blueman-manager is not installed." 2>/dev/null
     exit 1
 fi
 
+# -----------------------------------------------------------------------------
+# CLEANING UP blueman-applet IS HARDER THAN pkill, AND GETTING IT WRONG LEAKED
+# ~97 MiB PER PAIRING SESSION.
+#
+# Two things go wrong with `pkill -x blueman-applet`:
+#
+#   1. blueman-applet is a D-Bus-ACTIVATED systemd user service
+#      (/usr/lib/systemd/user/blueman-applet.service, a `static` unit). Merely
+#      running the binary makes it claim its bus name, and systemd then owns a
+#      copy. pkill reaps the child started here; systemd's stays `active
+#      running` forever.
+#   2. It brings up blueman-tray as a separate process, which `pkill -x
+#      blueman-applet` never matched at all.
+#
+# Measured on this machine after one pairing session: blueman-applet 52 MB +
+# blueman-tray 44 MB, still resident hours later -- defeating the entire reason
+# the applet was taken out of autostart.lua.
+#
+# So stop the UNIT (which covers whichever copy is real) and the tray, and only
+# ever clean up what this script actually started.
+# -----------------------------------------------------------------------------
+
+applet_running() {
+    pgrep -x blueman-applet >/dev/null 2>&1 \
+        || systemctl --user is-active --quiet blueman-applet.service 2>/dev/null
+}
+
+stop_applet() {
+    # Unit first: stopping it also terminates the process it owns. `|| true`
+    # because the unit may not exist on a system where blueman came from
+    # somewhere other than the distro package.
+    systemctl --user stop blueman-applet.service >/dev/null 2>&1 || true
+    pkill -x blueman-applet >/dev/null 2>&1 || true
+    pkill -x blueman-tray   >/dev/null 2>&1 || true
+}
+
 started_applet=0
-if ! pgrep -x blueman-applet >/dev/null 2>&1; then
+if ! applet_running; then
     blueman-applet >/dev/null 2>&1 &
     started_applet=1
     # The agent registers a moment after the process starts; opening the
@@ -51,5 +92,5 @@ blueman-manager >/dev/null 2>&1
 # Only clean up what we created. If the applet was already running -- because
 # it was started by hand, or put back into autostart -- leave it alone.
 if [ "$started_applet" = "1" ]; then
-    pkill -x blueman-applet >/dev/null 2>&1
+    stop_applet
 fi

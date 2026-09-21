@@ -27,7 +27,22 @@ end
 hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind("ALT + F4", hl.dsp.window.close())
-hl.bind(mod .. " + M", hl.dsp.exec_cmd(home .. "/.config/waybar/scripts/power-menu.sh"))
+-- Power menu. The shell's own PowerMenu (modules/power/PowerMenu.qml) was
+-- built, registered a `power` IPC target and even had a blur layer rule in
+-- rules.lua -- and nothing was ever bound to it, so it was dead code while
+-- this key still opened wlogout. It is the primary now, with wlogout as the
+-- fallback.
+--
+-- The `||` is exact, not hopeful: `quickshell ipc call` exits 255 when no
+-- shell is reachable, which is precisely the case the fallback is for. (It
+-- exits 0 for an unknown TARGET, so this idiom would NOT catch a typo in the
+-- target name -- `power` is verified present in `quickshell ipc show`.)
+hl.bind(
+    mod .. " + M",
+    hl.dsp.exec_cmd(
+        "quickshell ipc call power toggle >/dev/null 2>&1 || exec " .. home .. "/.config/waybar/scripts/power-menu.sh"
+    )
+)
 -- Lock lives on ESCAPE, not SHIFT+L. SUPER+L is focus-right, so the old bind
 -- was one slipped finger away from locking the session mid-thought.
 -- Caps Lock sends Escape here (caps:swapescape), so SUPER + CapsLock locks too.
@@ -341,6 +356,12 @@ hl.bind(mod .. " + comma", hl.dsp.exec_cmd(qs("settings", "toggle")))
 hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd(qs("overview", "toggle")))
 hl.bind(mod .. " + D", hl.dsp.exec_cmd(qs("dashboard", "toggle")))
 hl.bind(mod .. " + SHIFT + W", hl.dsp.exec_cmd(qs("wallpaper", "toggle")))
+-- Themes. This was bound to `quickshell ipc call theme toggle` for a target
+-- that never existed -- the shell answered "Target not found." and the key did
+-- nothing, silently, because `ipc call` still exits 0 in that case. shell.qml
+-- now exposes a real `theme` target; it opens Settings on the Appearance page,
+-- which is where the theme swatches live (there is no separate theme panel,
+-- and inventing one would duplicate ~/.local/bin/theme-switch's job).
 hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd(qs("theme", "toggle")))
 hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd(qs("visualizer", "toggle")))
 

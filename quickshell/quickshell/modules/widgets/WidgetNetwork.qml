@@ -7,7 +7,7 @@ DesktopWidget {
 
     widgetId: "network"
     defaultX: 0.035
-    defaultY: 0.56
+    defaultY: 0.52   // clears the visualizer band; see Widgets.qml
     contentWidth: 240
     contentHeight: 96
 

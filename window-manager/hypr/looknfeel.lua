@@ -3,9 +3,9 @@
 -- two accents; the inactive one is a near-background tone so unfocused windows
 -- recede. Alpha is the last byte of each rgba() literal.
 local theme = {
-    border_active_1 = "rgba(7fb5dbee)",
-    border_active_2 = "rgba(7970e0aa)",
-    border_inactive = "rgba(2c313488)",
+    border_active_1 = "rgba(7f96dbee)",
+    border_active_2 = "rgba(a669d1aa)",
+    border_inactive = "rgba(2c2e3488)",
 }
 -- THEME:END
 
@@ -126,20 +126,38 @@ hl.config({
     },
 
     debug = {
-        -- Was false. The log lives in /run (tmpfs, i.e. RAM) and was growing at
-        -- roughly 3.3 MB every 3 hours -- about 26 MB a day of RAM plus the
-        -- formatting cost, for output that is only ever read when something has
-        -- already gone wrong. Flip back to false while debugging.
+        -- Kept true, but be clear about what it does and does not buy.
+        --
+        -- IT DOES NOT STOP THE LOG GROWING. Measured with this set to true
+        -- (`hyprctl getoption debug:disable_logs` -> true): the log still
+        -- reached 3.4 MB in 4.5 hours, and 99.8% of it was
+        --
+        --     DEBUG from aquamarine ]: [libinput] event4 - tap: ...
+        --
+        -- i.e. aquamarine's own logger, not Hyprland's. aquamarine hands its
+        -- messages to Hyprland through a callback that this option does not
+        -- gate, and it puts libinput at DEBUG priority, so every touchpad
+        -- event is a line. There is no config lever for it in 0.56.2 /
+        -- aquamarine 0.15.0.
+        --
+        -- What it DOES buy is suppressing Hyprland's own chatter, which is
+        -- worth keeping off. The growth is input-driven, not continuous: the
+        -- log does not move at all while the machine is idle (verified over
+        -- 10 s of no input), so this is not a background RAM leak -- it is a
+        -- cost proportional to how much you touch the touchpad.
+        --
+        -- The disk half of the problem is handled where it actually belongs:
+        -- ~/.local/bin/hypr-log-persist.sh filters the libinput spam out of
+        -- the copy it mirrors to ~/.local/state/hypr-debug and prunes old
+        -- runs, so resume debugging keeps the lines that matter without
+        -- accumulating tens of MB a day.
         disable_logs = true,
         enable_stdout_logs = false,
     },
 })
 
-hl.curve("easeOut", {
-    type = "bezier",
-    points = { { 0.16, 1 }, { 0.3, 1 } },
-})
-
+-- "easeOut" was declared here and never referenced by any hl.animation call;
+-- removed rather than left as a curve the next reader has to check for uses.
 hl.curve("easeOutQuint", { type = "bezier", points = { { 0.23, 1 }, { 0.32, 1 } } })
 hl.curve("almostLinear", { type = "bezier", points = { { 0.5, 0.5 }, { 0.75, 1 } } })
 hl.curve("quick", { type = "bezier", points = { { 0.15, 0 }, { 0.1, 1 } } })

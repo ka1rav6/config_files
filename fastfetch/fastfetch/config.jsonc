@@ -1,7 +1,11 @@
 {
     "logo": {
         "type": "file-raw",
-        "source": "~/.config/fastfetch/logo.txt"
+        "source": "~/.config/fastfetch/logo.txt",
+        "padding": {
+            "left": 2,
+            "right": 3
+        }
     },
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
   "modules": [
@@ -9,6 +13,7 @@
     "separator",
     "os",
     "host",
+    "theme",
     "kernel",
     "uptime",
     "display",

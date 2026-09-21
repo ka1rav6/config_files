@@ -5,8 +5,12 @@ import Quickshell.Io
 // =============================================================================
 // shell.qml — the Quickshell desktop layer for this machine.
 // =============================================================================
-// Started once at login from ~/.config/hypr/autostart.lua, guarded by a pgrep
-// so `hyprctl reload` cannot stack a second shell on top of the first.
+// Started once at login from ~/.config/hypr/autostart.lua. A second instance
+// is prevented by Quickshell's own `-n` / --no-duplicate flag, which is checked
+// against its instance registry -- NOT by a pgrep guard, which is what this
+// used to say. (The pgrep form was replaced precisely because it matched on a
+// command line that had stopped being accurate; see the long note in
+// autostart.lua about how `pgrep -f` guards silently match themselves.)
 //
 // WHAT THIS IS
 //   Hyprland owns compositor behaviour: workspaces, scratchpads, window rules,
@@ -111,9 +115,11 @@ ShellRoot {
         sourceComponent: ControlCenter {}
     }
 
-    // The power menu has no feature flag of its own: an desktop you cannot
-    // shut down from is not a desktop. SUPER + M still reaches wlogout via
-    // ~/.config/waybar/scripts/power-menu.sh when Quickshell is not running.
+    // The power menu has no feature flag of its own: a desktop you cannot shut
+    // down from is not a desktop. SUPER + M opens this; if the shell is not
+    // running that keybind falls back to wlogout via
+    // ~/.config/waybar/scripts/power-menu.sh (see bindings.lua -- `ipc call`
+    // exits 255 when no shell is reachable, which is what drives the ||).
     PowerMenu {}
 
     Loader {
@@ -335,6 +341,47 @@ ShellRoot {
         }
     }
 
+    // SUPER + SHIFT + T. There is no separate theme PANEL -- theme switching is
+    // the Appearance page of Settings, backed by ~/.local/bin/theme-switch,
+    // which stays the single source of truth for what the desktop looks like.
+    //
+    // This target exists because bindings.lua has bound SUPER+SHIFT+T to
+    // `quickshell ipc call theme toggle` for as long as the shell has existed,
+    // against a target that was never declared. `ipc call` prints "Target not
+    // found." and still exits 0, so the key did nothing and said nothing.
+    IpcHandler {
+        target: "theme"
+
+        function toggle(): string {
+            if (!Shell.has("settings")) return "settings is disabled";
+            const panel = Shell.panels["settings"];
+            // Already sitting on Appearance: treat the key as a toggle and
+            // close, matching every other panel key in the shell.
+            if (panel.open && panel.page === "appearance") {
+                panel.hide();
+                return "ok";
+            }
+            panel.page = "appearance";
+            Shell.open("settings");
+            return "ok";
+        }
+
+        function open(): string {
+            if (!Shell.has("settings")) return "settings is disabled";
+            Shell.panels["settings"].page = "appearance";
+            Shell.open("settings");
+            return "ok";
+        }
+
+        function close(): void { Shell.close("settings"); }
+
+        // Which palette is live, and whether it came from theme-switch or the
+        // built-in fallback.
+        function current(): string {
+            return Theme.name + (Theme.fromDisk ? "" : " (fallback)");
+        }
+    }
+
     IpcHandler {
         target: "power"
 
@@ -391,7 +438,16 @@ ShellRoot {
                 + "\n  " + perMonitor.join("  ")
                 + "\naudio       peak " + Audio.peak.toFixed(3) + (Audio.audible ? " (audible)" : " (silent)")
                 + " · mpris " + (Media.playing ? "playing" : "not playing")
-                + "\nbands       " + Settings.visualizer.bands + " @ " + Performance.visualizerFramerate + "fps";
+                // Both numbers, because they can legitimately differ and the
+                // gap between them is exactly what makes "the slider says 160
+                // but it looks coarse" hard to diagnose. The profile scales
+                // the configured value (Performance.visualizerBands), and the
+                // RUNNING process may be on an older value still, since cava
+                // only re-reads its config on respawn.
+                + "\nbands       set " + Settings.visualizer.bands
+                + " · profile " + Performance.visualizerBands
+                + (Cava.liveBands > 0 ? " · running " + Cava.liveBands : " · not running")
+                + " @ " + Performance.visualizerFramerate + "fps";
         }
 
         // What the dock thinks is running, and why an app might be missing.

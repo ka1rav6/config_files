@@ -1,59 +1,133 @@
 #!/usr/bin/env bash
-# Battery and CPU temperature monitor — sends mako notifications via notify-send.
-# Launched at login from autostart.lua.
-set -euo pipefail
+# =============================================================================
+# system-monitor-notify — low-battery and CPU-temperature notifications.
+# =============================================================================
+# Launched at login from ~/.config/hypr/autostart.lua. Sends through notify-send,
+# so mako renders it (~/.config/mako/config has the Battery/Temperature rules).
+#
+# IS THIS A THIRD BATTERY MONITOR? NO -- AND THE DISTINCTION MATTERS.
+#   waybar's `battery`/`temperature` modules and Quickshell's UPower-driven
+#   config/Performance.qml both already know these numbers. Neither can
+#   NOTIFY: waybar colours a label you have to be looking at, and the shell
+#   draws a gauge on a desktop that is usually covered by a window. This is
+#   the only thing here that interrupts you, which is the whole point, so it
+#   stays -- but it is written to cost as close to nothing as a poll can.
+#
+# COST
+#   Zero subprocesses per cycle. Every read is a bash redirection ($(<file),
+#   a builtin) rather than `cat`, and the clock comes from $EPOCHSECONDS
+#   rather than forking `date`. It was forking 12 processes every 30 s --
+#   one `date` plus one `cat` per thermal zone, of which there are 11 on this
+#   machine -- i.e. ~34,500 forks a day to usually decide nothing had changed.
+#
+# WHICH TEMPERATURE
+#   The CPU PACKAGE sensor, via the same coretemp platform device
+#   ~/.config/waybar/config.jsonc points at -- so the bar and this notification
+#   can never disagree about how hot the CPU is.
+#
+#   It used to take the maximum across every /sys/class/thermal zone, which on
+#   this machine includes iwlwifi_1 (the Wi-Fi card, which idles around 48 C)
+#   and INT3400. A warm Wi-Fi chip could therefore raise "CPU Temperature
+#   High" while the CPU was idle at 43 C.
+#
+#   hwmon numbering is not stable across reboots, hence the glob rather than a
+#   fixed hwmonN path -- the same reason waybar uses `hwmon-path-abs`.
+# -----------------------------------------------------------------------------
+set -uo pipefail
 
-BATTERY_LOW=20           # percent
-CPU_TEMP_HIGH=80         # °C
-POLL_SECONDS=30          # check interval
+# --- single instance ---------------------------------------------------------
+# Held here rather than by a `pgrep` guard in autostart.lua, because
+# `pgrep -f <path>` also matches the shell that is launching this script (its
+# argv contains the path), so such a guard is a permanent false positive and
+# the program never starts. That bug really did keep two daemons dead. A lock
+# owned by the running process cannot be fooled that way. An interpreted script
+# runs as "bash", so `pgrep -x` cannot single it out either.
+LOCK_DIR="${XDG_RUNTIME_DIR:-/tmp}/system-monitor-notify.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    # A stale directory from a SIGKILLed run would block every later start, so
+    # only defer to a lock whose owner is actually alive.
+    if [[ -r "$LOCK_DIR/pid" ]] && kill -0 "$(<"$LOCK_DIR/pid")" 2>/dev/null; then
+        exit 0
+    fi
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || exit 0
+fi
+echo $$ >"$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR"' EXIT
+trap 'rm -rf "$LOCK_DIR"; exit 0' INT TERM
 
-# Cooldowns to avoid spamming the same notification.
+# --- policy ------------------------------------------------------------------
+# BATTERY_LOW is deliberately the same number as THRESHOLD in
+# ~/.config/hypr/scripts/idle-suspend.sh: that script suspends the machine at or
+# below 20% when idle, so warning at the same point is what makes the suspend
+# explicable rather than a surprise. Change both together.
+BATTERY_LOW=20
+CPU_TEMP_HIGH=80         # degrees C
+POLL_SECONDS=30
+COOLDOWN=300             # seconds between repeated alerts of the same kind
+
+BAT="/sys/class/power_supply/BAT0"
+
 battery_cooldown=0
 cpu_cooldown=0
-COOLDOWN=300             # 5 min between repeated alerts
+
+# Resolve the CPU package sensor once. Empty if this machine has no coretemp.
+cpu_temp_file=""
+for f in /sys/devices/platform/coretemp.0/hwmon/hwmon*/temp1_input; do
+    [[ -r "$f" ]] && { cpu_temp_file="$f"; break; }
+done
+
+# Read a sysfs integer, echoing nothing if it is missing or not a number. This
+# guard is the reason the loop cannot die: the previous version ran under
+# `set -e` and fed an unquoted empty string straight into `[ "$x" -le 20 ]`,
+# which is a fatal arithmetic error -- so a single transient read failure during
+# a suspend/resume killed the daemon silently for the rest of the session.
+read_int() {
+    local path="$1" value
+    [[ -r "$path" ]] || return 0
+    value=$(<"$path") || return 0
+    [[ "$value" =~ ^-?[0-9]+$ ]] || return 0
+    printf '%s' "$value"
+}
 
 while true; do
-    now=$(date +%s)
+    now=$EPOCHSECONDS
 
-    # ── Battery ──────────────────────────────────────────────────────
-    bat_cap_file="/sys/class/power_supply/BAT0/capacity"
-    bat_status_file="/sys/class/power_supply/BAT0/status"
-    if [ -f "$bat_cap_file" ]; then
-        capacity=$(cat "$bat_cap_file")
-        status=$(cat "$bat_status_file" 2>/dev/null || echo "Unknown")
-        if [ "$capacity" -le "$BATTERY_LOW" ] && [ "$status" != "Charging" ] && [ "$now" -ge "$battery_cooldown" ]; then
-            urgency="critical"
-            [ "$capacity" -gt 10 ] && urgency="normal"
+    # --- battery -------------------------------------------------------------
+    capacity=$(read_int "$BAT/capacity")
+    if [[ -n "$capacity" ]]; then
+        status=""
+        [[ -r "$BAT/status" ]] && status=$(<"$BAT/status")
+
+        if [[ "$status" == "Charging" || "$status" == "Full" ]]; then
+            # Reset as soon as it is charging, so unplugging again warns at once.
+            battery_cooldown=0
+        elif (( capacity <= BATTERY_LOW && now >= battery_cooldown )); then
+            urgency="normal"
+            (( capacity <= 10 )) && urgency="critical"
             notify-send -u "$urgency" -a "Battery" \
                 "󰁻 Battery Low — ${capacity}%" \
-                "Plug in your charger"
-            battery_cooldown=$((now + COOLDOWN))
+                "Plug in your charger" 2>/dev/null
+            battery_cooldown=$(( now + COOLDOWN ))
         fi
-        # Reset cooldown once charging
-        [ "$status" = "Charging" ] && battery_cooldown=0
     fi
 
-    # ── CPU Temperature ──────────────────────────────────────────────
-    # Try hwmon thermal_zone fallback
-    temp=""
-    for tz in /sys/class/thermal/thermal_zone*/temp; do
-        [ -f "$tz" ] || continue
-        t=$(cat "$tz")
-        t_c=$((t / 1000))
-        if [ -z "$temp" ] || [ "$t_c" -gt "$temp" ]; then
-            temp=$t_c
+    # --- CPU temperature -----------------------------------------------------
+    if [[ -n "$cpu_temp_file" ]]; then
+        raw=$(read_int "$cpu_temp_file")
+        if [[ -n "$raw" ]]; then
+            temp=$(( raw / 1000 ))
+            if (( temp >= CPU_TEMP_HIGH && now >= cpu_cooldown )); then
+                notify-send -u critical -a "Temperature" \
+                    "󰔏 CPU Temperature High — ${temp}°C" \
+                    "Thermal throttling may occur" 2>/dev/null
+                cpu_cooldown=$(( now + COOLDOWN ))
+            elif (( temp < CPU_TEMP_HIGH - 5 )); then
+                # Hysteresis: re-arm only once it has genuinely cooled, so a
+                # reading hovering on the threshold cannot alert every cooldown.
+                cpu_cooldown=0
+            fi
         fi
-    done
-
-    if [ -n "$temp" ] && [ "$temp" -ge "$CPU_TEMP_HIGH" ] && [ "$now" -ge "$cpu_cooldown" ]; then
-        notify-send -u critical -a "Temperature" \
-            "󰔏 CPU Temperature High — ${temp}°C" \
-            "Thermal throttling may occur"
-        cpu_cooldown=$((now + COOLDOWN))
-    fi
-    # Reset once cooled
-    if [ -n "$temp" ] && [ "$temp" -lt "$((CPU_TEMP_HIGH - 5))" ]; then
-        cpu_cooldown=0
     fi
 
     sleep "$POLL_SECONDS"

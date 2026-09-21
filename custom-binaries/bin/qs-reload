@@ -5,22 +5,37 @@
 # Driven by the Justfile:  just qs-reload   /   just qs-restart
 #
 # WHEN YOU NEED THIS
-#   Quickshell watches its own QML and hot-reloads on edit, so most changes
-#   need nothing. A full restart is for the cases hot-reload cannot cover:
-#     * a new file added to ~/.config/quickshell/qmldir
-#     * a singleton whose construction order matters
-#     * the shell has wedged and you want a clean process
+#   Quickshell does NOT hot-reload this config -- verified against a running
+#   instance, which logged a single "Configuration Loaded" across a session in
+#   which a dozen QML files were edited. (An earlier version of this comment
+#   claimed it watches its own QML and reloads on edit. It does not, and
+#   believing it meant staring at a shell that was still running the code you
+#   had just replaced.) So any QML change needs this.
 #
-# WHY NOT JUST pkill && quickshell
-#   Two reasons, both learned the hard way:
+# -----------------------------------------------------------------------------
+# IT MUST NEVER KILL THE SESSION LOCKER. THIS IS THE WHOLE POINT OF THE FILTER.
 #
-#   1. `pkill -f quickshell` matches the pkill command's OWN argv, and in some
-#      shells kills the script running it. The bracket trick -- [q]uickshell --
-#      stops the pattern matching itself.
+# The lock screen runs as its own Quickshell process, deliberately, so that a
+# fault in the dock or the visualiser cannot strand you at a locked screen with
+# no locker on it (see ~/.config/quickshell/modules/lock/Lock.qml -- it has
+# happened, and the way back in was a TTY).
 #
-#   2. Killing and relaunching immediately races: the old instance has not yet
-#      released its Wayland surfaces or its instance lock, so the new one
-#      either exits on -n or comes up with no panels. Hence the wait loop.
+# That separation is worth nothing if the restart script cannot tell the two
+# apart. This used to kill by the pattern
+#
+#     pkill -f 'forks/quickshell/build/src/[q]uickshell'
+#
+# which matches the locker's command line just as well as the shell's -- the
+# locker is the same binary. Running `just qs-restart` while the screen was
+# locked would have killed the locker mid-session. ext-session-lock keeps the
+# session locked when its client dies, so that is precisely the lockout the
+# split-process design exists to prevent, reintroduced by the tooling.
+#
+# So: enumerate by process NAME (`pgrep -x`, which cannot match a shell's argv
+# -- see the note about self-matching guards in ~/.config/hypr/autostart.lua),
+# then exclude anything running lock.qml, and assert that again immediately
+# before signalling.
+# -----------------------------------------------------------------------------
 #
 # SAFETY
 #   Never touches Hyprland. If this script fails outright, the desktop keeps
@@ -33,29 +48,55 @@ if ! command -v quickshell >/dev/null 2>&1; then
     exit 1
 fi
 
-# The bracket stops the pattern matching this script's own command line.
-PATTERN='forks/quickshell/build/src/[q]uickshell'
+# True if this pid is the session locker rather than the desktop shell.
+is_locker() {
+    local cmd
+    cmd=$(tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null) || return 1
+    case "$cmd" in
+        *lock.qml*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-if pgrep -f "$PATTERN" >/dev/null 2>&1; then
-    pkill -f "$PATTERN" || true
+# Every desktop-shell process, never the locker.
+shell_pids() {
+    local pid
+    for pid in $(pgrep -x quickshell 2>/dev/null || true); do
+        is_locker "$pid" && continue
+        printf '%s\n' "$pid"
+    done
+}
+
+stop_shell() {
+    local signal="$1" pid
+    for pid in $(shell_pids); do
+        # Re-check immediately before signalling: pids are recycled, and this
+        # is the one mistake in this script that cannot be undone.
+        is_locker "$pid" && continue
+        kill "$signal" "$pid" 2>/dev/null || true
+    done
+}
+
+if [ -n "$(shell_pids)" ]; then
+    stop_shell -TERM
 
     # Wait for the process to actually go, rather than guessing with a sleep.
     # Two seconds is far longer than it has ever taken; the fallback SIGKILL
     # is there so a wedged shell cannot make this script hang forever.
     for _ in $(seq 1 20); do
-        pgrep -f "$PATTERN" >/dev/null 2>&1 || break
+        [ -z "$(shell_pids)" ] && break
         sleep 0.1
     done
 
-    if pgrep -f "$PATTERN" >/dev/null 2>&1; then
+    if [ -n "$(shell_pids)" ]; then
         echo "quickshell did not exit on SIGTERM, sending SIGKILL" >&2
-        pkill -9 -f "$PATTERN" || true
+        stop_shell -KILL
         sleep 0.3
     fi
 fi
 
 # -n is belt-and-braces: if something else raced us to a launch, exit rather
-# than run two shells. -d detaches so this script can return.
+# than run two shells.  -d detaches so this script can return.
 quickshell -c default -n -d >/dev/null 2>&1
 
 # Confirm it actually came up. A config with a syntax error exits immediately,
@@ -71,4 +112,5 @@ done
 
 echo "quickshell did not come up. Check the QML for errors:" >&2
 echo "  quickshell -c default          # run in the foreground and watch stderr" >&2
+echo "  quickshell log                 # or read the last instance's log" >&2
 exit 1

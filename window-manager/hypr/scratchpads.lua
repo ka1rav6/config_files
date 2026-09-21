@@ -156,7 +156,12 @@ scratchpads.apps = {
         workspace = "todo",
         classes = { "hyprtodo" },
         command = "hyprtodo",
-        prespawn = true,
+        -- NOT pre-spawned. Measured at 155 MB resident -- the second-largest
+        -- process on this machine after the shell itself -- to save a cold
+        -- start on a list that gets opened a few times a day. The same
+        -- reasoning already applied to `music` and `whatsapp` below; this
+        -- entry was simply the one that predated it.
+        prespawn = false,
     },
 }
 
@@ -268,7 +273,7 @@ end
 --- Hide whichever scratchpad currently owns the focused window.
 ---
 --- Called from outside the compositor, by
---- ~/.config/hypr/scripts/open-in-terminal.sh, which yazi's `o` bind runs:
+--- ~/.config/hypr/scripts/open-file.sh, which yazi's `o` bind runs:
 ---
 ---   hyprctl eval 'scratchpads.dismiss_active()'
 ---

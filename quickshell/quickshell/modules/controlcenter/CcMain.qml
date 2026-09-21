@@ -135,8 +135,16 @@ Column {
             width: parent.cellWidth
             icon: "night-light"
             label: "Night Light"
-            detail: NightLight.active ? "On · warm" : "Off"
-            active: NightLight.active
+            // Says WHY when it cannot work, rather than presenting a switch
+            // that silently does nothing. On this machine the compositor is on
+            // the legacy DRM interface (AQ_NO_ATOMIC=1, an aquamarine
+            // workaround) and aquamarine refuses gamma there -- see the header
+            // in services/NightLight.qml.
+            enabled: NightLight.available
+            detail: NightLight.available
+                ? (NightLight.active ? "On · warm" : "Off")
+                : "Unavailable"
+            active: NightLight.available && NightLight.active
             onToggled: NightLight.toggle()
         }
 
@@ -144,9 +152,15 @@ Column {
             width: parent.cellWidth
             icon: Notifications.dnd ? "bell-off" : "bell"
             label: "Do Not Disturb"
-            detail: Notifications.dnd ? "Silenced" : "Notifications on"
-            active: Notifications.dnd
-            onToggled: Notifications.toggleDnd()
+            // Gated on the service having actually reached makoctl: the probe
+            // sets available = false when mako is not running, and a DND
+            // switch with no daemon behind it is exactly the kind of control
+            // that looks like it worked.
+            enabled: Notifications.available
+            detail: !Notifications.available ? "Unavailable"
+                : Notifications.dnd ? "Silenced" : "Notifications on"
+            active: Notifications.available && Notifications.dnd
+            onToggled: Notifications.toggle()
         }
     }
 

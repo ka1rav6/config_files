@@ -21,9 +21,19 @@ import qs
 //   is what turns them live. Read a volume off an untracked node and you get a
 //   stale zero, silently.
 //
-//   Only the default sink and source are tracked, plus whatever streams the
-//   Control Center is showing. Tracking every node on the system would mean
-//   mirroring every browser tab's audio stream for no reason.
+//   ONLY the default sink and source are tracked. Tracking every node on the
+//   system would mean mirroring every browser tab's audio stream for no
+//   reason.
+//
+//   This used to claim it also tracked "whatever streams the Control Center is
+//   showing". It did not -- the tracker below lists exactly two objects -- and
+//   nothing showed streams anyway: the Control Center's Sound page hands
+//   per-application volume to pavucontrol. A `streams()` helper existed here
+//   for nobody, and because its nodes would have been UNTRACKED, any future
+//   caller would have read the stale zeros this very header warns about. It
+//   has been removed rather than left as a trap; if a per-app mixer is ever
+//   built here, add a PwObjectTracker scoped to the panel's lifetime so the
+//   streams are bound only while it is open.
 //
 // VOLUME ABOVE 1.0
 //   PipeWire happily accepts volumes over 1.0 by applying software gain, which
@@ -71,11 +81,6 @@ Singleton {
 
     function sources() {
         return Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && n.audio);
-    }
-
-    // Per-application streams, for the mixer.
-    function streams() {
-        return Pipewire.nodes.values.filter(n => n.isStream && n.audio && n.isSink);
     }
 
     // --- Mutation -----------------------------------------------------

@@ -8,10 +8,20 @@ import qs
 // =============================================================================
 // Network — NetworkManager, event-driven.
 // =============================================================================
-// Replaces two things that each did half the job badly:
-//   * waybar's `network` module, polling every 10 s
+// Replaces the INTERACTIVE half of what used to be two things:
 //   * ~/.config/waybar/scripts/wifi-menu.sh -- 167 lines of shell driving wofi,
-//     which could only show what a scan happened to find at the moment it ran
+//     which could only show what a scan happened to find at the moment it ran.
+//     Deleted; it is in the dotfiles git history.
+//   * waybar's `network` module as a click target -- clicking the bar now opens
+//     the Control Center.
+//
+// IT DOES NOT REPLACE THE BAR'S READOUT, and this header used to claim it did.
+// `network` is still a live module in ~/.config/waybar/config.jsonc, still
+// refreshing on its own interval, because a persistent at-a-glance status line
+// is a different job from a panel you open. So there ARE two NetworkManager
+// consumers on this machine, deliberately: a cheap read-only one on the bar,
+// and this one, which is the only thing that connects, disconnects or scans.
+// If the bar's readout is ever retired, this is what it moves to.
 //
 // Quickshell.Networking talks to NetworkManager over D-Bus and is TOLD when
 // something changes. There is no timer anywhere in this file.
