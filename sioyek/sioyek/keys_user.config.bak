@@ -2,9 +2,8 @@
 #  sioyek — vim keybindings
 #  ~/.config/sioyek/keys_user.config
 #
-#  Press <C-h> for the full visual cheatsheet PDF, generated from this file.
-#  Press : (or <C-S-p>) for the command palette — every command, searchable,
-#              with its keybinding shown beside it.
+#  Press <C-h> (or <F1>) for the full visual cheatsheet.
+#  Press :     for the fuzzy command palette (every command, searchable).
 #
 #  Syntax:  command        key
 #           cmd1;cmd2      key      (chained)
@@ -14,28 +13,9 @@
 
 
 # ─── HELP ──────────────────────────────────────────────────────────────
-# 2.0.0 has no built-in help window — there is no `help`/`show_help` in the
-# binary's command table at all, and the default keyfile binds <f1> to
-# toggle_highlight, so <f1> is not free for help.
-#
-# <C-h> runs scripts/help.sh, defined as `execute_command_h` in
-# prefs_user.config.  That is ONE keystroke: the documented way to reach an
-# execute_command_* entry is `execute_predefined_command` and then the
-# letter, but `execute_command_<letter>` is itself a bindable command name.
-# Undocumented, and verified by keypress on this build.  <C-h> was free in
-# /etc/sioyek/keys.config, so this displaces nothing.
-#
-# NOTE: the comment block directly above a binding becomes its description
-# in the generated cheatsheet, so keep those to one line and leave a blank
-# line between prose like this and the binding itself.
-
-# Open the cheatsheet PDF, rebuilt first only if this file is newer
-execute_command_h                   <C-h>
-
-# Force a cheatsheet rebuild even when the PDF looks current
-execute_command_r                   <C-S-r>
-
-# Fuzzy palette of every command, with its key beside it (moved off <C-h>)
+#_help                               <C-h>
+#_help                               <f1>
+# Fuzzy palette of every built-in + custom command
 command                             :
 command                             <C-S-p>
 

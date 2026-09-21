@@ -5,7 +5,6 @@
 #   .pdf                          -> sioyek
 #   .md / .markdown               -> ghostwriter
 #   .doc .docx .ppt .pptx .xls*   -> Google Chrome
-#   .mp4 .mkv .webm .avi .mov ... -> VLC
 #   anything else                 -> $EDITOR in a new terminal
 #
 # Adding a type is one line in the case block below.
@@ -26,18 +25,9 @@
 # tiled yazi on SUPER+ALT+E, or yazi in any ordinary terminal), so this stays
 # correct there too.
 #
-# Note: images still deliberately fall through to the editor here. SHIFT+O is
-# the key for those -- it runs yazi's own opener table in
-# ~/.config/yazi/yazi.toml, which routes them to eog.
-#
-# Video used to fall through too, on the same reasoning, and that was the one
-# case where the rule was actively wrong: `o` is the key the hand reaches for,
-# and a 4GB .mkv loaded into nvim is a frozen terminal, not a useful buffer.
-# There is no scenario where an editor is the right answer for a video the way
-# it occasionally is for a stray binary, so video now goes to VLC directly and
-# matches what Enter already does via yazi's own rules. nvim is still reachable
-# for a suspect file: SHIFT+Enter offers it as the last entry of the `play`
-# opener list.
+# Note: media (images, audio, video) deliberately falls through to the editor
+# here. SHIFT+O is the key for those -- it runs yazi's own opener table in
+# ~/.config/yazi/yazi.toml, which already routes them to eog / VLC.
 
 set -eu
 
@@ -72,30 +62,6 @@ while [ "$i" -lt "$count" ]; do
         ;;
     *.md | *.markdown | *.mdown | *.mkd)
         spawn ghostwriter "$file"
-        ;;
-    *.ts)
-        # .ts is two unrelated formats: TypeScript source and an MPEG transport
-        # stream. Extension alone cannot tell them apart, and guessing wrong
-        # either throws source code at VLC or a 4GB video at nvim, so this is
-        # the one arm that pays for a look at the bytes.
-        #
-        # The test names the video cases rather than excluding the text ones,
-        # because `file` does not call TypeScript text/* — it answers
-        # application/javascript, so a "not text" test would have sent every
-        # .ts source file to VLC. A transport stream has no magic bytes at
-        # offset 0 and comes back application/octet-stream, hence the second
-        # pattern; anything unrecognised is safer in an editor than in VLC.
-        case $(file -bL --mime-type "$file" 2>/dev/null) in
-        video/* | application/octet-stream) spawn vlc "$file" ;;
-        *) set -- "$@" "$file" ;;
-        esac
-        ;;
-    *.mp4 | *.mkv | *.webm | *.avi | *.mov | *.m4v | *.flv | *.wmv | *.mpeg | *.mpg | *.m2ts | *.mts)
-        # One VLC per file rather than one VLC with a playlist: `o` on a
-        # multi-selection of videos almost always means "show me each of
-        # these", and VLC's default single-instance setting already folds them
-        # into one window for anyone who has turned it on.
-        spawn vlc "$file"
         ;;
     *.doc | *.docx | *.ppt | *.pptx | *.xls | *.xlsx)
         # Chrome wants an absolute path for a local file; a relative one is

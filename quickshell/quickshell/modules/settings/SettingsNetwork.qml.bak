@@ -72,10 +72,9 @@ Column {
 
                 Icon {
                     id: netIcon
-                    // Via the service, not modelData.signalStrength directly:
-                    // that property is a 0.0-1.0 fraction, so comparing it
-                    // against 75/50/25 here always picked the weakest icon.
-                    name: "wifi-" + Network.signalBarsFor(modelData)
+                    name: "wifi-" + (modelData.signalStrength >= 75 ? 4
+                                   : modelData.signalStrength >= 50 ? 3
+                                   : modelData.signalStrength >= 25 ? 2 : 1)
                     size: Appearance.iconSize
                     color: modelData.connected ? Theme.accent : Theme.muted
                     anchors.left: parent.left
@@ -103,7 +102,7 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.connected ? "Connected"
                         : modelData.known ? "Saved"
-                        : Network.signalPercent(modelData) + "%"
+                        : modelData.signalStrength + "%"
                     color: modelData.connected ? Theme.accent : Theme.muted
                     font.family: Appearance.font
                     font.pixelSize: Appearance.fontCaption

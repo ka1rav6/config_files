@@ -12,36 +12,17 @@
 
 ## Known limits of Ubuntu's sioyek 2.0.0 build
 
-**A non-ASCII byte anywhere in `prefs_user.config` kills every setting
-after it.** Silently — no warning, no log line. The parser simply stops
-applying preferences at the first line containing one, *including inside a
-comment*. This file used to open with a `═══` box rule on line 1, which
-meant not one preference in it was ever applied: no theme, no fonts, no
-search URLs, no mouse bindings. Verified by screenshot: a prefs file of
-just `default_dark_mode 1` renders the tutorial at mean brightness 4.7
-(black); prefix it with a single `# ═══` comment and the same file renders
-at 244.6 (white). The file is now pure ASCII and must stay that way.
-`keys_user.config` is **not** affected — its parser handles non-ASCII
-fine, which is why the vim bindings always worked and hid this.
+Two things in the upstream docs do not work in `2.0.0+dfsg-4build2`:
 
-**`new_command` does not exist in this binary.** Not "is broken" — absent:
-`strings /usr/bin/sioyek | grep -c new_command` returns 0. It appears only
-as a comment in `/etc/sioyek/prefs.config`, which was shipped from a newer
-upstream. The older `execute_command_*` route, which an earlier note here
-claimed also failed, in fact works fine — that test was run against a prefs
-file killed by the non-ASCII bug above, so nothing in it registered.
-
-**Unknown command names are accepted silently, and displace real ones.**
-`keys_user.config` is not validated at load time. Binding `totally_bogus_xyz`
-to `j` is accepted, and the startup warning even echoes the bogus name back
-(`Overriding command: j: replacing move_visual_mark_down with
-totally_bogus_xyz`) — so the typo reads exactly like a deliberate override,
-while `j` is now dead. You only find out at keypress time, when sioyek
-prints `invalid command (key:j); resetting to root` to stdout, which you
-will not be watching. `check-keys.sh` cannot catch this: it detects key
-conflicts, not misspelled command names. After adding a *new* command name
-(as opposed to rebinding a known one), press the key once and confirm it
-actually does something.
+**`new_command` never executes.** sioyek parses the definition and will bind
+the name to a key — the startup log even confirms the binding — but it never
+spawns the process. Verified with a minimal probe (`new_command _probe
+/path/touch-a-file.sh`) bound to `<F2>`: the key is delivered (other `<F2>`
+bindings fire), the command is registered, the file is never created. Also
+fails via tab-separated syntax, with `enable_experimental_features 1`, via
+`--execute-command`, and via the older `execute_command_*` +
+`execute_predefined_command` route. So all seven custom commands are
+commented out in the configs rather than left as keys that do nothing.
 
 **`startup_commands` never runs.** Dark mode is therefore set with the
 deprecated `default_dark_mode 1` instead. Smooth scrolling has no
@@ -51,21 +32,11 @@ must be switched on per session with `<A-s>`.
 ## The cheatsheet
 
 Generated from `keys_user.config`, so it cannot go stale — two pages of your
-bindings, then an index of every command.
-
-**Press `<C-h>`.** It opens in a new window, and rebuilds first only when
-`keys_user.config` or `gen-cheatsheet.py` is newer than the PDF, so the
-usual press is instant. `<C-S-r>` forces a rebuild. Building needs
-`pdflatex`; failures land in `~/.local/share/sioyek/help/build.log` and are
-reported in the status bar.
-
-It also still runs from a shell:
+bindings, then an index of every command. Build and open it from a shell:
 
     ~/.config/sioyek/scripts/help.sh /usr/bin/sioyek
 
-The comment block directly above a binding becomes that binding's
-description in the cheatsheet, and a blank line ends the block — so keep
-those comments to one line and put longer prose above a blank line.
+It rebuilds automatically when `keys_user.config` is newer than the PDF.
 
 ## Editing config
 

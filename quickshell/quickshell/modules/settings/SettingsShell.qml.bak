@@ -26,18 +26,13 @@ Column {
             width: parent.width
             enabled: Settings.features.dock
             label: "Visibility"
-            // Says what each one COSTS, because that is the only real
-            // difference between them -- see the header of modules/dock/Dock.qml.
-            description: "On hover: floats, slides away, reveals at the screen edge — "
-                + "costs a 3 px strip. Always: floats and blocks clicks under it. "
-                + "Reserve: windows tile above the dock, costs the height forever."
+            description: "Auto reveals the dock when the pointer reaches the screen edge."
             Row {
                 spacing: Appearance.xs
                 Repeater {
                     model: [
                         { id: "always", label: "Always" },
                         { id: "auto", label: "On hover" },
-                        { id: "reserve", label: "Reserve" },
                         { id: "never", label: "Hidden" }
                     ]
                     Button {

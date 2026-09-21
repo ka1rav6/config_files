@@ -502,14 +502,9 @@ ShellRoot {
                     ? Math.round(Audio.micVolume * 100) + "%" + (Audio.micMuted ? " muted" : "") + " · " + Audio.sourceName
                     : "no source"),
                 "brightness " + (Brightness.available ? Brightness.percent + "%" : "unavailable"),
-                // This used to say a 0 here meant "not measured, because the
-                // scanner is off". That was wrong, and it was wrong in a way
-                // that hid a real bug for a long time: NetworkManager always
-                // knows the AP you are ASSOCIATED with, scanner or not, so the
-                // connected network's strength is live at all times. The zeroes
-                // were a unit mismatch in services/Network.qml, now fixed. A 0
-                // here again means Wi-Fi is genuinely down -- treat it as a
-                // symptom, not as expected quiet.
+                // signalStrength is only populated while the Wi-Fi scanner is
+                // on, which it deliberately is not unless a panel is open --
+                // so a 0 here means "not measured", not "no signal".
                 "network    " + Network.summary
                     + (Network.signalStrength > 0 ? " · " + Network.signalStrength + "%" : "")
                     + " · " + Network.networks.length + " visible",

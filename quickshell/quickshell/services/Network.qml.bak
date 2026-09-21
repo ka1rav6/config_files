@@ -80,32 +80,8 @@ Singleton {
     }
 
     readonly property string ssid: root.activeNetwork ? root.activeNetwork.name : ""
+    readonly property int signalStrength: root.activeNetwork ? root.activeNetwork.signalStrength : 0
     readonly property string address: root.wifiDevice ? root.wifiDevice.address : ""
-
-    // WifiNetwork.signalStrength IS A FRACTION, NOT A PERCENT.
-    //   NetworkManager's AccessPoint.Strength is a guint8 0-100, but Quickshell
-    //   normalises it on the way out -- src/network/nm/network.cpp does
-    //   `signalStrength() / 100.0` -- so what QML sees is a qreal 0.0-1.0.
-    //
-    //   This file used to read it straight into `readonly property int`, which
-    //   is why every readout in the shell said 0%: QML truncates a double
-    //   assigned to an int property, so a genuine 60% AP arrived as 0.60 and
-    //   landed as 0. Not a parse bug, not a stale binding -- a unit mismatch
-    //   that only an AP at exactly 100% would have survived.
-    //
-    //   Everything downstream (this file's 75/50/25 buckets, the "% signal"
-    //   labels, the per-row icons) is written against 0-100, so the conversion
-    //   happens HERE, once, and nowhere else. Use signalPercent() for any
-    //   network that is not the connected one -- reading `.signalStrength` off
-    //   a WifiNetwork directly in a widget will reintroduce exactly this bug.
-    readonly property int signalStrength: root.signalPercent(root.activeNetwork)
-
-    // 0-100 for any WifiNetwork, or 0 for null. The one place the fraction ->
-    // percent conversion lives.
-    function signalPercent(network) {
-        if (!network) return 0;
-        return Math.round(network.signalStrength * 100);
-    }
 
     // Ethernet wins when both are up, because that is what the routing table
     // will do too -- reporting Wi-Fi while traffic goes over the cable is a
@@ -120,15 +96,8 @@ Singleton {
 
     // 0-4, for icon selection. Matching waybar's buckets so the bar and the
     // shell never disagree about how many bars to draw.
-    readonly property int signalBars: root.signalBarsFor(root.activeNetwork)
-
-    // Same buckets for a network that is not the connected one -- the Wi-Fi
-    // lists need this per row. It lives here rather than being re-typed in each
-    // list because the thresholds were previously copy-pasted into three
-    // widgets, all of which were silently comparing a 0.0-1.0 fraction against
-    // 75/50/25 and therefore always falling through to the weakest icon.
-    function signalBarsFor(network) {
-        const s = root.signalPercent(network);
+    readonly property int signalBars: {
+        const s = root.signalStrength;
         if (s >= 75) return 4;
         if (s >= 50) return 3;
         if (s >= 25) return 2;
@@ -157,11 +126,6 @@ Singleton {
         const d = root.wifiDevice;
         if (!d || !d.networks) return [];
 
-        // The raw 0.0-1.0 `signalStrength` is read directly below, which is
-        // fine and deliberate: this only ever COMPARES two of them against each
-        // other, and the ordering of the fraction is the ordering of the
-        // percent. Anything that DISPLAYS a number must go through
-        // signalPercent() instead -- see the note on signalStrength above.
         const best = {};
         for (const n of d.networks.values) {
             if (!n.name) continue;              // hidden SSIDs cannot be listed
@@ -206,18 +170,9 @@ Singleton {
     }
 
     // Whether joining this network will need a passphrase typed.
-    //
-    // WifiSecurityType HAS NO `None` MEMBER. The enum is Wpa3SuiteB192, Sae,
-    // Wpa2Eap, Wpa2Psk, WpaEap, WpaPsk, StaticWep, DynamicWep, Leap, Owe, Open,
-    // Unknown -- the open case is spelled `Open`. This used to compare against
-    // `WifiSecurityType.None`, which is undefined, so the `!==` was true for
-    // every network and a genuinely open AP still got a passphrase dialog it
-    // had no use for. Owe is "enhanced open": encrypted, but still no
-    // passphrase to type, so it belongs on this side of the test too.
     function needsPassphrase(network) {
         if (!network) return false;
         if (network.known) return false;                  // saved already
-        const s = network.security;
-        return s !== WifiSecurityType.Open && s !== WifiSecurityType.Owe;
+        return network.security !== WifiSecurityType.None;
     }
 }

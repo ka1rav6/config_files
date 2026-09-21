@@ -264,30 +264,7 @@ Singleton {
                 property int iconSize: 44
                 property int spacing: 8
 
-                // "always" | "auto" | "never" | "reserve".
-                //
-                //   auto     floats over your windows, slides away when unused,
-                //            and comes back when the pointer reaches the bottom
-                //            edge. While away it takes input on a 3 px strip and
-                //            nothing else, so the rest of the screen is yours.
-                //            The default, and the one that costs no screen.
-                //
-                //   always   floats over your windows and stays up. The dock's
-                //            own rectangle permanently eats clicks aimed at
-                //            whatever is underneath it. Fine on a big monitor,
-                //            irritating on the laptop panel.
-                //
-                //   never    not drawn, takes no input at all.
-                //
-                //   reserve  the dock gets a permanent exclusive zone, so
-                //            Hyprland tiles every window ABOVE it and nothing is
-                //            ever underneath it to be blocked. Zero overlap and
-                //            zero motion, at the cost of that strip of height
-                //            forever. Flip to this if you would rather spend the
-                //            pixels than think about the dock at all.
-                //
-                // See the header of modules/dock/Dock.qml for why "auto" is the
-                // default rather than "reserve".
+                // "always" | "auto" | "never". auto = reveal on edge hover.
                 property string visibility: "auto"
 
                 // Icon magnification on hover. Disable on battery if it ever

@@ -16,16 +16,84 @@ import qs
 //   running gets a dot under it rather than a second icon, so the dock does not
 //   grow while you work.
 //
-// AUTO-HIDE
-//   "auto" leaves a one-pixel reveal strip at the screen edge and slides the
-//   dock up on hover. The strip is a separate, permanently-visible surface so
-//   the hover can be detected at all -- a hidden dock cannot notice a pointer.
-//   The strip takes no exclusive zone and is click-through except for hover.
+// AUTO-HIDE, AND WHY THE INPUT MASK IS THE WHOLE POINT
+//   A layer surface takes pointer input over its ENTIRE rectangle unless a
+//   `mask: Region {...}` narrows it, and that is true whether or not the
+//   surface is painting anything. Opacity is not input. A dock faded to
+//   opacity 0 with a full-surface mask is an invisible hole in your desktop
+//   that swallows clicks, which is the worst of every option: you cannot see
+//   it, and you cannot click through it.
 //
-// WHY IT NEVER RESERVES SPACE
-//   ExclusionMode.Ignore, always. A dock that reserves an exclusive zone
-//   re-tiles every window on the workspace the moment it appears, which on a
-//   tiling compositor is an unpleasant surprise. It floats over instead.
+//   So the mask here is the load-bearing part, not the animation:
+//
+//     hidden    a 3 px strip along the very bottom edge (Appearance.edgeTrigger)
+//               and NOTHING else. Everything above it belongs to your windows.
+//     revealed  the dock, plus a small halo around it so the pointer does not
+//               fall into a dead gap on the way there.
+//     menu open the whole surface, so a click anywhere dismisses the menu
+//               instead of falling through into the window behind it.
+//
+//   The dock slides fully BELOW the surface's bottom edge when hidden rather
+//   than merely fading. That is not decoration either: Region tracks its item
+//   via mapToScene (see src/core/region.cpp upstream), so moving the dock off
+//   the surface is what actually removes it from the input region. The
+//   compositor clips the input region to the surface, so an off-surface dock
+//   contributes nothing.
+//
+//   TWO BUGS LIVED HERE. Both presented as "the dock eats clicks on my windows".
+//
+//   1. The slide never happened. The dock was positioned with
+//        anchors.bottom: parent.bottom
+//      and then animated with
+//        y: panel.revealed ? 0 : height + Appearance.screenMargin
+//      An anchor OWNS the coordinate it anchors. QML silently discards a
+//      competing binding on `y` -- no warning, no binding-loop message, the
+//      Behavior never fires. Measured: `y` sat at the anchored value in all
+//      three states. The dock therefore never moved, `Region { item: dockBar }`
+//      never moved either, and the only thing `revealed` actually changed was
+//      opacity. Result: an auto-hiding dock that was invisible and still took
+//      every click over its full rectangle, forever.
+//
+//      The fix is to animate the anchor's own margin instead, via the `slide`
+//      property below. That drives real x/y changes, which is what Region
+//      connects to (xChanged/yChanged/widthChanged/heightChanged -- and NOTHING
+//      else, which is why a `transform: Translate` would be a trap here: it
+//      would move the pixels and leave the input mask behind).
+//
+//   2. The reveal latched on. The strip's HoverHandler read
+//        onHoveredChanged: if (hovered) panel.hovered = true
+//      which sets true on entry and never sets false on exit. Brushing the
+//      bottom edge on the way somewhere else pinned the dock up permanently,
+//      at which point (1) made it a permanent click sink. Hover is now tracked
+//      as two plain booleans OR'd together, with timers deciding the rest.
+//
+//   DELAYS. Appearance.hoverRevealDelay before appearing, so a pointer merely
+//   crossing the edge does not summon the dock; the much longer
+//   Appearance.hoverHideDelay before leaving, so the dock does not vanish
+//   mid-reach while the pointer crosses the gap between the edge and the dock.
+//   The menu pins it up regardless -- see `revealed`.
+//
+// WHY IT FLOATS RATHER THAN RESERVING SPACE (AND HOW TO CHANGE YOUR MIND)
+//   Default is ExclusionMode.Ignore: a dock that reserves an exclusive zone
+//   re-tiles every window on the workspace, and on a tiling compositor having
+//   the layout shift under you is an unpleasant surprise.
+//
+//   The honest trade-off is that "float over windows" and "never block a
+//   click" cannot both be absolute -- something has to give, and auto-hide is
+//   the version where what gives is a 3 px strip at the screen edge instead of
+//   either a permanent band of screen or a permanently blocked rectangle.
+//
+//   If you would rather just spend the pixels: set dock.visibility to
+//   "reserve" in settings.json (or Settings > Shell > Dock > Reserve). Windows
+//   then tile above the dock and nothing is ever underneath it. That is the
+//   boring, zero-jank answer and there is nothing wrong with it.
+//
+//   NOT IMPLEMENTED, deliberately: toggling the exclusive zone on hover, so
+//   windows "squish" only while you reach for the dock. It re-tiles every
+//   window on the workspace on a pointer movement, fights Hyprland's own
+//   window animations, and -- fatally -- the windows snap back the instant the
+//   dock hides, so the bottom of a window is still unreachable by the time your
+//   click lands. It trades a static problem for a moving one.
 //
 // COST
 //   The window list comes from the Hyprland toplevel model, which Hypr.qml
@@ -43,8 +111,20 @@ Scope {
 
     readonly property bool enabled: Settings.features.dock
 
-    // "always" | "auto" | "never"
+    // "always" | "auto" | "never" | "reserve" -- see Settings.qml for what each
+    // one costs you. Derived flags rather than string comparisons scattered
+    // through the surface below, so a typo'd mode fails one way instead of
+    // three inconsistent ways.
     readonly property string visibility: Settings.dock.visibility
+
+    // Slides away on its own and reveals on edge hover.
+    readonly property bool autoHide: root.visibility === "auto"
+
+    // Reserves a permanent exclusive zone so nothing ever tiles underneath it.
+    readonly property bool reserveSpace: root.visibility === "reserve"
+
+    // Never drawn and never takes input.
+    readonly property bool suppressed: root.visibility === "never"
 
     // Reveal state is PER MONITOR, not global. A single shared flag made the
     // dock slide up on both screens whenever the pointer touched either one,
@@ -284,18 +364,81 @@ Scope {
                 : dockBar.height + Appearance.screenMargin * 2 + 20
 
             WlrLayershell.layer: WlrLayer.Top
+            // ~/.config/hypr/rules.lua matches this exact string ("^qs-dock$")
+            // to enable blur behind the dock. Renaming it silently drops the
+            // blur -- that file turns blur OFF for everything by default and
+            // re-enables it per namespace by name.
             WlrLayershell.namespace: "qs-dock"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-            // Never reserve space -- see the header.
-            exclusionMode: ExclusionMode.Ignore
 
-            // This surface's own reveal state. "always" and "never" do not
-            // depend on the pointer; "auto" follows the hover of THIS monitor's
-            // strip and dock only.
-            property bool hovered: false
+            // --- exclusive zone -------------------------------------------
+            //
+            // These two are set through `Binding { when: }` rather than as two
+            // ordinary ternary bindings, and that is not style. Upstream,
+            // setExclusiveZone() unconditionally does
+            //     bExclusionMode = ExclusionMode::Normal;
+            // (src/wayland/wlr_layershell/wlr_layershell.hpp) -- writing a zone
+            // AT ALL, even a zero one, flips the mode. Two plain bindings on
+            // the same dependency would therefore race: whichever re-evaluated
+            // last would win, and the losing frame would have the floating dock
+            // quietly reserving space and re-tiling the workspace.
+            //
+            // With `when`, exactly one of them is ever live, so there is no
+            // ordering to get wrong.
+
+            // Floating (always / auto / never): reserve nothing, and ignore
+            // other layers' zones so waybar's does not shove the dock around.
+            Binding {
+                target: panel
+                property: "exclusionMode"
+                value: ExclusionMode.Ignore
+                when: !root.reserveSpace
+                restoreMode: Binding.RestoreNone
+            }
+
+            // "reserve": hold back exactly the dock and its margins, so
+            // Hyprland tiles windows above it and nothing is ever underneath.
+            //
+            // Deliberately NOT panel.implicitHeight: that grows by 360 px while
+            // the context menu is open, and reserving THAT would re-tile every
+            // window on the workspace every time you right-clicked a tile. The
+            // zone must be a constant the menu cannot move. The leftover ~20 px
+            // of surface above the zone is shadow, which is allowed to feather
+            // over the window above it.
+            Binding {
+                target: panel
+                property: "exclusiveZone"
+                value: dockBar.height + Appearance.screenMargin * 2
+                when: root.reserveSpace
+                restoreMode: Binding.RestoreNone
+            }
+
+            // --- reveal state ---------------------------------------------
+            //
+            // Pointer presence is tracked as two independent booleans rather
+            // than one shared flag that every handler writes. The old code had
+            // the strip handler writing `true` on entry and nothing on exit,
+            // which latched the dock up forever after an accidental brush of
+            // the screen edge -- see bug (2) in the header. Two booleans OR'd
+            // together cannot latch: each handler only ever reports its own
+            // item, and neither can leave the other's state stale.
+            //
+            // Both are needed. The zone catches the approach from the screen
+            // edge; dockHover catches the pointer once it is on the dock
+            // itself, which matters because a DockItem's MouseArea sits on top
+            // and the two overlap. Belt and braces, cheaply.
+            property bool pointerOnZone: false
+            property bool pointerOnDock: false
+            readonly property bool pointerNear: panel.pointerOnZone || panel.pointerOnDock
+
+            // What the timers actually drive. Only meaningful in "auto".
+            property bool autoRevealed: false
+
+            // Reveal state is PER MONITOR -- see the note at the top of the
+            // file. This is that per-surface state.
             readonly property bool revealed: {
                 if (!root.enabled) return false;
-                if (root.visibility === "never") return false;
+                if (root.suppressed) return false;
 
                 // The context menu pins the dock up for as long as it is open.
                 //
@@ -308,27 +451,100 @@ Scope {
                 // is wrong.
                 if (menu.open) return true;
 
-                if (root.visibility === "always") return true;
-                return panel.hovered;
+                // "auto" is the only mode the pointer has any say in.
+                // "always" and "reserve" are both permanently up.
+                if (root.autoHide) return panel.autoRevealed;
+                return true;
             }
 
-            // Only the dock itself, the reveal strip, and (while it is up) the
-            // context menu take the pointer. Everything else stays
-            // click-through to the windows underneath.
+            // Single place that decides which timer should be running, called
+            // from every edge that can change the answer. Having one function
+            // rather than logic spread across three handlers is what stops the
+            // two timers from ever being armed at the same time.
+            function retime() {
+                if (!root.autoHide) {
+                    revealTimer.stop();
+                    hideTimer.stop();
+                    return;
+                }
+
+                if (panel.pointerNear) {
+                    // Committing to the dock: cancel any pending hide outright,
+                    // so crossing back onto it mid-fade keeps it up.
+                    hideTimer.stop();
+                    if (!panel.autoRevealed) revealTimer.restart();
+                } else {
+                    // Left before the reveal delay elapsed: it was a pass-by,
+                    // not a reach. Drop it rather than summoning the dock behind
+                    // the pointer.
+                    revealTimer.stop();
+                    if (panel.autoRevealed && !menu.open) hideTimer.restart();
+                }
+            }
+
+            onPointerNearChanged: panel.retime()
+
+            Timer {
+                id: revealTimer
+
+                interval: Appearance.hoverRevealDelay
+                onTriggered: panel.autoRevealed = true
+            }
+
+            Timer {
+                id: hideTimer
+
+                interval: Appearance.hoverHideDelay
+                // Re-check the menu: it can open during the delay, and a dock
+                // that hid out from under its own open context menu is the
+                // exact failure `revealed` guards against above.
+                onTriggered: if (!menu.open) panel.autoRevealed = false
+            }
+
+            // Switching modes from the settings GUI must not leave a stale
+            // reveal behind -- flipping "auto" -> "never" -> "auto" would
+            // otherwise come back already revealed, with no pointer anywhere
+            // near it and no hide armed to take it down again.
+            Connections {
+                target: root
+
+                function onVisibilityChanged() {
+                    panel.autoRevealed = false;
+                    panel.retime();
+                }
+            }
+
+            // THE INPUT MASK. This, not opacity, is what decides whether your
+            // windows are clickable. See the header.
             //
-            // While the menu is open the WHOLE surface takes input instead, so
-            // that clicking anywhere else dismisses it -- which is what every
-            // context menu on every desktop does, and the only way to close one
-            // without a stray click landing in the window behind it.
+            // `null` means "no mask", i.e. the whole surface takes input -- so
+            // while the menu is open a click anywhere dismisses it rather than
+            // falling through into the window behind it, which is what every
+            // context menu on every desktop does.
+            //
+            // Otherwise the mask is the union of two items, and it is correct
+            // only because both of them physically move/resize to nothing when
+            // they should not be taking input:
+            //
+            //   dockBar    slides entirely below the surface's bottom edge when
+            //              hidden. The compositor clips the input region to the
+            //              surface, so off-surface contributes nothing.
+            //   hoverZone  collapses to height 0 outside "auto".
+            //
+            // Both have to be geometric. Region reads ONLY the item's x/y/
+            // width/height (region.cpp: build() calls mapToScene, and setItem()
+            // connects to exactly those four signals). It does not look at
+            // `visible`, and it does not look at `opacity`. The previous strip
+            // used `visible: root.visibility === "auto"` and so kept eating a
+            // 2 px line across the bottom of the screen even in "never" mode,
+            // with the dock not drawn at all.
             mask: menu.open ? null : dockRegion
 
             Region {
                 id: dockRegion
 
                 item: dockBar
-                // While hidden, the strip along the very bottom edge is what
-                // notices the pointer and brings the dock back.
-                Region { item: revealStrip }
+                Region { item: hoverZone }
             }
 
             MouseArea {
@@ -339,18 +555,62 @@ Scope {
                 z: 10
             }
 
-            // --- reveal strip -------------------------------------------
+            // --- hover zone ---------------------------------------------
+            //
+            // The only part of this surface that takes input while the dock is
+            // away, so its size is a direct tax on your windows. It changes
+            // shape with the state rather than being one fixed strip:
+            //
+            //   hidden    full width, Appearance.edgeTrigger (3 px) tall, along
+            //             the very bottom edge. Full width because summoning
+            //             the dock has to work by slamming the pointer down
+            //             anywhere, not just dead centre; 3 px tall because
+            //             this is exactly the band of your windows that stops
+            //             being clickable, and the pointer's last row is always
+            //             inside it.
+            //
+            //   revealed  a halo around the dock: its width plus a grip each
+            //             side, and tall enough to take in the gap between the
+            //             dock's lower rim and the screen edge. That gap is
+            //             Appearance.screenMargin of dead space that belongs to
+            //             neither the strip nor the dock, and without this the
+            //             pointer coming up off the edge towards a tile passes
+            //             through a hole where nothing is hovered. The generous
+            //             hide delay would usually cover the crossing, but a
+            //             pointer that simply STOPS in the gap would watch the
+            //             dock slide away from under it. Covering the approach
+            //             corridor is cheaper than lengthening the delay.
+            //
+            //             Deliberately not full width: while revealed this area
+            //             is unclickable, so it stays a halo around the dock and
+            //             leaves the bottom corners of the screen alone.
+            //
+            //   otherwise height 0, which makes its Region empty. "always" and
+            //             "reserve" have no hover behaviour to detect, and
+            //             "never" must take no input at all.
             Item {
-                id: revealStrip
+                id: hoverZone
 
                 anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 2
-                visible: root.visibility === "auto"
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                width: panel.revealed ? dockBar.width + Appearance.xl * 2
+                                      : parent.width
+
+                height: {
+                    if (!root.autoHide) return 0;
+                    return panel.revealed
+                        ? dockBar.height + Appearance.screenMargin * 2
+                        : Appearance.edgeTrigger;
+                }
 
                 HoverHandler {
-                    onHoveredChanged: if (hovered) panel.hovered = true
+                    id: zoneHover
+
+                    // Reports both directions, unlike the strip handler this
+                    // replaces. That one-sided `if (hovered)` is what latched
+                    // the dock up permanently -- see bug (2) in the header.
+                    onHoveredChanged: panel.pointerOnZone = hovered
                 }
             }
 
@@ -365,10 +625,21 @@ Scope {
                 dock: root
                 dockBar: dockBar
 
-                // When the menu closes, hand the reveal back to the pointer:
-                // if the cursor is no longer on the dock, it should hide as
-                // usual rather than staying up because the menu once was.
-                onOpenChanged: if (!menu.open) panel.hovered = dockHover.hovered
+                // Hand the reveal back to the pointer on both edges.
+                //
+                // Closing: if the cursor has wandered off the dock while the
+                // menu was up, resync from the live handler and let the hide
+                // delay run, rather than staying up because the menu once was.
+                //
+                // Opening matters too: the mask goes full-surface, which moves
+                // the pointer out of dockBar as far as the HoverHandler is
+                // concerned, so the booleans must be resynced or the dock would
+                // be left believing the pointer is somewhere it is not.
+                onOpenChanged: {
+                    panel.pointerOnDock = dockHover.hovered;
+                    panel.pointerOnZone = zoneHover.hovered;
+                    panel.retime();
+                }
             }
 
             // --- the dock -----------------------------------------------
@@ -380,17 +651,45 @@ Scope {
 
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: Appearance.screenMargin
+                anchors.bottomMargin: dockBar.slide
 
                 width: row.implicitWidth + Appearance.md * 2
                 height: Settings.dock.iconSize + Appearance.md * 2
 
-                // Slide out of view rather than disappearing: a dock that
-                // vanishes has no affordance for getting it back.
-                y: panel.revealed ? 0 : height + Appearance.screenMargin
+                // THE SLIDE. Slide out of view rather than disappearing: a dock
+                // that vanishes has no affordance for getting it back.
+                //
+                // This animates the ANCHOR'S MARGIN, not `y`. It used to be
+                //     anchors.bottom: parent.bottom
+                //     y: panel.revealed ? 0 : height + Appearance.screenMargin
+                // which does nothing whatsoever -- an anchor owns the
+                // coordinate it anchors, and QML drops the competing `y`
+                // binding without a word. No warning, no binding loop, the
+                // Behavior never runs, `y` just sits at the anchored value in
+                // every state. The dock never moved; only its opacity did; and
+                // because Region follows the ITEM, the input mask never moved
+                // either. That is bug (1) in the header, and it is why a dock
+                // set to "auto" was an invisible click sink.
+                //
+                // Margins are fair game because the anchor computes
+                //     y = parent.height - height - bottomMargin
+                // so driving the margin drives real x/y changes -- which is
+                // also precisely what Region listens to.
+                //
+                // The hidden value must push the dock ENTIRELY below the
+                // surface, not merely down a bit: at bottomMargin
+                // -(height + screenMargin) the dock's top edge lands at
+                // parent.height + screenMargin, so every pixel of it -- and
+                // therefore every pixel of its input region -- is outside the
+                // surface for the compositor to clip away. A smaller offset
+                // would leave a sliver of the dock still taking clicks.
+                property real slide: panel.revealed
+                    ? Appearance.screenMargin
+                    : -(dockBar.height + Appearance.screenMargin)
+
                 opacity: panel.revealed ? 1 : 0
 
-                Behavior on y {
+                Behavior on slide {
                     enabled: !Appearance.motionless
                     NumberAnimation {
                         duration: Appearance.durationSlow
@@ -407,9 +706,11 @@ Scope {
                     id: dockHover
 
                     // Keeps the dock up while the pointer is on it, so it does
-                    // not slide away mid-click. Ignored while the menu is open
-                    // -- see `revealed` above.
-                    onHoveredChanged: if (!menu.open) panel.hovered = hovered
+                    // not slide away mid-click. Reports both directions; the
+                    // menu case is handled by `revealed` and by retime()'s
+                    // menu guard rather than by dropping the update here, so
+                    // this boolean is never left stale.
+                    onHoveredChanged: panel.pointerOnDock = hovered
                 }
 
                 Row {

@@ -151,26 +151,6 @@ Singleton {
     // animation object rather than building one with duration 0.
     readonly property bool motionless: Performance.motionScale <= 0
 
-    // Hover INTENT delays, for edge-triggered surfaces (the dock's auto-hide).
-    //
-    // These are NOT durations and deliberately do NOT go through duration() --
-    // they must not scale with Performance.motionScale. A duration describes
-    // how long a thing takes to move; these describe how long the pointer must
-    // commit before we believe it meant it. Under reduced motion an animation
-    // should collapse to 0 and snap, but a *delay* collapsing to 0 would mean
-    // the dock is summoned by any mouse that merely crosses the bottom edge on
-    // its way somewhere else -- an accessibility setting would have silently
-    // turned into a behaviour regression.
-    //
-    // The numbers match durationNormal and durationSlower at motionScale 1 so
-    // the rhythm still reads as part of the same system. They are deliberately
-    // asymmetric: quick to arrive, slow to leave. The hide delay is the long
-    // one because it covers the reach -- the pointer crossing the gap between
-    // the screen edge and the dock is momentarily over neither, and a tight
-    // hide would yank the dock away mid-reach.
-    readonly property int hoverRevealDelay: 180
-    readonly property int hoverHideDelay: 420
-
     // Easing. Exposed as enum + optional bezier overshoot so every Behavior in
     // the shell pulls from the same two curves.
     readonly property int easeStandard: Easing.OutCubic
@@ -236,15 +216,6 @@ Singleton {
     // they never collide with the bar. Kept in step with
     // ~/.config/waybar/config.jsonc by hand -- there is no way to query it.
     readonly property int barClearance: 8 + 38 + 8
-
-    // How tall the invisible trigger strip at a screen edge is, for surfaces
-    // that reveal on edge hover (the dock). Small on purpose: this is the one
-    // part of an auto-hidden surface that still takes pointer input while the
-    // surface itself is away, so every pixel of it is a pixel of the user's
-    // window that cannot be clicked. Three is enough to catch a pointer slammed
-    // into the edge -- the cursor's last row is always inside it -- without
-    // being a band anything real would land in.
-    readonly property int edgeTrigger: 3
 
     // Default width for a side panel (Control Center, notification centre).
     readonly property int panelWidth: 400

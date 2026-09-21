@@ -1,23 +1,14 @@
-# =======================================================================
-#  sioyek -- preferences
+# ═══════════════════════════════════════════════════════════════════════
+#  sioyek — preferences
 #  ~/.config/sioyek/prefs_user.config
 #
 #  Keybindings live in  ~/.config/sioyek/keys_user.config
 #  Press <C-h> in sioyek for the full cheatsheet PDF, or : for the palette.
 #  Colors are  R G B  floats in 0..1  (optionally a 4th alpha).
-#
-#  !! KEEP THIS FILE PURE ASCII -- no box-drawing, em dashes or arrows. !!
-#  On 2.0.0 the prefs parser stops applying settings at the first line
-#  containing a non-ASCII byte, silently and with no warning.  Everything
-#  below such a line is ignored.  This file used to open with a box-rule
-#  comment, which meant every preference in it was dead; that is why the
-#  theme never looked right.  keys_user.config is NOT affected -- its
-#  parser handles non-ASCII fine, so its comments can stay decorated.
-#  See README -> Known limits.
-# =======================================================================
+# ═══════════════════════════════════════════════════════════════════════
 
 
-# --- THEME: "midnight" -------------------------------------------------
+# ─── THEME: "midnight" ─────────────────────────────────────────────────
 # Canvas behind the pages
 background_color                0.97 0.97 0.97
 dark_mode_background_color      0.047 0.051 0.063
@@ -25,7 +16,7 @@ dark_mode_background_color      0.047 0.051 0.063
 # Dim the whites so inverted text isn't a flashlight to the face
 dark_mode_contrast              0.82
 
-# Page colors for toggle_custom_color (<S-F8>) -- warm, sepia-ish dark
+# Page colors for toggle_custom_color (<S-F8>) — warm, sepia-ish dark
 custom_background_color         0.129 0.137 0.169
 custom_text_color               0.878 0.867 0.827
 
@@ -51,13 +42,13 @@ link_highlight_color            0.447 0.749 1.0
 synctex_highlight_color         1.0 0.400 0.800
 
 
-# --- TYPOGRAPHY --------------------------------------------------------
+# ─── TYPOGRAPHY ────────────────────────────────────────────────────────
 ui_font                         Inter
 font_size                       17
 status_bar_font_size            15
 
 
-# --- STARTUP -----------------------------------------------------------
+# ─── STARTUP ───────────────────────────────────────────────────────────
 default_dark_mode               1
 check_for_updates_on_startup    0
 should_load_tutorial_when_no_other_file  0
@@ -65,8 +56,8 @@ should_launch_new_window        0
 should_use_multiple_monitors    0
 
 
-# --- RENDERING ---------------------------------------------------------
-# Smooth scaling instead of nearest-neighbour -- much nicer on HiDPI
+# ─── RENDERING ─────────────────────────────────────────────────────────
+# Smooth scaling instead of nearest-neighbour — much nicer on HiDPI
 linear_filter                   1
 # Re-render the overview popup at full resolution instead of upscaling
 rerender_overview               1
@@ -74,18 +65,18 @@ should_draw_unrendered_pages    0
 prerender_next_page_presentation 1
 
 
-# --- MOVEMENT & ZOOM FEEL ----------------------------------------------
+# ─── MOVEMENT & ZOOM FEEL ──────────────────────────────────────────────
 zoom_inc_factor                 1.15
 vertical_move_amount            1.0
 horizontal_move_amount          1.0
-# <C-d>/<C-u> move this fraction of a screen -- keeps context on screen
+# <C-d>/<C-u> move this fraction of a screen — keeps context on screen
 move_screen_ratio               0.5
 wheel_zoom_on_cursor            1
 touchpad_sensitivity            1.0
 fit_to_page_width_ratio         0.80
 
 
-# --- VISUAL RULER (<C-v>) ----------------------------------------------
+# ─── VISUAL RULER (<C-v>) ──────────────────────────────────────────────
 # Mask above *and* below the focused line
 ruler_mode                      1
 ruler_padding                   1.0
@@ -94,12 +85,12 @@ visual_mark_next_page_fraction  0.75
 visual_mark_next_page_threshold 0.25
 
 
-# --- SEARCH ------------------------------------------------------------
+# ─── SEARCH ────────────────────────────────────────────────────────────
 super_fast_search               1
 case_sensitive_search           0
 
 
-# --- LISTS, TOC, MENUS -------------------------------------------------
+# ─── LISTS, TOC, MENUS ─────────────────────────────────────────────────
 flat_toc                        0
 collapsed_toc                   0
 multiline_menus                 1
@@ -110,12 +101,12 @@ create_table_of_contents_if_not_exists  1
 max_created_toc_size            5000
 
 
-# --- OVERVIEW POPUP ----------------------------------------------------
+# ─── OVERVIEW POPUP ────────────────────────────────────────────────────
 overview_size                   0.8 0.45
 overview_offset                 0 0
 
 
-# --- MOUSE -------------------------------------------------------------
+# ─── MOUSE ─────────────────────────────────────────────────────────────
 # ctrl+click peeks at the reference under the cursor; alt+click jumps to it
 control_click_command           overview_under_cursor
 alt_click_command               smart_jump_under_cursor
@@ -123,7 +114,7 @@ shift_click_command             visual_mark_under_cursor
 highlight_middle_click          0
 
 
-# --- EXTERNAL SEARCH -- select text, press s, then a letter -------------
+# ─── EXTERNAL SEARCH — select text, press s, then a letter ─────────────
 search_url_a    https://arxiv.org/a/search?searchtype=all&query=
 search_url_b    https://www.semanticscholar.org/search?q=
 search_url_d    https://duckduckgo.com/?q=
@@ -140,61 +131,61 @@ middle_click_search_engine          s
 shift_middle_click_search_engine    x
 
 
-# --- CUSTOM COMMANDS -- LIVE (execute_command_* route) -----------------
-# `new_command` is not in this binary at all -- the name does not appear in
+# ─── CUSTOM COMMANDS — LIVE (execute_command_* route) ─────────────────
+# `new_command` is not in this binary at all — the name does not appear in
 # `strings /usr/bin/sioyek`, so the block further down stays commented out.
 #
 # But the older `execute_command_<letter>` route DOES work here, and better
 # than its own docs claim.  /etc/sioyek/keys.config says you reach these by
-# running `execute_predefined_command` and then pressing the letter -- two
+# running `execute_predefined_command` and then pressing the letter — two
 # keystrokes.  That is not the only way: `execute_command_<letter>` is itself
 # a bindable command name, so binding it straight to a key in
 # keys_user.config runs the script in ONE keystroke.  Undocumented, but
-# verified by keypress on this build (see README -> Known limits).
-# %{...} tokens expand normally here; %{sioyek_path} -> /usr/bin/sioyek.
+# verified by keypress on this build (see README → Known limits).
+# %{...} tokens expand normally here; %{sioyek_path} → /usr/bin/sioyek.
 #
-# The same route would revive the other five scripts below -- each just needs
-# its own free letter -- but only help is wired up for now.
+# The same route would revive the other five scripts below — each just needs
+# its own free letter — but only help is wired up for now.
 
-# <C-h> -- build (only if stale) and open the cheatsheet PDF
+# <C-h> — build (only if stale) and open the cheatsheet PDF
 execute_command_h	/home/kairav/.config/sioyek/scripts/help.sh %{sioyek_path}
 
-# <C-S-r> -- force a cheatsheet rebuild even if the PDF looks current
+# <C-S-r> — force a cheatsheet rebuild even if the PDF looks current
 execute_command_r	/home/kairav/.config/sioyek/scripts/help.sh %{sioyek_path} --rebuild
 
 
-# --- CUSTOM COMMANDS -- DISABLED ON THIS BUILD -------------------------
+# ─── CUSTOM COMMANDS — DISABLED ON THIS BUILD ─────────────────────────
 # `new_command` is absent from this binary (0 hits in `strings`); it exists
 # only as a comment in /etc/sioyek/prefs.config, which came from a newer
-# upstream.  Uncomment this block if you ever move to such a build -- until
+# upstream.  Uncomment this block if you ever move to such a build — until
 # then use the execute_command_* route above instead.
 
-# Y -- yank selection with PDF line-breaks + hyphenation repaired
+# Y — yank selection with PDF line-breaks + hyphenation repaired
 #new_command _copy_clean /home/kairav/.config/sioyek/scripts/copy-clean.sh %{sioyek_path} "%{selected_text}"
 
-# ge -- export this document's highlights to Markdown, grouped by color
+# ge — export this document's highlights to Markdown, grouped by color
 #new_command _export_highlights /home/kairav/.config/sioyek/scripts/export-highlights.py %{sioyek_path} "%{file_path}" %{local_database} %{shared_database}
 
-# gc -- copy a citation line:  "Title, p. 42"
+# gc — copy a citation line:  "Title, p. 42"
 #new_command _cite /home/kairav/.config/sioyek/scripts/cite.sh %{sioyek_path} "%{file_name}" %{page_number} "%{selected_text}"
 
-# <C-S-b> -- snapshot highlights/bookmarks/portals database
+# <C-S-b> — snapshot highlights/bookmarks/portals database
 #new_command _backup /home/kairav/.config/sioyek/scripts/backup.sh %{sioyek_path} %{local_database} %{shared_database}
 
-# gf -- reveal the current document in the file manager
+# gf — reveal the current document in the file manager
 #new_command _reveal /home/kairav/.config/sioyek/scripts/reveal.sh %{sioyek_path} "%{file_path}"
 
 # Rebuild the cheatsheet after you edit keys_user.config (also in : palette)
 #new_command _rebuild_help /home/kairav/.config/sioyek/scripts/help.sh %{sioyek_path} --rebuild
 
 
-# --- LATEX INVERSE SEARCH ----------------------------------------------
+# ─── LATEX INVERSE SEARCH ──────────────────────────────────────────────
 # <F4> toggles synctex mode; right-click then jumps to the source line.
 # Uncomment the line matching your editor:
 #inverse_search_command  nvim --server /tmp/nvim.pipe --remote-send "<esc>:e\ %1<CR>:%2<CR>"
 #inverse_search_command  code -r -g %1:%2
 
 
-# --- EXPERIMENTAL ------------------------------------------------------
+# ─── EXPERIMENTAL ──────────────────────────────────────────────────────
 # Turns on in-progress features; flip to 1 if you like living dangerously
 #enable_experimental_features   1
