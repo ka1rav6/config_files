@@ -177,8 +177,44 @@ local function spawn_once(name, command)
     hl.exec_cmd("pgrep -x " .. name .. " >/dev/null 2>&1 || exec " .. command)
 end
 
+-- Prewarm the Ghostty instance, windowless.
+--
+-- WHY THIS IS WORTH A LINE AT LOGIN
+--   A cold Ghostty took 0.83 s from keybind to a shell actually running (zsh -i
+--   itself exits in 0.11 s, so almost none of that was the shell). Asking a
+--   LIVE instance for the window over D-Bus instead takes 0.18 s. This claims
+--   the D-Bus name at login so every terminal afterwards takes the fast path;
+--   ~/.local/bin/ghostty routes them there and explains the rest.
+--
+--   --initial-window=false means it starts with NO window -- it is a daemon,
+--   not a hidden terminal, so there is nothing to stumble into on a workspace.
+--   It only works alongside `quit-after-last-window-closed = false` in
+--   ~/.config/ghostty/config; with the default `true` this daemon would die the
+--   first time you closed a window and every later terminal would be cold
+--   again. The two settings are a pair -- changing one without the other
+--   quietly gives back the speedup.
+--
+-- WHY NOT spawn_once("ghostty", ...)
+--   `pgrep -x ghostty` would match THE SCRATCHPADS, which are Ghostty too
+--   (com.scratchpad.ghostty and com.yazi.ghostty, both running as "ghostty").
+--   ensure_prespawned() above starts them first, so the guard would always
+--   report "already running" and this would never start -- the same silent
+--   failure the comment on spawn_once describes, arrived at from the other
+--   direction. The D-Bus name is the precise test: only the default-class
+--   instance owns com.mitchellh.ghostty, and the scratchpads never do.
+local function prewarm_ghostty()
+    hl.exec_cmd(
+        "gdbus call --session --dest org.freedesktop.DBus"
+            .. " --object-path /org/freedesktop/DBus"
+            .. " --method org.freedesktop.DBus.NameHasOwner com.mitchellh.ghostty"
+            .. " 2>/dev/null | grep -q true"
+            .. " || exec ghostty --initial-window=false"
+    )
+end
+
 hl.on("hyprland.start", function()
     scratchpads.ensure_prespawned()
+    prewarm_ghostty()
     spawn("hyprpaper")
     spawn_once("waybar", "waybar")
     spawn("mako")

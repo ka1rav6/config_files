@@ -89,8 +89,40 @@ confirm-close-surface = false
 # this is the setting to suspect — set it back to `detect`.
 gtk-single-instance = true
 
-# Ghostty is installed as a *snap*, which adds roughly 130 ms of pure launch
-# overhead versus a native binary (measured: 0.16 s vs 0.03 s just to print
-# --version). single-instance above hides that for every window after the
-# first. Removing it entirely means installing Ghostty natively — see the notes
-# from the session that wrote this config.
+# Ghostty was installed as a *snap*, and that cost far more than the 130 ms this
+# note used to claim. Measured end to end — launch to a shell actually running,
+# where `zsh -i` on its own exits in 0.11 s:
+#
+#     snap, cold start                       0.83 s
+#     snap, "attaching" to a live instance   0.51 s
+#     +new-window over D-Bus                 0.18 s
+#
+# WHERE IT WENT — and why the old claim here was wrong:
+#   * 0.27 s was GTK walking the 8 icon themes the snap bundles: 586
+#     directories, 5822 files, and not one icon-theme.cache, against a 142 MB
+#     squashfs mounted `threads=single` where every miss costs a decompress.
+#     7359 filesystem operations per launch, all of them duplicating themes
+#     that already sit cached on ext4 in /usr/share/icons.
+#   * 0.15 s was `snap run` itself — snap-confine and seccomp, which do nothing
+#     for a CLASSIC snap that already runs unconfined.
+#   * single-instance does NOT hide either one, which is where the old note went
+#     wrong. The second window still does full GTK, fontconfig and GL init
+#     BEFORE it discovers the running instance over D-Bus and hands off: 0.57 s
+#     cold versus 0.51 s attaching, a 0.06 s saving rather than the whole cold
+#     start. `ghostty +new-window` is the actual fast path — it makes the D-Bus
+#     call and exits without touching GTK at all.
+#
+# A native install removes the first two outright. ~/.local/bin/ghostty removes
+# the third by routing launches through +new-window whenever an instance is up,
+# and autostart.lua keeps one up from login. See the comments in both.
+
+# Keep that instance alive when no windows are open.
+#
+# The default is `true`, and it is why terminals felt slow at random rather than
+# consistently: closing your LAST window quit the instance, so the next terminal
+# paid a full cold start again. Prewarming is pointless without this — the
+# daemon autostart.lua starts would die the first time you closed a window.
+#
+# The scratchpads read this same file and are meant to persist anyway, so this
+# changes nothing for them.
+quit-after-last-window-closed = false

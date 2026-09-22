@@ -2,7 +2,7 @@
 #
 # Type-aware opener for yazi's `o` bind (~/.config/yazi/keymap.toml).
 #
-#   .pdf                          -> sioyek
+#   .pdf                          -> zathura
 #   .md / .markdown               -> ghostwriter
 #   .doc .docx .ppt .pptx .xls*   -> Google Chrome
 #   .mp4 .mkv .webm .avi .mov ... -> VLC
@@ -68,7 +68,7 @@ while [ "$i" -lt "$count" ]; do
 
     case "$lower" in
     *.pdf)
-        spawn sioyek "$file"
+        spawn zathura "$file"
         ;;
     *.md | *.markdown | *.mdown | *.mkd)
         spawn ghostwriter "$file"

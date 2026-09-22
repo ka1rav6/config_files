@@ -1,0 +1,124 @@
+#!/bin/sh
+# Fast launcher for Ghostty.
+#
+# WHAT WAS SLOW (measured on the snap, 0.83 s from launch to a shell running --
+# zsh -i itself exits in 0.11 s, so almost none of it was the shell):
+#
+#   1. THE ICON SCAN  ~0.27 s   [snap only]
+#      The snap's launcher prepends $SNAP/usr/share to XDG_DATA_DIRS, and that
+#      carries 8 bundled icon themes -- 586 directories, 5822 files, and NOT ONE
+#      icon-theme.cache. GTK looked for a cache, missed, and walked the tree by
+#      hand: 7359 filesystem operations against a 142 MB squashfs mounted
+#      `threads=single`, where every miss costs a decompress. 33203 syscalls per
+#      launch, 16686 once this was fixed. Every one of those themes already
+#      exists in /usr/share/icons on ext4 WITH a built cache.
+#
+#   2. `snap run`  ~0.15 s      [snap only]
+#      snap-confine, seccomp and a command-chain shell, none of which do
+#      anything for a CLASSIC snap -- classic confinement already runs
+#      unconfined with plain filesystem access.
+#
+#   3. STARTING A SECOND PROCESS  ~0.45 s   [both installs]
+#      gtk-single-instance=true does NOT make the second window cheap: the new
+#      process still does full GTK, fontconfig and GL init before it finds the
+#      running instance over D-Bus and hands off. Measured 0.57 s cold vs 0.51 s
+#      "attaching" -- a 0.06 s saving, not the one you'd assume. The real fast
+#      path is `ghostty +new-window`, which makes the D-Bus call and exits
+#      without touching GTK at all: 0.18 s end to end.
+#
+# A NATIVE INSTALL (the ghostty .deb) deletes 1 and 2 outright -- system libs on
+# ext4, system icon caches, no squashfs, no snap-confine. It does NOT touch 3,
+# which is the largest single cost, so this wrapper stays useful either way and
+# detects which install it is driving.
+#
+# IF THIS WRAPPER IS IN THE WAY
+#   Delete it. `ghostty` falls back to whatever is next on PATH and behaves
+#   exactly as before; nothing else in the config depends on this file.
+
+SNAP=/snap/ghostty/current
+ARCH=x86_64-linux-gnu
+
+if [ -x /usr/bin/ghostty ]; then
+    # NATIVE INSTALL -- links against the system GTK, fontconfig and Mesa, and
+    # reads /usr/share/icons directly. Nothing to patch; costs 1 and 2 simply
+    # do not exist here.
+    REAL=/usr/bin/ghostty
+elif [ -x "$SNAP/bin/ghostty" ]; then
+    REAL="$SNAP/bin/ghostty"
+
+    CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/ghostty-fast"
+    OVERLAY="$CACHE/share"
+    REV=$(readlink /snap/ghostty/current 2>/dev/null || echo unknown)
+
+    # A directory of symlinks to $SNAP/usr/share minus `icons`, so glib schemas,
+    # mime, themes and locale still resolve out of the snap and only the icon
+    # lookup falls through to the system's cached copies. Rebuilt whenever the
+    # snap revision changes, so a refresh that adds or drops a share/
+    # subdirectory cannot leave a stale symlink farm behind.
+    if [ "$(cat "$CACHE/.rev" 2>/dev/null)" != "$REV" ] || [ ! -d "$OVERLAY" ]; then
+        rm -rf "$OVERLAY"
+        mkdir -p "$OVERLAY"
+        for entry in "$SNAP"/usr/share/*; do
+            name=${entry##*/}
+            [ "$name" = icons ] && continue
+            ln -sfn "$entry" "$OVERLAY/$name"
+        done
+        # This cache names absolute paths inside the snap, so it is
+        # revision-specific too.
+        rm -f "$CACHE/gdk-pixbuf-loaders.cache"
+        printf '%s\n' "$REV" > "$CACHE/.rev"
+    fi
+
+    # Transcribed from $SNAP/app/launcher, with XDG_DATA_DIRS pointed at the
+    # icon-free overlay instead of $SNAP/usr/share. Keep in sync if the snap's
+    # launcher changes.
+    export LC_ALL=C.UTF-8
+    export GHOSTTY_RESOURCES_DIR="$SNAP/share/ghostty"
+    export LD_LIBRARY_PATH="$SNAP/usr/lib/$ARCH:$SNAP/usr/lib/$ARCH/vdpau${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LIBGL_DRIVERS_PATH="$SNAP/usr/lib/$ARCH/dri/"
+    export LIBVA_DRIVERS_PATH="$SNAP/usr/lib/$ARCH/dri/"
+    export __EGL_VENDOR_LIBRARY_DIRS="/etc/glvnd/egl_vendor.d:/usr/share/glvnd/egl_vendor.d:$SNAP/usr/share/glvnd/egl_vendor.d"
+    export __EGL_EXTERNAL_PLATFORM_CONFIG_DIRS="$SNAP/usr/share/egl/egl_external_platform.d"
+    export DRIRC_CONFIGDIR="$SNAP/usr/share/drirc.d"
+    export VK_LAYER_PATH="$SNAP/usr/share/vulkan/implicit_layer.d/:$SNAP/usr/share/vulkan/explicit_layer.d/"
+    export XDG_DATA_DIRS="$OVERLAY${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+    export XLOCALEDIR="$SNAP/usr/share/X11/locale"
+    export GTK_PATH="$SNAP/usr/lib/$ARCH/gtk-4.0"
+    export GIO_MODULE_DIR="$SNAP/usr/lib/$ARCH/gio/modules"
+    unset GIO_EXTRA_MODULES
+    export TERMINFO_DIRS="$SNAP/share/terminfo${TERMINFO_DIRS:+:$TERMINFO_DIRS}"
+    export GDK_PIXBUF_MODULEDIR="$SNAP/usr/lib/$ARCH/gdk-pixbuf-2.0/2.10.0/loaders"
+    export GDK_PIXBUF_MODULE_FILE="$CACHE/gdk-pixbuf-loaders.cache"
+    if [ ! -f "$GDK_PIXBUF_MODULE_FILE" ]; then
+        "$SNAP/usr/lib/$ARCH/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders" \
+            > "$GDK_PIXBUF_MODULE_FILE" 2>/dev/null || :
+    fi
+else
+    # Neither install present, or the snap is mid-refresh with its revision
+    # symlink swinging. Let the official entry point produce the error.
+    exec /snap/bin/ghostty "$@"
+fi
+
+# --class names a DIFFERENT GTK application id, so it is a separate instance by
+# definition and cannot be served by the main one's D-Bus name -- that is how
+# the scratchpads in scratchpads.lua stay distinct windows. An explicit +action
+# the caller already chose is passed through untouched.
+for arg in "$@"; do
+    case "$arg" in
+        --class | --class=* | +*) exec "$REAL" "$@" ;;
+    esac
+done
+
+# Hand the window to the running instance if there is one. The check is gdbus
+# rather than `+new-window`'s exit status because that action EXITS 0 even when
+# the D-Bus call fails with ServiceUnknown -- trusting it would silently swallow
+# the launch whenever no instance was up.
+if [ -n "$DBUS_SESSION_BUS_ADDRESS" ] && command -v gdbus >/dev/null 2>&1 &&
+    gdbus call --session --dest org.freedesktop.DBus \
+        --object-path /org/freedesktop/DBus \
+        --method org.freedesktop.DBus.NameHasOwner com.mitchellh.ghostty \
+        2>/dev/null | grep -q true; then
+    exec "$REAL" +new-window "$@"
+fi
+
+exec "$REAL" "$@"
