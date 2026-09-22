@@ -2,7 +2,8 @@
 # mako — notification daemon
 # =============================================================================
 # Started at login from ~/.config/hypr/autostart.lua. Everything that calls
-# notify-send lands here: the `notify-build` shell function in ~/.zshrc, the
+# notify-send lands here: the build notifications from ~/.zshrc (automatic for make,
+# cargo and friends), the
 # battery and temperature watchers in ~/.local/bin/system-monitor-notify, and
 # ~/.local/bin/now-playing-notify.
 #
@@ -86,9 +87,10 @@ border-color=#ff9b85
 # THEME:CRITICAL:END
 default-timeout=0
 
-# Build results from the `notify-build` function in ~/.zshrc. Clicking focuses
-# the Ghostty window so you land back on the build output rather than hunting
-# for the terminal.
+# Build results from section 7 of ~/.zshrc — raised automatically when a build
+# command finishes, or by hand via `notify-build`. Clicking focuses the Ghostty
+# window so you land back on the build output rather than hunting for the
+# terminal.
 [app-name="Build"]
 on-button-left=exec ~/.config/hypr/scripts/focus-window.sh com.mitchellh.ghostty
 

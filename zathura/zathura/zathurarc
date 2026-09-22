@@ -1,0 +1,290 @@
+# =============================================================================
+# zathura — PDF viewer
+# =============================================================================
+# Syntax is its own thing, not TOML and not vimrc:
+#
+#   set <option> <value>      quoting optional, but required if the value
+#                             contains spaces (fonts, colours with #, commands)
+#   map [mode] <key> <fn> <arg>
+#   unmap [mode] <key>
+#   include <path>
+#
+# Reload is not a thing — zathura reads this once at startup. `R` reloads the
+# *document*, not the config. Changes here need a restart, but every `set` line
+# below can be tried live from the command line with `:set option value`.
+#
+# `:dump <file>` writes every current setting with its description. That is the
+# fastest way to see what a knob actually does without leaving the program.
+
+# =============================================================================
+# Palette
+# =============================================================================
+# Same colours as ~/.config/yazi/theme.toml, which in turn tracks Ghostty's
+# "Adventure" palette and waybar's style.css. A PDF viewer is mostly chrome
+# around a white rectangle, so the chrome is the only thing worth theming --
+# but it should read as part of the desktop, not as a stray GTK app.
+#
+#   ink      #14211f   near-black teal — the recolored "paper"
+#   surface  #1b1f26   window background behind the pages
+#   line     #2a2f36   borders, inputbar
+#   muted    #6d7581   secondary text
+#   text     #e6e3dd   primary text
+#   mint     #8ee3c1   primary accent
+#   amber    #f4c47b   search hits, warnings
+#   coral    #ff9b85   errors, the *active* search hit
+
+set font "JetBrainsMono Nerd Font 10"
+
+# The surround is `surface`, not pure black. Against #040404 an un-recolored
+# white page glares; one step up gives the page a visible edge instead.
+set default-bg   "#1b1f26"
+set default-fg   "#e6e3dd"
+
+set statusbar-bg "#14181e"
+set statusbar-fg "#e6e3dd"
+
+set inputbar-bg  "#14181e"
+set inputbar-fg  "#8ee3c1"
+
+set notification-bg          "#1b1f26"
+set notification-fg          "#e6e3dd"
+set notification-warning-bg  "#1b1f26"
+set notification-warning-fg  "#f4c47b"
+set notification-error-bg    "#1b1f26"
+set notification-error-fg    "#ff9b85"
+
+set completion-bg            "#14181e"
+set completion-fg            "#6d7581"
+set completion-group-bg      "#14181e"
+set completion-group-fg      "#8ee3c1"
+set completion-highlight-bg  "#8ee3c1"
+set completion-highlight-fg  "#14211f"
+
+# The index (Tab) is a sidebar tree; these are its rows.
+set index-bg        "#1b1f26"
+set index-fg        "#e6e3dd"
+set index-active-bg "#8ee3c1"
+set index-active-fg "#14211f"
+
+# Search hits. Two colours so the *current* match is distinguishable from the
+# other twelve on the page — without that, `n` feels like nothing happened.
+set highlight-color        "#f4c47b"
+set highlight-active-color "#ff9b85"
+set highlight-fg           "#14211f"
+set highlight-transparency 0.45
+
+# Shown while a page is still rendering, instead of a white flash.
+set render-loading    true
+set render-loading-bg "#1b1f26"
+set render-loading-fg "#6d7581"
+
+# Digital signature panel colours (`:info` on a signed PDF).
+set signature-success-color "#8ee3c1"
+set signature-warning-color "#f4c47b"
+set signature-error-color   "#ff9b85"
+
+# =============================================================================
+# Recolor — the dark mode for the page itself
+# =============================================================================
+# Toggled with <C-r> or `i`; deliberately OFF at startup. Recolor is a blunt
+# two-colour remap, and it flattens anything that is not black-on-white:
+# syntax-highlighted code listings, heat maps, scanned pages. Text-heavy
+# documents at night, yes. Papers with figures, usually not.
+#
+# To have it on by default, flip this one line to true.
+set recolor       false
+set recolor-lightcolor "#14211f"
+set recolor-darkcolor  "#e6e3dd"
+
+# keephue leaves saturated colours alone and only remaps the greys, so charts
+# and figures survive the toggle instead of turning into mint-and-ink mush.
+set recolor-keephue      true
+# Images that are already light-on-dark get inverted twice without this, i.e.
+# a dark-themed screenshot embedded in a paper comes out blinding.
+set recolor-reverse-video true
+
+# =============================================================================
+# Window and layout
+# =============================================================================
+set window-title-basename  true
+set window-title-page      true
+set window-title-home-tilde true
+set window-icon-document   true
+
+# guioptions letters: c command line, s statusbar, h/v scrollbars, n none.
+# Statusbar only. The scrollbars are GTK overlay bars that fade in and out and
+# fight the theme; the statusbar percentage already answers "where am I".
+set guioptions "s"
+
+set statusbar-home-tilde  true
+set statusbar-basename    false
+set statusbar-page-percent true
+set statusbar-h-padding   8
+set statusbar-v-padding   6
+
+# Open fitted to page width rather than whole-page. For A4 text on a 16:9
+# display best-fit shrinks the type to unreadable; width is the reading default
+# and `a` is right there when a figure needs the whole page.
+set adjust-open "width"
+
+set page-padding 4
+set pages-per-row 1
+
+# Only matters once `d` turns on dual-page: it puts page 1 alone in the right
+# column, so every later spread is odd-left/even-right the way a printed book
+# falls open. Without it every spread is off by one.
+set first-page-column "1:2"
+set advance-pages-per-row false
+
+# Keeps the horizontal position and the zoom anchor centred instead of pinned
+# to the top-left corner — the difference between zooming *in on something*
+# and zooming into the corner of the page.
+set zoom-center     true
+set vertical-center true
+
+set zoom-step 10
+set zoom-min  10
+set zoom-max  1000
+
+# =============================================================================
+# Scrolling
+# =============================================================================
+set scroll-step  70
+set scroll-hstep 70
+
+# Full-page scrolls (<C-f>, Space) keep 8% of the old view, so a line that
+# straddles the fold is not lost between screens.
+set scroll-full-overlap 0.08
+
+# false: scrolling is continuous and pages flow past each other. true would
+# make full-page scrolls snap to page boundaries — better for slide decks,
+# worse for prose. `P` snaps on demand either way.
+set scroll-page-aware false
+set scroll-wrap       false
+
+# How many rendered pages stay in RAM. 15 is the default and was chosen for
+# 2010 hardware; a bigger ring makes flicking back and forth instant.
+set page-cache-size 30
+
+# =============================================================================
+# Behaviour
+# =============================================================================
+# sqlite, not the default "plain": this is what makes zathura reopen a document
+# on the page you left it on, and it is where bookmarks and quickmarks live.
+# Stored in ~/.local/share/zathura/bookmarks.sqlite.
+set database sqlite
+set continuous-hist-save true
+
+# Default is "primary" — middle-click paste only. clipboard puts selected text
+# and `c` (copy link target) where Ctrl+V can reach them.
+set selection-clipboard "clipboard"
+set selection-notification true
+
+set incremental-search true
+set search-hadjust     true
+set abort-clear-search true
+
+# Links get a zoom/scroll adjustment when followed so the target lands in view.
+set link-zoom    true
+set link-hadjust true
+
+# Re-render when the file changes on disk. This is the one that makes a
+# recompiled LaTeX PDF or a regenerated report update under you, no keypress.
+set filemonitor glib
+set smooth-reload true
+
+set synctex true
+# Backward search (<C-click> in the PDF jumps to the source line). Harmless if
+# you never touch LaTeX. Points at a throwaway nvim in a new terminal because
+# there is no vimtex/nvim server running to talk to.
+set synctex-editor-command "ghostty -e nvim +%{line} %{input}"
+
+set dbus-service     true
+set dbus-raise-window true
+
+# `:open` completion should see dotfiles and directories.
+set show-hidden     true
+set show-directories true
+set show-recent     10
+
+# NOTE: leave `sandbox` at its default ("normal"). The seccomp "strict" mode
+# blocks exec() and network, which silently kills every `exec` binding below
+# and the synctex editor command. If you never use those, `set sandbox strict`
+# is a real hardening win for opening untrusted PDFs.
+
+# =============================================================================
+# Keybindings
+# =============================================================================
+# Everything zathura ships with is already vim-shaped and is left alone. What
+# follows is (1) a few additions in normal mode and (2) filling in the holes in
+# fullscreen / presentation / index mode, which ship with a much thinner set of
+# bindings than normal mode and are jarring to drop into as a result.
+
+# ── Normal mode additions ──────────────────────────────────────────────────
+# `i` for invert, next to the un-typeable <C-r>.
+map i recolor
+# Counter-clockwise rotate; `r` only ever goes clockwise, so this saves three
+# presses on a landscape scan that came in the wrong way round. (<C-S-r> would
+# be the obvious key but girara rejects Shift+letter combinations outright.)
+map <A-r> rotate rotate-ccw
+map <C-p> print
+# Yank the document's own path to the clipboard — for pasting into a shell, a
+# citation, or a message. Mnemonically `y` is taken (full-page right scroll).
+map Y exec 'wl-copy "$FILE"'
+# Open this file's directory in yazi, in a new terminal.
+map gy exec 'ghostty -e yazi "$FILE"'
+
+# ── Fullscreen mode (F11) ──────────────────────────────────────────────────
+# Ships with only paging, zoom and quit. Without these, fullscreen loses
+# scrolling, search and the index, which makes it useless for actual reading.
+map [fullscreen] h scroll left
+map [fullscreen] j scroll down
+map [fullscreen] k scroll up
+map [fullscreen] l scroll right
+map [fullscreen] <C-d> scroll half-down
+map [fullscreen] <C-u> scroll half-up
+map [fullscreen] <C-f> scroll full-down
+map [fullscreen] <C-b> scroll full-up
+map [fullscreen] H scroll page-top
+map [fullscreen] L scroll page-bottom
+map [fullscreen] P snap_to_page
+map [fullscreen] a adjust_window best-fit
+map [fullscreen] s adjust_window width
+map [fullscreen] d toggle_page_mode
+map [fullscreen] r rotate rotate-cw
+map [fullscreen] R reload
+map [fullscreen] i recolor
+map [fullscreen] <C-r> recolor
+map [fullscreen] Tab toggle_index
+map [fullscreen] f follow
+map [fullscreen] F display_link
+map [fullscreen] : focus_inputbar ":"
+map [fullscreen] / focus_inputbar "/"
+map [fullscreen] ? focus_inputbar "?"
+map [fullscreen] n search forward
+map [fullscreen] N search backward
+map [fullscreen] <C-o> jumplist backward
+map [fullscreen] <C-i> jumplist forward
+map [fullscreen] F5 change_mode presentation
+
+# ── Presentation mode (F5) ─────────────────────────────────────────────────
+# Ships with space / backspace / quit and nothing else. Give it the four keys
+# your hands will reach for anyway when a slide needs to go backwards.
+map [presentation] j navigate next
+map [presentation] k navigate previous
+map [presentation] l navigate next
+map [presentation] h navigate previous
+map [presentation] <C-r> recolor
+map [presentation] i recolor
+map [presentation] r rotate rotate-cw
+map [presentation] F11 toggle_fullscreen
+
+# ── Index mode (Tab) ───────────────────────────────────────────────────────
+# j/k/h/l/L/H and Return are already bound. These add the vim motions the tree
+# is otherwise missing, plus a way out that is not `Tab`.
+map [index] gg navigate_index top
+map [index] G  navigate_index bottom
+map [index] <C-d> navigate_index down
+map [index] <C-u> navigate_index up
+map [index] q toggle_index
+map [index] <Esc> toggle_index

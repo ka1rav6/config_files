@@ -232,7 +232,7 @@ alias bat='batcat'
 alias cd='z'
 
 # --- Application shortcuts ---------------------------------------------------
-alias pdf='sioyek'       # keyboard-driven PDF reader, good for papers
+alias pdf='zathura'       # keyboard-driven PDF reader, good for papers
 alias gmd='ghostwriter'  # markdown editor with live preview
 
 # --- General -----------------------------------------------------------------
@@ -320,20 +320,6 @@ pipinst() {
 	python -m pip install --break-system-packages "$@"
 }
 
-# notify-build <command…> — run a command and raise a desktop notification with
-# the result. Useful for long builds you walk away from:
-#     notify-build make -j8
-# Notifications are rendered by mako (~/.config/mako/config), which has an
-# app-name="Build" rule making a click focus the Ghostty window.
-notify-build() {
-	local cmd="$*"
-	if eval "$cmd"; then
-		notify-send -a "Build" -u normal -i software-update-available "Build succeeded" "$cmd"
-	else
-		notify-send -a "Build" -u critical -i dialog-error "Build failed" "$cmd"
-	fi
-}
-
 # y — yazi wrapper that leaves the shell in the directory you browsed to.
 #
 # yazi writes its final directory to the --cwd-file path on exit; this reads it
@@ -352,7 +338,156 @@ function y() {
 
 
 # =============================================================================
-# 7. TOOLCHAINS, PATH AND ENVIRONMENT
+# 7. BUILD NOTIFICATIONS
+# =============================================================================
+# Every build you start raises a mako notification when it finishes, so you can
+# kick off a long compile, switch workspace, and be told when it lands. Two
+# halves, sharing one sender:
+#
+#   * a preexec/precmd hook pair that fires automatically for the commands in
+#     ZSH_BUILD_NOTIFY_CMDS below — make, cargo, gradle and friends;
+#   * `notify-build <command…>`, which wraps one command explicitly, for
+#     anything the list does not cover (a script, an ad-hoc pipeline).
+#
+# Rendering is mako's job (~/.config/mako/config): the app-name="Build" rule
+# there makes a click focus the Ghostty window, and urgency=critical — which
+# failures use — keeps the notification up until you dismiss it.
+
+zmodload -i zsh/datetime   # defines $EPOCHSECONDS, used for the elapsed time
+
+# First word of a command line worth notifying about, matched on the basename
+# so that /usr/bin/make and ./gradlew both count. Add your own here.
+typeset -ga ZSH_BUILD_NOTIFY_CMDS=(
+	make cmake ninja meson bear
+	cargo rustc
+	gcc g++ clang clang++ zig
+	go javac mvn gradle gradlew
+	npm pnpm yarn bun tsc vite webpack esbuild
+	just docker podman nix
+)
+
+# Successful builds faster than this stay quiet — you were still looking at the
+# terminal when they finished. Failures always notify, however fast they were.
+# Set to 0 to get a notification from every single build.
+: ${ZSH_BUILD_NOTIFY_MIN_SECONDS:=10}
+
+# 1 = also stay quiet when the terminal that started the build is the focused
+# window. Costs one hyprctl call per notification, so it is off by default.
+: ${ZSH_BUILD_NOTIFY_ONLY_UNFOCUSED:=0}
+
+typeset -g _build_notify_label="" _build_notify_start=0
+
+# _build_notify_send <exit-code> <label> [seconds] — the one place that talks to
+# notify-send, so the hook and notify-build cannot drift apart.
+_build_notify_send() {
+	local code=$1 label=$2 secs=$3 took=""
+
+	# No display means no notification daemon: a bare TTY, or an ssh session.
+	[[ -n $WAYLAND_DISPLAY || -n $DISPLAY ]] || return
+
+	if [[ -n $secs ]]; then
+		if (( secs >= 60 )); then
+			took="  ·  $(( secs / 60 ))m $(( secs % 60 ))s"
+		else
+			took="  ·  ${secs}s"
+		fi
+	fi
+
+	if (( code == 0 )); then
+		notify-send -a "Build" -u normal -i software-update-available \
+			"Build succeeded" "${label}${took}"
+	else
+		notify-send -a "Build" -u critical -i dialog-error \
+			"Build failed  (exit $code)" "${label}${took}"
+	fi
+}
+
+# True when the window that owns this shell is the one you are looking at.
+#
+# hyprctl reports the pid of the *terminal*, not of the shell inside it, so a
+# plain `$$` comparison never matches. Walk up the process tree instead: the
+# terminal is one of our ancestors, so the active window owns us if its pid
+# turns up on the way to init.
+_build_notify_focused() {
+	local apid p=$$
+	apid=$(hyprctl activewindow -j 2>/dev/null |
+		sed -n 's/.*"pid": *\([0-9]\{1,\}\).*/\1/p')
+	[[ -n $apid ]] || return 1
+
+	while [[ -n $p && $p != 1 ]]; do
+		[[ $p == $apid ]] && return 0
+		p=${$(grep -m1 '^PPid:' /proc/$p/status 2>/dev/null)##*[[:space:]]}
+	done
+	return 1
+}
+
+# Runs just before each command. Decides whether this one is a build, and if so
+# remembers what to say about it; precmd below does the saying.
+_build_notify_preexec() {
+	_build_notify_label=""
+
+	# (z) splits the line the way the shell itself would, honouring quotes.
+	local -a words
+	words=(${(z)1})
+
+	# Skip anything that merely prefixes the real command, so `sudo make` and
+	# `RUSTFLAGS=… cargo build` are recognised as make and cargo.
+	while (( $#words )); do
+		case $words[1] in
+			*=*|sudo|doas|command|nohup|env|time|nice|ionice) shift words ;;
+			*) break ;;
+		esac
+	done
+	(( $#words )) || return
+
+	# (Ie) is an exact-match index lookup: nonzero when the word is in the list.
+	(( ${ZSH_BUILD_NOTIFY_CMDS[(Ie)${words[1]:t}]} )) || return
+
+	_build_notify_label="${PWD:t}: $1"
+	_build_notify_start=$EPOCHSECONDS
+}
+
+# Runs just before each prompt — including after a bare Enter, which is why the
+# label is cleared on the way through: one notification per command, not per
+# prompt.
+_build_notify_precmd() {
+	local code=$?   # must be the first line: zsh sets $? per precmd function
+	[[ -n $_build_notify_label ]] || return
+
+	local label=$_build_notify_label
+	local secs=$(( EPOCHSECONDS - _build_notify_start ))
+	_build_notify_label=""
+
+	# 130 is Ctrl-C. You stopped it yourself, so you are already at the keyboard.
+	(( code == 130 )) && return
+	(( code == 0 && secs < ZSH_BUILD_NOTIFY_MIN_SECONDS )) && return
+	(( ZSH_BUILD_NOTIFY_ONLY_UNFOCUSED )) && _build_notify_focused && return
+
+	_build_notify_send $code "$label" $secs
+}
+
+autoload -Uz add-zsh-hook
+add-zsh-hook preexec _build_notify_preexec
+add-zsh-hook precmd  _build_notify_precmd
+
+# notify-build <command…> — run one command and notify regardless of what it is
+# or how long it took. For the things the list above does not know about:
+#     notify-build ./scripts/deploy.sh
+#     notify-build 'make 2>&1 | tee build.log'
+#
+# The argument is eval'd, so a quoted string may contain pipes and redirections;
+# the flip side is that quoting inside an unquoted command line is re-parsed.
+notify-build() {
+	local start=$EPOCHSECONDS code
+	eval "$*"
+	code=$?
+	_build_notify_send $code "${PWD:t}: $*" $(( EPOCHSECONDS - start ))
+	return $code
+}
+
+
+# =============================================================================
+# 8. TOOLCHAINS, PATH AND ENVIRONMENT
 # =============================================================================
 #
 # NOTE: several entries below are already exported by ~/.zshenv and ~/.zprofile,

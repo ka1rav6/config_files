@@ -133,5 +133,10 @@
     "path": "/home/kairav/media/pictures/wallpapers",
     "category": "custom",
     "description": "Custom backup: wallpapers"
+  },
+  {
+    "path": "/home/kairav/.config/zathura",
+    "category": "zathura",
+    "description": "Custom backup: zathura"
   }
 ]

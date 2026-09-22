@@ -98,7 +98,7 @@ alias cd='z'
 alias ff='fastfetch'
 
 # --- App shortcuts -----------------------------------------------------------
-alias pdf='sioyek'      # Sioyek: keyboard-driven PDF reader tuned for papers
+alias pdf='zathura'     # Zathura : keyboard-driven PDF reader tuned for papers
 alias gmd='ghostwriter' # Markdown editor with live preview
 
 # --- General shortcuts -------------------------------------------------------
