@@ -102,13 +102,13 @@
     {
       "id": "auto",
       "label": "Wallpaper",
-      "desc": "derived from wallppr.jpg",
-      "bg": "#141416",
-      "surface": "#202125",
-      "text": "#edf0f7",
-      "a1": "#7f96db",
-      "a2": "#a669d1",
-      "a3": "#5cccc3"
+      "desc": "derived from wallhaven-jx7zpq.png",
+      "bg": "#141615",
+      "surface": "#202523",
+      "text": "#edf7f3",
+      "a1": "#8ee3c1",
+      "a2": "#f4c47b",
+      "a3": "#ff9b85"
     }
   ]
 }

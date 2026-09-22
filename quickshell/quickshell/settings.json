@@ -13,7 +13,7 @@
     },
     "desktop": {
         "battery": true,
-        "calendar": false,
+        "calendar": true,
         "clock": true,
         "cpu": true,
         "gridSize": 8,
@@ -24,6 +24,14 @@
         "snapToGrid": true,
         "visualizer": true,
         "widgetLayout": {
+            "calendar": {
+                "x": 0.07610993657505286,
+                "y": 0.2756183745583039
+            },
+            "clock": {
+                "x": 0.14799154334038056,
+                "y": 0.05653710247349823
+            },
             "cpu": {
                 "x": 0.7441860465116279,
                 "y": 0.5936395759717314
@@ -31,6 +39,10 @@
             "media": {
                 "x": 0.0315955766192733,
                 "y": 0.34402332361516036
+            },
+            "network": {
+                "x": 0.13953488372093023,
+                "y": 0.6289752650176679
             }
         }
     },
@@ -123,7 +135,7 @@
         "deriveAccents": false,
         "directory": "/home/kairav/media/pictures/wallpapers",
         "perMonitor": false,
-        "random": false,
+        "random": true,
         "randomInterval": 30
     }
 }

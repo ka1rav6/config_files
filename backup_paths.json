@@ -128,5 +128,10 @@
     "path": "/home/kairav/.local/share/applications",
     "category": "custom",
     "description": "Custom backup: applications"
+  },
+  {
+    "path": "/home/kairav/media/pictures/wallpapers",
+    "category": "custom",
+    "description": "Custom backup: wallpapers"
   }
 ]

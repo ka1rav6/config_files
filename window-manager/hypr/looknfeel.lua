@@ -3,9 +3,9 @@
 -- two accents; the inactive one is a near-background tone so unfocused windows
 -- recede. Alpha is the last byte of each rgba() literal.
 local theme = {
-    border_active_1 = "rgba(7f96dbee)",
-    border_active_2 = "rgba(a669d1aa)",
-    border_inactive = "rgba(2c2e3488)",
+    border_active_1 = "rgba(8ee3c1ee)",
+    border_active_2 = "rgba(f4c47baa)",
+    border_inactive = "rgba(2c343188)",
 }
 -- THEME:END
 

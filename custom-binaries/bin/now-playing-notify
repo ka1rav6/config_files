@@ -16,6 +16,9 @@ set -uo pipefail
 
 LOCK_DIR="${XDG_RUNTIME_DIR:-/tmp}/now-playing-notify"
 
+# How long to wait for a track change to finish arriving. See the loop.
+DEBOUNCE="${NOW_PLAYING_DEBOUNCE:-0.7}"
+
 # mkdir is the atomic test-and-set. But a SIGKILLed run (or a crash) never
 # reaches its EXIT trap, leaving the directory behind -- and because
 # $XDG_RUNTIME_DIR survives until logout, that stale directory would block
@@ -34,8 +37,77 @@ trap 'rm -rf "$LOCK_DIR"; exit 0' INT TERM
 
 command -v playerctl >/dev/null 2>&1 || exit 0
 
+# --- Why this loop is not just `while read; do notify; done` ------------------
+# A track change is not one event. The player publishes its metadata over D-Bus
+# as a sequence of PropertiesChanged signals, and playerctl --follow re-renders
+# the format string on every one of them, from whatever it has cached at that
+# moment. So one skip on the YouTube Music PWA produces something like:
+#
+#     Chrome|New Song|Old Artist     <- title landed, artist has not yet
+#     Chrome|New Song|New Artist     <- the real state
+#
+# The naive loop fired on both: two notifications per song, the first of them
+# announcing the new title next to the previous track's artist. That first line
+# is not a track anyone is playing -- it is a half-applied update caught
+# mid-flight.
+#
+# So: never notify on a line, notify on a PAUSE in the lines. Each line just
+# replaces what is pending; only $DEBOUNCE of silence promotes the pending
+# state to a notification. Intermediate states are overwritten before anyone
+# sees them, and the notification always describes a settled track.
+#
+# `read -t` distinguishes its two failure modes by exit status: greater than
+# 128 means the timeout expired (the quiet gap we are waiting for), 1 means
+# playerctl's pipe closed and there will be no more lines.
+# -----------------------------------------------------------------------------
+
+last_sent=""
+pending=""
+have_pending=0
+
+emit() {
+    # Same track twice in a row is the other half of the duplicate problem:
+    # album art arriving after the fact, or a pause/resume, re-publishes
+    # metadata that has not actually changed. Nothing to announce.
+    [[ "$pending" == "$last_sent" ]] && { have_pending=0; return; }
+    last_sent="$pending"
+    have_pending=0
+
+    local player title artist
+    IFS='|' read -r player title artist <<<"$pending"
+    notify-send -a "NowPlaying:${player}" -i audio-x-generic \
+        "$title" "${artist:-Now Playing}" 2>/dev/null
+}
+
 playerctl --follow metadata --format '{{playerName}}|{{title}}|{{artist}}' 2>/dev/null |
-while IFS='|' read -r player title artist; do
-    [[ -z "$title" ]] && continue
-    notify-send -a "NowPlaying:${player}" -i audio-x-generic "$title" "${artist:-Now Playing}" 2>/dev/null
+while :; do
+    if (( have_pending )); then
+        # -t must precede the variable names: `read` stops parsing options at
+        # the first operand, so a trailing `-t` becomes a variable called "-t".
+        IFS='|' read -r -t "$DEBOUNCE" player title artist
+    else
+        # Nothing waiting, so there is nothing to be late for: block.
+        IFS='|' read -r player title artist
+    fi
+    rc=$?
+
+    if (( rc == 0 )); then
+        # An empty title is a player going away, or one with no track loaded.
+        # It is not something to announce, and it must not overwrite a real
+        # pending track with a blank one.
+        [[ -z "$title" ]] && continue
+        pending="${player}|${title}|${artist}"
+        have_pending=1
+        continue
+    fi
+
+    if (( rc > 128 )); then
+        # The gap we were waiting for: the change has finished arriving.
+        emit
+        continue
+    fi
+
+    # Pipe closed: playerctl exited. Announce anything still pending, then stop.
+    (( have_pending )) && emit
+    break
 done
