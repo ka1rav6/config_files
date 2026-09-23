@@ -147,21 +147,31 @@ loud VOL=MAXVOL:
 
 # --- Theming ----------------------------------------------------------------
 # Retheme the entire desktop in one step: ghostty, bat, btop, waybar, wofi,
-# wlogout, mako, tmux and the Hyprland border gradient.
+# wlogout, mako, tmux, GTK3, GTK4/libadwaita, the Hyprland border gradient and
+# Quickshell -- plus the freedesktop portal, which carries the theme into
+# Chromium, VS Code, Electron and every Flatpak.
 #
 #   just theme            list available themes and show the active one
 #   just theme gruvbox    apply a theme everywhere
 #   just theme auto       derive the palette from the current wallpaper
 #   just theme-palette    preview what `auto` would derive, without applying
+#   just theme-matugen    read or change how `auto` derives it
 #
 # Only the THEME:START/THEME:END blocks in each config are rewritten, so your
 # layout, padding and comments survive every switch.
 #
-# `auto` extracts three accent hues from the wallpaper, transplants them onto
-# the house saturation/value so they stay legible at 11px in a status bar, and
-# lifts any that fall below WCAG AA against the generated background. A
-# greyscale wallpaper has no hue to extract, so it keeps the previous theme's
-# accents and tints only the greys rather than inventing colours from noise.
+# `auto` hands the wallpaper to matugen (Google's Material Color Utilities),
+# maps the Material You scheme it gets back onto the nine house colours, and
+# then re-checks every one against WCAG -- Material's contrast model is tuned
+# for phones, and 11px text in a status bar is not negotiable. It also rotates
+# the accents apart when Material's fixed red `error` role collides with a red
+# wallpaper, which would otherwise make "focused" and "critical" the same
+# colour everywhere they are used.
+#
+# The hand-written themes are NOT re-derived: Catppuccin and Gruvbox are
+# upstream palettes, and rebuilding them from a seed colour would replace them
+# with something merely Catppuccin-flavoured. They still go through matugen's
+# templates for GTK, so every theme reaches the toolkits.
 #
 # Changing the wallpaper while `auto` is active re-derives the palette
 # automatically -- see ~/.config/hypr/scripts/apply-wallpaper.sh.
@@ -177,6 +187,114 @@ theme-current:
 # Preview the palette `auto` would derive, with colour swatches
 theme-palette IMAGE="":
     @{{THEME}} --palette {{IMAGE}}
+
+# --- matugen -----------------------------------------------------------------
+# The three knobs on `auto`'s derivation. Changing any of them re-applies the
+# active theme in the same run, so the result is visible immediately.
+#
+#   just theme-matugen                    show the current options
+#   just theme-matugen vibrant            pick an algorithm (9 of them)
+#   just theme-matugen light              or a mode
+#   just theme-matugen contrast 0.3       or a contrast offset, -1 to 1
+#   just theme-matugen "muted dark"       any combination, any order
+#
+# The same options are in the Quickshell Settings GUI under Appearance -> Matugen.
+# Both read and write the same file, so neither can disagree with the other.
+
+# Read or change how `auto` derives its palette (no arg shows the options)
+[positional-arguments]
+theme-matugen *ARGS:
+    @{{THEME}} --matugen "$@"
+
+# matugen is a separate binary and is not packaged for Ubuntu 24.04. Without it
+# `auto` silently falls back to the old hand-rolled derivation, which still
+# works and is strictly worse.
+
+# Install or update the matugen binary into ~/.local/bin
+theme-install-matugen:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    url=$(curl -fsSL https://api.github.com/repos/InioX/matugen/releases/latest \
+        | grep -o '"browser_download_url": "[^"]*x86_64[^"]*"' | cut -d'"' -f4 | head -1)
+    [ -n "$url" ] || { echo "could not find a release asset" >&2; exit 1; }
+    echo "downloading $url"
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    curl -fsSL "$url" | tar xz -C "$tmp"
+    install -Dm755 "$tmp/matugen" ~/.local/bin/matugen
+    ~/.local/bin/matugen --version
+    echo "Now run:  just theme auto"
+
+# --- Desktop portals ---------------------------------------------------------
+# xdg-desktop-portal is how sandboxed and toolkit-agnostic applications ask this
+# desktop for a file picker, a screen share, or the current colour scheme. Which
+# backend answers which request is decided by
+# ~/.config/xdg-desktop-portal/hyprland-portal.conf -- screen capture and global
+# shortcuts go to xdg-desktop-portal-hyprland, everything else to -gtk.
+#
+# That routing is what makes `just theme` reach Chromium, VS Code and Flatpaks:
+# they learn the desktop is dark through the GTK backend's Settings interface,
+# not from any file theme-switch writes.
+
+# Show which backend is answering, and whether both are running
+portal-check:
+    #!/usr/bin/env bash
+    echo "XDG_CURRENT_DESKTOP = ${XDG_CURRENT_DESKTOP:-(unset)}"
+    echo "config file         = ~/.config/xdg-desktop-portal/$(echo "${XDG_CURRENT_DESKTOP:-}" | tr 'A-Z' 'a-z')-portal.conf"
+    echo
+    echo "Running backends:"
+    pgrep -a -f 'xdg-desktop-portal' | sed 's/^/  /' || echo "  none"
+    echo
+    echo "Colour scheme the portal is broadcasting:"
+    gdbus call --session --dest org.freedesktop.portal.Desktop \
+        --object-path /org/freedesktop/portal/desktop \
+        --method org.freedesktop.portal.Settings.Read \
+        org.freedesktop.appearance color-scheme 2>&1 | sed 's/^/  /'
+
+# Restart every portal backend, after editing the routing config
+portal-restart:
+    systemctl --user restart xdg-desktop-portal-hyprland.service || true
+    systemctl --user restart xdg-desktop-portal-gtk.service || true
+    systemctl --user restart xdg-desktop-portal.service
+    @echo "restarted -- run 'just portal-check' to confirm"
+
+# --- The screen-share picker -------------------------------------------------
+# The dialog that appears when something asks to capture the screen. It is the
+# stock Qt6 picker from xdg-desktop-portal-hyprland -- deliberately, because it
+# is the security boundary for screen capture and what it prints on stdout is
+# what actually gets shared. Only its appearance is ours:
+#
+#   ~/.config/matugen/templates/share-picker.qss   the stylesheet, themed by
+#                                                  `just theme` like everything else
+#   ~/.local/bin/hyprland-share-picker-themed      adds Qt's -stylesheet argument
+#   ~/.config/hypr/xdph.conf                       tells xdph to launch that wrapper
+#   rules.lua "screen-share-picker"                floats it, sizes it, keeps it opaque
+#
+# Keyboard: Tab / Shift+Tab move, Left/Right switch tabs from the tab bar,
+# Ctrl+Tab switches tabs from anywhere, Space or Enter picks the focused entry.
+# The focused entry is the one with the thick accent border -- that ring is the
+# whole reason the stylesheet exists.
+
+# Open the share picker on its own, to see it without starting a screen share
+picker-preview:
+    #!/usr/bin/env bash
+    # The real dialog gets its list of windows from xdph in this variable, as
+    # repeated  handle[HC>]class[HC>]title[HC>]  triples. Synthesising it here
+    # is what gives the Window tab something to look at.
+    #
+    # The handle is a DECIMAL uintptr. hyprctl reports it as hex ("0x5c1f..."),
+    # and handing the picker the hex -- with or without the 0x -- aborts it with
+    # a std::out_of_range out of substr, so the int(..., 16) is load-bearing.
+    export XDPH_WINDOW_SHARING_LIST=$(hyprctl clients -j | python3 -c "
+    import json, sys
+    print(''.join(
+        f\"{int(w['address'], 16)}[HC>]{w['class']}[HC>]{w['title']}[HC>]\"
+        for w in json.load(sys.stdin) if w.get('mapped') and w.get('title')))")
+    echo "Picked: $(~/.local/bin/hyprland-share-picker-themed)"
+
+# Regenerate the picker stylesheet only, without retheming the whole desktop
+picker-restyle:
+    @{{THEME}} $({{THEME}} --current) 2>&1 | grep -E "matugen templates" || true
+    @echo "stylesheet: ~/.config/hyprland-share-picker/style.qss"
 
 
 clean-brave:

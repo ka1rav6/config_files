@@ -1,0 +1,60 @@
+# =============================================================================
+# matugen — the colour engine behind `theme-switch`.
+# =============================================================================
+# theme-switch is still the single source of truth for what the desktop looks
+# like. matugen is the thing it *asks* for colours, replacing the hand-rolled
+# hue-histogram / HSV math that used to live inside theme-switch itself.
+#
+# Two jobs, and only two:
+#
+#   1. `theme-switch auto` feeds matugen the wallpaper and gets a full Material
+#      You 3 scheme back. theme-switch maps nine of those roles onto its own
+#      nine-colour house schema and re-checks them against WCAG before using
+#      them, so nothing downstream had to change.
+#
+#   2. Every theme -- hand-written or derived -- is then pushed through the
+#      templates below to reach the toolkits theme-switch could never reach on
+#      its own: GTK3, GTK4/libadwaita, and the freedesktop colour scheme that
+#      xdg-desktop-portal hands to Electron/Chromium/Flatpak apps.
+#
+# WHY THE TEMPLATES USE {{house.*}} AND NOT {{colors.*}}
+#   theme-switch invokes matugen with `--import-json-string`, injecting the
+#   exact palette it is applying under `house`. For `auto` those two are the
+#   same numbers. For catppuccin, gruvbox and friends they are NOT: those are
+#   hand-picked upstream palettes and re-deriving them from a seed colour would
+#   quietly replace Catppuccin with something merely Catppuccin-flavoured.
+#   So house wins for the nine roles that matter, and matugen's own tones fill
+#   in the containers and fixed variants that the house schema has no name for.
+#
+# Do not run matugen by hand to retheme. `just theme <name>` does it, and does
+# the other twelve applications at the same time.
+# =============================================================================
+
+[config]
+reload_apps = false
+set_wallpaper = false
+
+# GTK3 — Nautilus, GIMP, most older apps. ~/.config/gtk-3.0/gtk.css is read
+# after the system theme, so these @define-colors override Yaru's.
+[templates.gtk3]
+input_path = '~/.config/matugen/templates/gtk.css'
+output_path = '~/.config/gtk-3.0/gtk.css'
+
+# GTK4 / libadwaita — everything modern. Same file, same overrides: libadwaita
+# resolves its named colours through the very same @define-color mechanism.
+[templates.gtk4]
+input_path = '~/.config/matugen/templates/gtk.css'
+output_path = '~/.config/gtk-4.0/gtk.css'
+
+# The screen-share picker. A Qt6 Widgets app, restyled through QApplication's
+# built-in -stylesheet argument by ~/.local/bin/hyprland-share-picker-themed --
+# which is what xdph launches, per ~/.config/hypr/xdph.conf.
+[templates.share_picker]
+input_path = '~/.config/matugen/templates/share-picker.qss'
+output_path = '~/.config/hyprland-share-picker/style.qss'
+
+# The full Material scheme as data, for anything that wants more than the nine
+# house roles -- the Quickshell Settings UI reads this to preview a scheme.
+[templates.json]
+input_path = '~/.config/matugen/templates/colors.json'
+output_path = '~/.config/quickshell/matugen.json'

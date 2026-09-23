@@ -20,13 +20,18 @@ import qs
 //   ~/.config/quickshell/theme.json, because services/Theme.qml watches it.
 //   Nothing here pushes colours into the shell.
 //
-// THE `auto` THEME
-//   Derives its palette from the current wallpaper: three accent hues lifted
-//   from the image, transplanted onto the house saturation/value so they stay
-//   legible at 11px, then raised until each clears WCAG AA against the
-//   generated background. A greyscale wallpaper keeps the previous theme's
-//   accents rather than inventing colour out of sensor noise. See the long
-//   note in ~/.local/bin/theme-switch.
+// THE `auto` THEME, AND THE MATUGEN SECTION UNDER IT
+//   `auto` derives its palette from the current wallpaper using matugen --
+//   Google's Material Color Utilities -- and then maps the Material You scheme
+//   onto the nine house colours, re-checking every one against WCAG before it
+//   is used. The MATUGEN group below exposes the three knobs that derivation
+//   has: which algorithm, dark or light, and how much contrast.
+//
+//   Those knobs only affect `auto`. Catppuccin, Gruvbox and the rest are
+//   hand-picked upstream palettes; re-deriving them from a seed colour would
+//   replace them with something merely Catppuccin-flavoured, so theme-switch
+//   does not. Changing a knob still rethemes everything, because matugen also
+//   writes the GTK3/GTK4 CSS for whichever theme is active.
 // =============================================================================
 
 Column {
@@ -37,6 +42,22 @@ Column {
 
     // --- theme -----------------------------------------------------------
     property string applying: ""
+
+    // Local copy of the contrast slider while it is being dragged. Committed to
+    // matugen on release -- see the slider below for why.
+    property real contrastDraft: Matugen.contrast
+
+    // Step through the scheme list rather than opening a dropdown: there are
+    // nine of them, each retheme is visible immediately, and comparing two
+    // adjacent ones is the actual task.
+    function cycleScheme(step) {
+        const list = Matugen.schemes;
+        if (!list || list.length === 0) return;
+        let i = 0;
+        for (let n = 0; n < list.length; n++)
+            if (list[n].id === Matugen.scheme) { i = n; break; }
+        Matugen.setScheme(list[(i + step + list.length) % list.length].id);
+    }
 
     SettingsGroup {
         width: parent.width
@@ -85,6 +106,160 @@ Column {
         function onApplied(name, ok, message) {
             root.applying = "";
             if (!ok) console.warn("[settings] theme-switch failed:", message);
+        }
+    }
+
+    // --- matugen -----------------------------------------------------------
+    // Only meaningful while `auto` is the active theme, and said so rather
+    // than hidden: hiding it would leave no way to set the scheme up BEFORE
+    // switching to auto, which is exactly when you want to.
+    SettingsGroup {
+        width: parent.width
+        title: "MATUGEN"
+        subtitle: Matugen.installed
+            ? (Theme.name === "auto"
+               ? "Deriving the palette from " + Wallpaper.name
+               : "Applies when the theme is set to auto")
+            : "matugen is not installed — auto is using the built-in fallback"
+
+        // The one case where nothing below will do anything. Say so once, at
+        // the top, with the command that fixes it.
+        SettingRow {
+            width: parent.width
+            visible: Matugen.loaded && !Matugen.installed
+            label: "Not installed"
+            description: "Run  just theme-install-matugen  in a terminal, then reopen this page."
+            Button {
+                text: "Recheck"
+                variant: "soft"
+                onClicked: Matugen.refresh()
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            enabled: Matugen.installed
+            label: "Scheme"
+            description: Matugen.schemeDesc
+            Row {
+                spacing: Appearance.xs
+                Button {
+                    text: "Prev"
+                    variant: "ghost"
+                    enabled: Matugen.installed && !Matugen.busy
+                    onClicked: root.cycleScheme(-1)
+                }
+                Text {
+                    width: 110
+                    horizontalAlignment: Text.AlignHCenter
+                    text: Matugen.shortName(Matugen.scheme)
+                    color: Theme.accent
+                    font.family: Appearance.fontMono
+                    font.pixelSize: Appearance.fontSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Button {
+                    text: "Next"
+                    variant: "ghost"
+                    enabled: Matugen.installed && !Matugen.busy
+                    onClicked: root.cycleScheme(1)
+                }
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            enabled: Matugen.installed
+            label: "Mode"
+            description: "Light mode inverts the whole desktop, not just this shell."
+            Row {
+                spacing: Appearance.xs
+                Button {
+                    text: "Dark"
+                    variant: Matugen.mode === "dark" ? "accent" : "soft"
+                    enabled: Matugen.installed && !Matugen.busy
+                    onClicked: Matugen.setMode("dark")
+                }
+                Button {
+                    text: "Light"
+                    variant: Matugen.mode === "light" ? "accent" : "soft"
+                    enabled: Matugen.installed && !Matugen.busy
+                    onClicked: Matugen.setMode("light")
+                }
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            enabled: Matugen.installed
+            label: "Contrast"
+            description: "Material's own contrast offset. The WCAG floors apply on top of it regardless."
+            Row {
+                spacing: Appearance.sm
+                Text {
+                    text: root.contrastDraft.toFixed(2)
+                    color: Theme.muted
+                    font.family: Appearance.fontMono
+                    font.pixelSize: Appearance.fontSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Slider {
+                    width: 200
+                    enabled: Matugen.installed && !Matugen.busy
+                    // -1..1 across the track, so standard contrast is the middle.
+                    value: (root.contrastDraft + 1) / 2
+                    // Dragging is local only. Committing on every frame would
+                    // queue a full desktop retheme per pixel of travel.
+                    onMoved: (v) => root.contrastDraft = Math.round((v * 2 - 1) * 20) / 20
+                    onCommitted: Matugen.setContrast(root.contrastDraft)
+                }
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            enabled: Matugen.installed
+            label: "Seed colour"
+            description: "Which colour in the wallpaper the scheme is built from."
+            Row {
+                spacing: Appearance.xs
+                Repeater {
+                    model: Matugen.preferences
+                    Button {
+                        required property var modelData
+                        text: modelData.id === "less-saturation" ? "muted"
+                            : modelData.id === "saturation" ? "vivid"
+                            : modelData.id
+                        variant: Matugen.prefer === modelData.id ? "accent" : "soft"
+                        enabled: Matugen.installed && !Matugen.busy
+                        onClicked: Matugen.setPrefer(modelData.id)
+                    }
+                }
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            enabled: Matugen.installed
+            label: "Re-derive now"
+            description: "Rebuild the palette from the current wallpaper without changing a setting."
+            Button {
+                text: "Re-derive"
+                variant: "soft"
+                busy: Matugen.busy || ThemeCatalogue.busy
+                enabled: Matugen.installed && !Matugen.busy && !ThemeCatalogue.busy
+                onClicked: ThemeCatalogue.refreshAuto()
+            }
+        }
+
+        Text {
+            width: parent.width
+            topPadding: Appearance.sm
+            visible: Matugen.busy
+            text: "Re-deriving and retheming every application…"
+            color: Theme.accent
+            font.family: Appearance.font
+            font.pixelSize: Appearance.fontSmall
         }
     }
 

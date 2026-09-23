@@ -66,6 +66,7 @@ singleton Shell         1.0 services/Shell.qml
 singleton ThemeCatalogue 1.0 services/ThemeCatalogue.qml
 singleton Wallpaper     1.0 services/Wallpaper.qml
 singleton SysInfo       1.0 services/SysInfo.qml
+singleton Matugen       1.0 services/Matugen.qml
 
 # --- Design system -----------------------------------------------------------
 # The shared vocabulary. Every surface in the shell is a Card, every switch is a

@@ -40,6 +40,7 @@ import json
 import os
 import re
 import sys
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -435,7 +436,396 @@ def _pick_hues(hist, bins=36, min_separation=5):
     return [(i + 0.5) / bins for i in picked]
 
 
+
+# --------------------------------------------------------------------------
+# matugen — the colour engine
+# --------------------------------------------------------------------------
+# What used to be ~200 lines of hue histograms, HSV transplants and hand-tuned
+# constants in this file is now one subprocess call. matugen implements Google's
+# Material Color Utilities: it quantises the image in CAM16, picks a seed, and
+# builds a full tonal system around it. It is better at this than the code it
+# replaced -- it understands perceptual lightness rather than HSV value, so a
+# saturated orange and a saturated blue at the same "brightness" actually look
+# the same brightness.
+#
+# WHAT IS *NOT* DELEGATED
+#   The WCAG floors below still run afterwards. Material's contrast model is
+#   its own, tuned for phone screens at arm's length; this desktop has 11px
+#   text in a status bar and the AAA/AA guarantees in CONTRAST_* are not
+#   negotiable. matugen proposes, contrast_ratio() disposes.
+#
+#   The nine-colour house schema also stays. Every consumer in apply() speaks
+#   bg/surface/surface2/border/text/muted/a1/a2/a3, so matugen's fifty Material
+#   roles are mapped down to those nine at the boundary and nothing downstream
+#   learned a new vocabulary.
+#
+# IF matugen IS NOT INSTALLED
+#   The old derivation is still here as palette_from_wallpaper_legacy() and is
+#   used automatically. `auto` never stops working; it just gets worse. Install
+#   with `just theme-install-matugen`.
+# --------------------------------------------------------------------------
+
+MATUGEN = shutil.which("matugen") or str(HOME / ".local/bin/matugen")
+
+# How matugen should build the scheme. Persisted so the CLI and the Quickshell
+# Settings UI agree, and so `auto` re-derives identically when the wallpaper
+# changes without anyone having to pass flags again.
+MATUGEN_STATE = CFG / "matugen-options.json"
+
+MATUGEN_CONFIG = CFG / "matugen/config.toml"
+
+# The scheme algorithms matugen offers, with what each is actually for. Shown
+# verbatim in the Settings UI, so the descriptions are user-facing copy.
+MATUGEN_SCHEMES = {
+    "scheme-tonal-spot": "Balanced. The Material You default — one hue, muted.",
+    "scheme-content": "Closest to the wallpaper. Keeps its real colours.",
+    "scheme-vibrant": "Saturated. Strongest accents, most contrast between them.",
+    "scheme-expressive": "Playful. Pushes the secondary and tertiary hues apart.",
+    "scheme-fidelity": "Faithful. Like content, but preserves chroma exactly.",
+    "scheme-neutral": "Nearly grey. The wallpaper barely tints anything.",
+    "scheme-monochrome": "No colour at all. Greyscale, seeded by the image.",
+    "scheme-fruit-salad": "Loose. Shifts the hue before building the scheme.",
+    "scheme-rainbow": "Wide. Accents spread right around the wheel.",
+}
+
+# An image usually offers several defensible seed colours. This picks between
+# them without prompting -- matugen otherwise refuses to choose and errors out
+# when it cannot find a terminal to ask at, which is every call made from here.
+# "saturation" takes the most colourful candidate, which is what you want for
+# an accent: the alternatives all tend towards picking the wallpaper's
+# background instead of the thing in front of it.
+MATUGEN_PREFER = {
+    "saturation": "Most colourful candidate. Liveliest accents.",
+    "less-saturation": "Most muted candidate. Calmest accents.",
+    "lightness": "Brightest candidate.",
+    "darkness": "Darkest candidate. Usually the wallpaper's background.",
+    "value": "Highest raw value, ignoring saturation.",
+}
+
+MATUGEN_DEFAULTS = {
+    "scheme": "scheme-tonal-spot",
+    "mode": "dark",
+    "contrast": 0.0,
+    "prefer": "saturation",
+}
+
+
+def matugen_available():
+    return Path(MATUGEN).exists()
+
+
+def matugen_options():
+    """The persisted scheme/mode/contrast, with defaults filled in."""
+    opts = dict(MATUGEN_DEFAULTS)
+    if MATUGEN_STATE.exists():
+        try:
+            opts.update(json.loads(MATUGEN_STATE.read_text()))
+        except (ValueError, OSError):
+            pass
+    if opts.get("scheme") not in MATUGEN_SCHEMES:
+        opts["scheme"] = MATUGEN_DEFAULTS["scheme"]
+    if opts.get("mode") not in ("dark", "light"):
+        opts["mode"] = MATUGEN_DEFAULTS["mode"]
+    if opts.get("prefer") not in MATUGEN_PREFER:
+        opts["prefer"] = MATUGEN_DEFAULTS["prefer"]
+    try:
+        opts["contrast"] = max(-1.0, min(1.0, float(opts.get("contrast", 0.0))))
+    except (TypeError, ValueError):
+        opts["contrast"] = 0.0
+    return opts
+
+
+def save_matugen_options(**changes):
+    """Merge changes into the persisted options and return the result."""
+    opts = matugen_options()
+    opts.update({k: v for k, v in changes.items() if v is not None})
+    MATUGEN_STATE.write_text(json.dumps(opts, indent=2) + "\n")
+    return matugen_options()
+
+
+def _matugen_run(args, import_json=None, templates=False):
+    """Invoke matugen. Returns (colors_dict_or_None, error_string_or_None).
+
+    `templates=False` passes --dry-run, because the common case -- deriving a
+    palette -- must not write GTK files: apply() has not decided yet whether
+    this theme is even going to be applied, and check() can still refuse it.
+    """
+    opts = matugen_options()
+    cmd = [MATUGEN, "-q", "-c", str(MATUGEN_CONFIG),
+           "-t", opts["scheme"], "-m", opts["mode"],
+           "--contrast", str(opts["contrast"]),
+           "--prefer", opts["prefer"], "-j", "hex"]
+    if not templates:
+        cmd.append("--dry-run")
+    if import_json:
+        cmd += ["--import-json-string", json.dumps(import_json)]
+    cmd += args
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return None, str(exc)
+    if proc.returncode != 0:
+        return None, (proc.stderr or proc.stdout or "").strip().splitlines()[-1:] and \
+            (proc.stderr or proc.stdout).strip().splitlines()[-1] or "matugen failed"
+    try:
+        return json.loads(proc.stdout)["colors"], None
+    except (ValueError, KeyError) as exc:
+        return None, f"unreadable matugen output: {exc}"
+
+
+# Material You role  ->  house role. The load-bearing translation in this file.
+#
+# Material names a surface by its elevation and a foreground by what it sits
+# on; the house schema names them by what they are for. These nine pairings are
+# the ones where those two vocabularies mean the same thing:
+#
+#   surface / container / container_high   the three greys, dark to light
+#   outline_variant                        borders -- outline proper is far too
+#                                          bright for a 1px line at this size
+#   on_surface / on_surface_variant        body text and secondary text
+#   primary / tertiary / error             a1 / a2 / a3, i.e. good / warn / bad
+#
+# secondary is deliberately unused: Material's secondary is a desaturated
+# sibling of primary, which as a2 would read as "the same accent, but broken".
+# tertiary is the one Material intends to contrast against primary.
+MD3_TO_HOUSE = {
+    "bg": "surface",
+    "surface": "surface_container",
+    "surface2": "surface_container_high",
+    "border": "outline_variant",
+    "text": "on_surface",
+    "muted": "on_surface_variant",
+    "a1": "primary",
+    "a2": "tertiary",
+    "a3": "error",
+}
+
+
+
+# Minimum hue separation between two accents, as a fraction of the wheel.
+# 0.055 is ~20 degrees: below that two swatches at 11px are the same colour.
+ACCENT_HUE_MIN = 0.055
+
+
+def _separate_accents(palette, notes):
+    """Push a1/a2/a3 apart until each is visibly its own colour.
+
+    Only hue moves. Saturation and value are Material's and are what make the
+    three look like a set; rotating hue keeps that while restoring the one
+    thing the palette is actually used for -- telling good from warning from
+    critical at a glance.
+    """
+    hsv = {k: list(colorsys.rgb_to_hsv(*_from_hex(palette[k]))) for k in ("a1", "a2", "a3")}
+
+    def gap(a, b):
+        d = abs(hsv[a][0] - hsv[b][0])
+        return min(d, 1.0 - d)
+
+    # a1 is the identity of the theme and never moves. a2 is nudged off a1,
+    # then a3 off both -- in that order, so a fix to one cannot recreate the
+    # collision it was fixing.
+    for key, others, direction in (("a2", ("a1",), 1), ("a3", ("a1", "a2"), -1)):
+        for _ in range(24):
+            if all(gap(key, o) >= ACCENT_HUE_MIN for o in others):
+                break
+            hsv[key][0] = (hsv[key][0] + direction * 0.02) % 1.0
+        else:
+            continue
+    for key in ("a2", "a3"):
+        moved = _to_hex(_hsv(*hsv[key]))
+        if moved != palette[key]:
+            notes.append(f"rotated {key} off a1 for separation: {palette[key]} -> {moved}")
+            palette[key] = moved
+    return palette
+
+
+def palette_from_matugen(source, is_image=True, base_theme="mint"):
+    """Derive the nine house colours from an image or a seed colour.
+
+    Returns (palette, notes) exactly like the legacy derivation, or raises
+    RuntimeError if matugen could not produce a scheme -- the caller falls back.
+    """
+    opts = matugen_options()
+    args = ["image", str(source)] if is_image else ["color", "hex", str(source)]
+    colors, err = _matugen_run(args)
+    if colors is None:
+        raise RuntimeError(err or "matugen produced nothing")
+
+    notes = [
+        f"matugen {opts['scheme'].removeprefix('scheme-')}, {opts['mode']} mode, "
+        f"seed by {opts['prefer']}"
+        + (f", contrast {opts['contrast']:+.1f}" if opts["contrast"] else "")
+    ]
+
+    # matugen nests each role as {"default": {"color": "#rrggbb"}, ...}. The
+    # "default" branch is already the one for the mode that was requested, so
+    # there is no second mode decision to make here.
+    palette = {
+        house: colors[md3]["default"]["color"]
+        for house, md3 in MD3_TO_HOUSE.items()
+    }
+
+    # --- keep the three accents telling apart -----------------------------
+    # Material's `error` is a FIXED red -- it is a semantic role, not a derived
+    # one, so a red wallpaper produces a1 and a3 within a few degrees of each
+    # other and "focused" becomes indistinguishable from "critical" everywhere
+    # they are used: workspace pills, notification urgency, the border gradient.
+    # Rotate whichever one collided, keeping its lightness and chroma so the
+    # scheme still reads as one system.
+    palette = _separate_accents(palette, notes)
+
+    # --- the WCAG floors this desktop does not negotiate ------------------
+    # Material's own contrast model targets phone-sized text. Lift anything
+    # that misses the floor, keeping hue and saturation so the scheme still
+    # reads as one system, and report what moved rather than doing it silently.
+    bg_rgb = _from_hex(palette["bg"])
+    for key, target in (("text", CONTRAST_TEXT), ("muted", CONTRAST_MUTED),
+                        ("a1", CONTRAST_ACCENT), ("a2", CONTRAST_ACCENT),
+                        ("a3", CONTRAST_ACCENT)):
+        rgb = _from_hex(palette[key])
+        before = contrast_ratio(rgb, bg_rgb)
+        if before >= target:
+            continue
+        h_, s_, v_ = colorsys.rgb_to_hsv(*rgb)
+        lifted = _lift_until((h_, s_, v_), bg_rgb, target)
+        palette[key] = _to_hex(lifted)
+        notes.append(
+            f"lifted {key} for WCAG: {before:.1f}:1 -> "
+            f"{contrast_ratio(lifted, bg_rgb):.1f}:1 (floor {target})"
+        )
+
+    # ghostty, bat and btop take a theme NAME, not colours, so the closest
+    # built-in still has to be chosen by hue -- matugen has nothing to say here.
+    nearest = _nearest_builtin(palette["a1"])
+    palette["ghostty"] = THEMES[nearest]["ghostty"]
+    palette["bat"] = THEMES[nearest]["bat"]
+    palette["btop"] = THEMES[nearest]["btop"]
+    palette["desc"] = (
+        f"matugen {opts['scheme'].removeprefix('scheme-')} from "
+        f"{Path(source).name if is_image else source}"
+    )
+    notes.append(f"terminal/btop follow the nearest built-in theme: {nearest}")
+
+    for name, floor in (("text", CONTRAST_TEXT), ("a1", CONTRAST_ACCENT),
+                        ("a2", CONTRAST_ACCENT), ("a3", CONTRAST_ACCENT)):
+        ratio = contrast_ratio(_from_hex(palette[name]), bg_rgb)
+        flag = "" if ratio >= floor else f"  BELOW {floor}:1"
+        notes.append(f"contrast {name}/bg = {ratio:.1f}:1{flag}")
+
+    return palette, notes
+
+
+def run_matugen_templates(name, t):
+    """Push the applied palette through the matugen templates.
+
+    This is the half of matugen that runs for EVERY theme, not just `auto`: it
+    is how GTK3, GTK4/libadwaita and the portal colour scheme get themed at
+    all. See ~/.config/matugen/config.toml for why the templates read the house
+    palette rather than matugen's own derivation.
+
+    Returns a one-line status for apply()'s report. Never raises: GTK theming
+    is the least important thing this script does and must not be able to fail
+    a theme switch.
+    """
+    if not matugen_available():
+        return "SKIPPED matugen templates (matugen not installed)"
+    if not MATUGEN_CONFIG.exists():
+        return f"SKIPPED matugen templates ({MATUGEN_CONFIG} missing)"
+
+    house = {k: t[k] for k in MD3_TO_HOUSE}
+    house["name"] = name
+    # Seeded from the palette's own primary accent, so matugen's container and
+    # fixed tones -- the ones the house schema has no name for -- land in the
+    # same hue family as the theme they are filling in around.
+    _, err = _matugen_run(["color", "hex", t["a1"]],
+                          import_json={"house": house}, templates=True)
+    if err:
+        return f"SKIPPED matugen templates ({err})"
+    # Named from the config rather than hardcoded, so adding a template there
+    # does not leave this line quietly lying about what was written.
+    try:
+        names = re.findall(r"^\s*\[templates\.([^\]]+)\]", MATUGEN_CONFIG.read_text(), re.M)
+    except OSError:
+        names = []
+    return "wrote matugen templates: " + (", ".join(names) if names else "(none)")
+
+
+def gtk_colour_scheme(t):
+    """Tell GTK and the portal whether this theme is dark or light.
+
+    The freedesktop Settings portal reads org.gnome.desktop.interface, so this
+    one gsettings write is what carries the theme into Chromium, VS Code,
+    Electron and every Flatpak -- none of which can read a single file this
+    script otherwise touches. Measured from the background's own luminance
+    rather than from the matugen mode option, because a hand-written theme
+    never went through matugen.
+    """
+    dark = luminance(_from_hex(t["bg"])) < 0.25
+    scheme = "prefer-dark" if dark else "prefer-light"
+    try:
+        subprocess.run(
+            ["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", scheme],
+            capture_output=True, timeout=5, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return "SKIPPED gsettings colour scheme (gsettings unavailable)"
+    # Accent colour, for the GNOME 47+ apps that honour it. Nearest of the
+    # eleven names GNOME accepts -- it is an enum, not a hex field.
+    try:
+        subprocess.run(
+            ["gsettings", "set", "org.gnome.desktop.interface", "accent-color",
+             _gnome_accent(t["a1"])],
+            capture_output=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return f"gsettings color-scheme = {scheme}"
+
+
+# GNOME's accent-color is a fixed enum, so the palette's accent has to be
+# rounded to whichever of these it is closest to in hue.
+_GNOME_ACCENTS = {
+    "blue": "#3584e4", "teal": "#2190a4", "green": "#3a944a",
+    "yellow": "#c88800", "orange": "#ed5b00", "red": "#e62d42",
+    "pink": "#d56199", "purple": "#9141ac", "slate": "#6f8396",
+}
+
+
+def _gnome_accent(hex_colour):
+    want = colorsys.rgb_to_hsv(*_from_hex(hex_colour))
+    if want[1] < 0.15:
+        return "slate"
+    best, best_d = "blue", 2.0
+    for name, hx in _GNOME_ACCENTS.items():
+        have = colorsys.rgb_to_hsv(*_from_hex(hx))
+        d = abs(want[0] - have[0])
+        d = min(d, 1.0 - d)
+        if d < best_d:
+            best, best_d = name, d
+    return best
+
+
 def palette_from_wallpaper(image_path, base_theme="mint"):
+    """Derive the nine house colours from an image.
+
+    matugen does the deriving. The hand-rolled hue-histogram version below is
+    kept only as the fallback for a machine without matugen installed -- it is
+    what this function used to be, and it is strictly worse.
+    """
+    if matugen_available():
+        try:
+            return palette_from_matugen(image_path, is_image=True,
+                                        base_theme=base_theme)
+        except RuntimeError as exc:
+            print(f"  matugen failed ({exc}) -- falling back to the built-in "
+                  f"derivation", file=sys.stderr)
+    else:
+        print("  matugen is not installed -- using the built-in derivation. "
+              "Install it with `just theme-install-matugen`.", file=sys.stderr)
+    return palette_from_wallpaper_legacy(image_path, base_theme=base_theme)
+
+
+def palette_from_wallpaper_legacy(image_path, base_theme="mint"):
     """Derive a full nine-colour palette from an image.
 
     Returns (palette_dict, notes). `notes` is a list of human-readable lines
@@ -880,6 +1270,15 @@ setw -g clock-mode-colour "{t["a1"]}"
     # Keep the Settings GUI's swatch list in step with THEMES on every apply.
     out.append(write_catalogue())
 
+    # --- GTK3 / GTK4 / the freedesktop portal, via matugen -------------
+    # Everything above is a config file this script owns outright. These two
+    # reach the applications it does not own -- toolkit apps through the GTK
+    # CSS matugen writes, and Electron/Chromium/Flatpak through the colour
+    # scheme the Settings portal broadcasts. See ~/.config/matugen/config.toml
+    # and ~/.config/xdg-desktop-portal/hyprland-portal.conf.
+    out.append(run_matugen_templates(name, t))
+    out.append(gtk_colour_scheme(t))
+
     STATE.write_text(name + "\n")
 
     # Remember which named theme to fall back on when `auto` meets a greyscale
@@ -1049,6 +1448,81 @@ def main():
     if arg in ("--catalogue", "--catalog"):
         print(write_catalogue())
         return 0
+
+    # Read or change how matugen builds a scheme, then re-apply so the change
+    # is visible now rather than at the next wallpaper change. The Quickshell
+    # Settings UI drives exactly this entry point.
+    #
+    #     theme-switch --matugen                    show the current options
+    #     theme-switch --matugen scheme-vibrant     pick an algorithm
+    #     theme-switch --matugen light              or a mode
+    #     theme-switch --matugen contrast 0.3       or a contrast offset (-1..1)
+    #     theme-switch --matugen --json             machine-readable, for the GUI
+    #
+    # Arguments are matched by shape, not by position, so any combination in
+    # any order works:  `--matugen light scheme-content contrast -0.2`.
+    if arg in ("--matugen", "-M"):
+        rest = sys.argv[2:]
+        changes, i, bad = {}, 0, []
+        while i < len(rest):
+            a = rest[i]
+            if a in MATUGEN_SCHEMES:
+                changes["scheme"] = a
+            elif "scheme-" + a in MATUGEN_SCHEMES:
+                changes["scheme"] = "scheme-" + a
+            elif a in ("dark", "light"):
+                changes["mode"] = a
+            elif a in MATUGEN_PREFER:
+                changes["prefer"] = a
+            elif a == "contrast" and i + 1 < len(rest):
+                i += 1
+                try:
+                    changes["contrast"] = max(-1.0, min(1.0, float(rest[i])))
+                except ValueError:
+                    bad.append(rest[i])
+            elif a in ("--json", "-j"):
+                changes["__json__"] = True
+            else:
+                bad.append(a)
+            i += 1
+        if bad:
+            print("Unrecognised: " + ", ".join(bad), file=sys.stderr)
+            print("Schemes: " + ", ".join(MATUGEN_SCHEMES), file=sys.stderr)
+            return 1
+
+        as_json = changes.pop("__json__", False)
+        opts = save_matugen_options(**changes) if changes else matugen_options()
+
+        if as_json:
+            print(json.dumps({
+                "installed": matugen_available(),
+                "options": opts,
+                "schemes": [{"id": k, "desc": v} for k, v in MATUGEN_SCHEMES.items()],
+                "prefer": [{"id": k, "desc": v} for k, v in MATUGEN_PREFER.items()],
+            }, indent=2))
+            return 0
+
+        if not matugen_available():
+            print("matugen is NOT installed -- `auto` is using the built-in")
+            print("fallback derivation. Install it: just theme-install-matugen\n")
+        print(f"  scheme    {opts['scheme']}  ({MATUGEN_SCHEMES[opts['scheme']]})")
+        print(f"  mode      {opts['mode']}")
+        print(f"  contrast  {opts['contrast']:+.2f}")
+        print(f"  prefer    {opts['prefer']}  ({MATUGEN_PREFER[opts['prefer']]})")
+        if not changes:
+            print("\nSchemes:")
+            for k, v in MATUGEN_SCHEMES.items():
+                print(f"  {k.removeprefix('scheme-'):<12} {v}")
+            print("\nSeed preference (which colour in the image to build from):")
+            for k, v in MATUGEN_PREFER.items():
+                print(f"  {k:<16} {v}")
+            return 0
+
+        # Something changed: re-apply whatever is active so it takes effect.
+        active = STATE.read_text().strip() if STATE.exists() else "auto"
+        print(f"\nRe-applying {active} with the new options...\n")
+        sys.argv = [sys.argv[0], active]
+        return main()
 
     if arg in ("--current", "-c"):
         print(STATE.read_text().strip() if STATE.exists() else "(unknown)")

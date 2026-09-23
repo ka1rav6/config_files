@@ -33,6 +33,33 @@ hl.window_rule({
     center = true,
 })
 
+-- The screen-share picker, i.e. the dialog xdg-desktop-portal-hyprland shows
+-- when an application asks to capture the screen. It is a Qt6 app and it asks
+-- for 950x800 of mostly empty space, so the size is pinned here rather than
+-- left to the app.
+--
+-- opacity = 1.0 is the load-bearing one: this is a permission prompt, and
+-- reading "which window am I about to share" through a 0.94 window onto a busy
+-- wallpaper is exactly the moment not to be guessing. dim_around darkens
+-- everything behind it, which both says "modal" and removes the distraction.
+-- It is a BOOLEAN here, not a strength -- how dark it goes is the global
+-- `decoration.dim_strength` in looknfeel.lua, which is 0.08, so the effect is
+-- a hint rather than a blackout. Passing a number here is a config error, and
+-- Hyprland reports it on the NEXT reload rather than the one that introduced
+-- it, which makes it easy to blame the wrong edit.
+--
+-- Its looks come from ~/.config/matugen/templates/share-picker.qss via
+-- ~/.local/bin/hyprland-share-picker-themed -- see ~/.config/hypr/xdph.conf.
+hl.window_rule({
+    name = "screen-share-picker",
+    match = { class = "^hyprland-share-picker$" },
+    float = true,
+    center = true,
+    size = { 760, 560 },
+    opacity = 1.0,
+    dim_around = true,
+})
+
 hl.window_rule({
     name = "skip-focus-applets",
     match = { class = "^(nm-applet|blueman-applet)$" },

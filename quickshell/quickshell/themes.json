@@ -102,13 +102,13 @@
     {
       "id": "auto",
       "label": "Wallpaper",
-      "desc": "derived from wallhaven-nkp2pm.png",
-      "bg": "#141615",
-      "surface": "#202523",
-      "text": "#edf7f3",
-      "a1": "#8ee3c1",
-      "a2": "#f4c47b",
-      "a3": "#ff9b85"
+      "desc": "matugen tonal-spot from wallpaper10.jpg",
+      "bg": "#101417",
+      "surface": "#1c2024",
+      "text": "#e0e3e8",
+      "a1": "#95cdf7",
+      "a2": "#cec0e8",
+      "a3": "#ffb4ab"
     }
   ]
 }

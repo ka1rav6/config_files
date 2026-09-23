@@ -138,5 +138,15 @@
     "path": "/home/kairav/.config/zathura",
     "category": "zathura",
     "description": "Custom backup: zathura"
+  },
+  {
+    "path": "/home/kairav/.config/matugen",
+    "category": "matugen",
+    "description": "Custom backup: matugen"
+  },
+  {
+    "path": "/home/kairav/.config/xdg-desktop-portal",
+    "category": "xdg-desktop-portal",
+    "description": "Custom backup: xdg-desktop-portal"
   }
 ]
