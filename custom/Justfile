@@ -1,6 +1,7 @@
 DEST := "/media/kairav/PROJECTS/dev/"
 EXCLUDES := home_directory() / ".config/rsync/excludes.txt"
 BACKUP := home_directory() / ".local/share/config-backup/config_backup.py"
+RESTORE := home_directory() / ".local/share/config-backup/config_restore.py"
 MAXVOL := "150"
 THEME := home_directory() / ".local/bin/theme-switch"
 
@@ -8,6 +9,58 @@ all: backup
 
 backup:
 	python {{BACKUP}}
+
+# --- Restore -----------------------------------------------------------------
+# The inverse of `just backup`: copies every tracked path out of ~/dotfiles and
+# back to where it lives. The path list in backup_paths.json is the only record
+# of where anything came from, so restore reads the same list backup writes.
+#
+#   just restore-check      show what would change, touch nothing  (start here)
+#   just restore            copy it all back, after confirming
+#   just restore-pushed     reset ~/dotfiles to origin/main first, then restore
+#
+# restore-check prints a numbered listing, and every recipe here takes those
+# numbers, so you can copy back one piece and leave the rest alone:
+#
+#   just restore 1          entry [1] of the last listing, all of it
+#   just restore 1 3        several entries
+#   just restore 1-3        an inclusive range
+#   just restore 1.2        just the file listed as 1.2
+#   just restore hypr nvim  or select by substring instead of by number
+#
+# The numbers are positions in that listing, which only holds what is currently
+# out of sync -- restore something and everything after it renumbers. They are
+# meant to be read off a fresh restore-check and used immediately; the paths
+# are always printed in full before the confirmation prompt, so check those,
+# not the numbers.
+#
+# Everything about to be overwritten is archived to
+# ~/.local/share/config-restore/pre-restore_<stamp>.tar.gz first, so a restore
+# from the wrong commit is itself undoable (`tar -xzf <archive> -C ~`).
+#
+# Directories are MERGED, not mirrored: files that exist locally but were never
+# backed up are left alone. That is deliberate -- the backup skips anything over
+# 2 MB, which here means every compiled binary in ~/.local/bin (todo is 155 MB)
+# and the larger wallpapers. `--clean` mirrors exactly and would delete all of
+# them, so it is opt-in and worth a `restore-check --clean` first.
+#
+# After restoring ~/.config/hypr or ~/.config/quickshell, reload them:
+# `hyprctl reload` and `just qs-reload` -- neither rereads config on its own.
+
+# Copy every tracked config from ~/dotfiles back into place
+[positional-arguments]
+restore *ARGS:
+	python {{RESTORE}} "$@"
+
+# What `just restore` would change, without changing anything
+[positional-arguments]
+restore-check *ARGS:
+	python {{RESTORE}} --dry-run "$@"
+
+# Restore exactly what was last pushed (hard-resets ~/dotfiles to origin/main)
+[positional-arguments]
+restore-pushed *ARGS:
+	python {{RESTORE}} --pull "$@"
 
 # --- Quickshell desktop layer ------------------------------------------------
 # The interactive shell: dock, Control Center, Settings, OSD, desktop widgets
