@@ -27,7 +27,7 @@ font-size = 13
 #     ghostty +list-themes
 # Preview one without editing this file:
 #     ghostty --theme=<name>
-theme = Rose Pine
+theme = Gruvbox Dark
 
 
 # --- Transparency ------------------------------------------------------------

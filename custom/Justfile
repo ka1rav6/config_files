@@ -298,8 +298,8 @@ picker-restyle:
 
 
 clean-brave:
-    pkill -f brave
+    pkill -x brave || true
     zsh -c 'setopt LOCAL_OPTIONS RM_STAR_SILENT; rm -rf ~/.cache/BraveSoftware/Brave-Browser/*'
 clean-chrome:
-    pkill -f chrome 
+    pkill -x chrome || true
     zsh -c 'setopt LOCAL_OPTIONS RM_STAR_SILENT; rm -rf ~/.cache/google-chrome/*'

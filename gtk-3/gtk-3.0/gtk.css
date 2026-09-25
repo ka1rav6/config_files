@@ -10,71 +10,71 @@
  * no equivalent role (containers, fixed variants, scrims).
  */
 
-@define-color theme_bg_color #101417;
-@define-color theme_base_color #1c2024;
-@define-color theme_fg_color #e0e3e8;
-@define-color theme_text_color #e0e3e8;
-@define-color theme_selected_bg_color #95cdf7;
-@define-color theme_selected_fg_color #101417;
-@define-color theme_unfocused_bg_color #101417;
-@define-color theme_unfocused_base_color #1c2024;
-@define-color theme_unfocused_fg_color #e0e3e8;
-@define-color theme_unfocused_text_color #c1c7ce;
-@define-color theme_unfocused_selected_bg_color #95cdf7;
-@define-color theme_unfocused_selected_fg_color #101417;
+@define-color theme_bg_color #1a120e;
+@define-color theme_base_color #271e19;
+@define-color theme_fg_color #f0dfd8;
+@define-color theme_text_color #f0dfd8;
+@define-color theme_selected_bg_color #ffb691;
+@define-color theme_selected_fg_color #1a120e;
+@define-color theme_unfocused_bg_color #1a120e;
+@define-color theme_unfocused_base_color #271e19;
+@define-color theme_unfocused_fg_color #f0dfd8;
+@define-color theme_unfocused_text_color #d7c2b9;
+@define-color theme_unfocused_selected_bg_color #ffb691;
+@define-color theme_unfocused_selected_fg_color #1a120e;
 
-@define-color insensitive_bg_color #1c2024;
-@define-color insensitive_fg_color #c1c7ce;
-@define-color insensitive_base_color #101417;
+@define-color insensitive_bg_color #271e19;
+@define-color insensitive_fg_color #d7c2b9;
+@define-color insensitive_base_color #1a120e;
 
-@define-color borders #41474d;
-@define-color unfocused_borders #41474d;
+@define-color borders #52443d;
+@define-color unfocused_borders #52443d;
 
-@define-color warning_color #cec0e8;
-@define-color error_color #ffb4ab;
-@define-color success_color #95cdf7;
+@define-color warning_color #cfc890;
+@define-color error_color #ffabac;
+@define-color success_color #ffb691;
 
 /* libadwaita (GTK4). Same names GNOME apps ask for by default. */
-@define-color accent_color #95cdf7;
-@define-color accent_bg_color #95cdf7;
-@define-color accent_fg_color #101417;
-@define-color destructive_color #ffb4ab;
-@define-color destructive_bg_color #ffb4ab;
-@define-color destructive_fg_color #101417;
-@define-color success_bg_color #95cdf7;
-@define-color success_fg_color #101417;
-@define-color warning_bg_color #cec0e8;
-@define-color warning_fg_color #101417;
-@define-color error_bg_color #ffb4ab;
-@define-color error_fg_color #101417;
+@define-color accent_color #ffb691;
+@define-color accent_bg_color #ffb691;
+@define-color accent_fg_color #1a120e;
+@define-color destructive_color #ffabac;
+@define-color destructive_bg_color #ffabac;
+@define-color destructive_fg_color #1a120e;
+@define-color success_bg_color #ffb691;
+@define-color success_fg_color #1a120e;
+@define-color warning_bg_color #cfc890;
+@define-color warning_fg_color #1a120e;
+@define-color error_bg_color #ffabac;
+@define-color error_fg_color #1a120e;
 
-@define-color window_bg_color #101417;
-@define-color window_fg_color #e0e3e8;
-@define-color view_bg_color #101417;
-@define-color view_fg_color #e0e3e8;
-@define-color headerbar_bg_color #1c2024;
-@define-color headerbar_fg_color #e0e3e8;
-@define-color headerbar_border_color #41474d;
-@define-color headerbar_backdrop_color #101417;
-@define-color sidebar_bg_color #1c2024;
-@define-color sidebar_fg_color #e0e3e8;
-@define-color sidebar_backdrop_color #101417;
-@define-color sidebar_border_color #41474d;
-@define-color secondary_sidebar_bg_color #1c2024;
-@define-color secondary_sidebar_fg_color #e0e3e8;
-@define-color card_bg_color #262a2e;
-@define-color card_fg_color #e0e3e8;
-@define-color dialog_bg_color #1c2024;
-@define-color dialog_fg_color #e0e3e8;
-@define-color popover_bg_color #1c2024;
-@define-color popover_fg_color #e0e3e8;
-@define-color thumbnail_bg_color #1c2024;
-@define-color thumbnail_fg_color #e0e3e8;
+@define-color window_bg_color #1a120e;
+@define-color window_fg_color #f0dfd8;
+@define-color view_bg_color #1a120e;
+@define-color view_fg_color #f0dfd8;
+@define-color headerbar_bg_color #271e19;
+@define-color headerbar_fg_color #f0dfd8;
+@define-color headerbar_border_color #52443d;
+@define-color headerbar_backdrop_color #1a120e;
+@define-color sidebar_bg_color #271e19;
+@define-color sidebar_fg_color #f0dfd8;
+@define-color sidebar_backdrop_color #1a120e;
+@define-color sidebar_border_color #52443d;
+@define-color secondary_sidebar_bg_color #271e19;
+@define-color secondary_sidebar_fg_color #f0dfd8;
+@define-color card_bg_color #322823;
+@define-color card_fg_color #f0dfd8;
+@define-color dialog_bg_color #271e19;
+@define-color dialog_fg_color #f0dfd8;
+@define-color popover_bg_color #271e19;
+@define-color popover_fg_color #f0dfd8;
+@define-color thumbnail_bg_color #271e19;
+@define-color thumbnail_fg_color #f0dfd8;
 
 /* Roles the house schema does not name -- matugen fills these in. */
 @define-color shade_color #000000;
 @define-color scrim_color #000000;
-@define-color accent_container_color #004c6e;
-@define-color on_accent_container_color #c9e6ff;
+@define-color accent_container_color #703716;
+@define-color on_accent_container_color #ffdbcb;
 
 /* THEME:END */

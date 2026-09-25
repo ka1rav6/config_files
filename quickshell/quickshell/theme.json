@@ -1,13 +1,13 @@
 {
   "name": "auto",
-  "desc": "matugen tonal-spot from wallpaper10.jpg",
-  "bg": "#101417",
-  "surface": "#1c2024",
-  "surface2": "#262a2e",
-  "border": "#41474d",
-  "text": "#e0e3e8",
-  "muted": "#c1c7ce",
-  "a1": "#95cdf7",
-  "a2": "#cec0e8",
-  "a3": "#ffb4ab"
+  "desc": "matugen tonal-spot from wallhaven-4lepol.jpg",
+  "bg": "#1a120e",
+  "surface": "#271e19",
+  "surface2": "#322823",
+  "border": "#52443d",
+  "text": "#f0dfd8",
+  "muted": "#d7c2b9",
+  "a1": "#ffb691",
+  "a2": "#cfc890",
+  "a3": "#ffabac"
 }

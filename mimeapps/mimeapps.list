@@ -58,5 +58,6 @@ video/3gpp=vlc.desktop
 video/3gpp2=vlc.desktop
 video/x-ogm+ogg=vlc.desktop
 video/x-theora+ogg=vlc.desktop
+x-scheme-handler/codex=chatgpt.desktop
 
 [Added Associations]

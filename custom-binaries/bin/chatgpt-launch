@@ -1,0 +1,21 @@
+#!/bin/sh
+# Launch the ChatGPT desktop app detached from the launcher's session, with
+# stderr captured so a crash leaves evidence behind.
+#
+# Why this exists: launched straight from wofi's .desktop entry, the app died
+# silently after 2-3 minutes -- no crashpad dump, no OOM kill, no segfault in
+# the journal, and the systemd scope reporting a clean stop. Launched this way
+# it stayed up indefinitely. The causal difference has NOT been proven, so this
+# deliberately changes nothing else: same binary, same XWayland backend the
+# stable run used. Do not add --ozone-platform=wayland here without testing.
+set -u
+
+logdir="${XDG_STATE_HOME:-$HOME/.local/state}/chatgpt"
+mkdir -p "$logdir"
+log="$logdir/chatgpt.log"
+
+# Rotate one generation. If the app crashes and you relaunch, the crashing
+# run's output survives as chatgpt.log.1 -- that file is the whole point.
+[ -f "$log" ] && mv -f "$log" "$logdir/chatgpt.log.1"
+
+exec setsid /usr/bin/chatgpt --enable-logging=stderr "$@" >"$log" 2>&1 </dev/null
