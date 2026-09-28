@@ -67,6 +67,13 @@ Singleton {
     readonly property alias visualizer: adapter.visualizer
     readonly property alias wallpaper: adapter.wallpaper
     readonly property alias performance: adapter.performance
+    // Window decoration and window-behaviour policy. `windows` is read by BOTH
+    // halves of the desktop: modules/windowcontrols draws from it, and
+    // services/WindowPolicy.qml pushes the two drag values into the
+    // compositor's Lua state (see the header there for why a push rather than
+    // a read).
+    readonly property alias windows: adapter.windows
+    readonly property alias lid: adapter.lid
 
     // False until the first read finishes. UI that would otherwise flash its
     // defaults for a frame before the real values land should gate on this.
@@ -454,6 +461,137 @@ Singleton {
                 // fullscreen. Distinct from desktop.hideOnFullscreen: this one
                 // stops work, that one only hides pixels.
                 property bool gameMode: true
+            }
+
+            // =============================================================
+            // windows — per-window decoration, and the mouse policy for
+            // turning a tiled window into a floating one.
+            //
+            // TWO CONSUMERS, TWO DIFFERENT ROUTES. This matters:
+            //
+            //   The `controls*` keys are read directly by
+            //   modules/windowcontrols/WindowControls.qml, in this process.
+            //   Nothing else needs to know about them.
+            //
+            //   `dragToFloat` and `floatScale` are consumed by a KEYBIND, in
+            //   the compositor's Lua state (~/.config/hypr/windows.lua). A
+            //   mouse-press handler cannot afford to read a JSON file, so
+            //   services/WindowPolicy.qml PUSHES these two into that Lua state
+            //   with `hyprctl eval` whenever they change. settings.json stays
+            //   the single source of truth; windows.lua carries matching
+            //   defaults so the gesture keeps working with this shell dead.
+            // =============================================================
+            property JsonObject windows: JsonObject {
+                // The macOS-style control cluster on the active window.
+                //
+                // Hyprland has no server-side titlebars, so this is a
+                // layer-shell overlay rather than a decoration -- see the
+                // header of modules/windowcontrols/WindowControls.qml for what
+                // that does and does not buy. `false` here means the whole
+                // component is never constructed: no surface, no timer, no
+                // subscription.
+                property bool controls: true
+
+                // Show the cluster on floating windows as well as tiled ones.
+                // Off is a reasonable taste: a floating window is usually
+                // something you summoned and will dismiss with the same key.
+                property bool controlsOnFloating: true
+
+                // Which corner. Only "top-right" is implemented -- the whole
+                // point of the feature is that the controls are NOT on the
+                // macOS left -- but the key exists so the choice is recorded
+                // in the file rather than buried in QML.
+                property string controlsPosition: "top-right"
+
+                // Diameter of one dot, logical px. 12 matches macOS closely at
+                // this scale; below ~9 they stop being clickable.
+                property int controlsSize: 12
+
+                // Distance from the window's top-right corner, logical px.
+                // Raise it if an application's own close button sits there.
+                property int controlsInset: 8
+
+                // Window classes the cluster never appears on, matched as
+                // substrings of the app_id.
+                //
+                // The scratchpads are here because they are summoned panels
+                // with their own toggle key -- a close button on the SUPER+`
+                // terminal would kill the pre-spawned instance that exists to
+                // make that key instant. hyprland-share-picker is here because
+                // it is a PERMISSION PROMPT: overlaying anything clickable on
+                // a "which window am I about to share" dialog is exactly the
+                // wrong place to be approximate.
+                property list<string> controlsExclude: [
+                    "com.scratchpad.ghostty",
+                    "com.yazi.ghostty",
+                    "hyprtodo",
+                    "hyprland-share-picker"
+                ]
+
+                // SUPER + left-drag on a TILED window pops it out to floating
+                // and hands it straight to the pointer. Off restores the plain
+                // Hyprland behaviour (drag-to-swap-tiles) on that gesture.
+                //
+                // Either way SUPER + SHIFT + left-drag stays the tile swap and
+                // SUPER + right-drag stays the resize, so nothing is lost.
+                property bool dragToFloat: true
+
+                // Target size of a popped-out window, as a fraction of its
+                // monitor's logical size. It is never enlarged -- a window
+                // already smaller than this keeps its size -- so this is a
+                // ceiling, not a target.
+                property real floatScale: 0.55
+            }
+
+            // =============================================================
+            // lid — what closing the laptop lid does.
+            //
+            // Read by ~/.config/hypr/scripts/lid.sh with jq, on each lid
+            // event. No push and no reload: the keybind that fires the script
+            // is registered once by ~/.config/hypr/lid.lua and the POLICY is
+            // decided per event, so toggling any of these takes effect on the
+            // very next lid close.
+            //
+            // logind is deliberately NOT part of this. Its three
+            // HandleLidSwitch* keys are all `ignore` in
+            // /etc/systemd/logind.conf.d/10-lid-ignore.conf, which is what
+            // stops it suspending the machine out from under a build -- and
+            // that is also why the lid currently does nothing at all. The
+            // display and camera policy that `ignore` leaves undone is what
+            // lives here.
+            // =============================================================
+            property JsonObject lid: JsonObject {
+                // Master switch. Off means the script returns immediately and
+                // the lid goes back to doing nothing, exactly as today.
+                property bool enabled: true
+
+                // Lid closed WITH an external monitor attached: keep the
+                // session running on the external. This is the case the whole
+                // feature exists for, so turning it off is only useful for
+                // proving what the script is responsible for.
+                property bool keepSessionOnExternal: true
+
+                // Stop the internal panel rendering when the lid is shut.
+                //
+                // The MECHANISM is chosen by the script, not here, because the
+                // safe one differs per case: with an external monitor present
+                // the internal output is disabled outright; with no external
+                // it is only DPMS-blanked, because disabling the last
+                // remaining output is how you lose a session. See lid.sh.
+                property bool disableInternal: true
+
+                // Lid closed with NO external monitor: lock the session, the
+                // way a closed laptop should be. Goes through
+                // ~/.local/bin/lock-session like every other lock path, so it
+                // cannot stack a second locker on a live one.
+                property bool lockOnClose: true
+
+                // Deauthorize the internal camera's USB device while the lid
+                // is shut, and authorize it again when the lid opens. Needs
+                // the one-time root helper installed -- see
+                // ~/.config/hypr/scripts/install-camera-guard.sh. Without it
+                // this is a no-op that logs and carries on.
+                property bool disableCamera: true
             }
         }
     }

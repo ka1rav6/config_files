@@ -18,7 +18,39 @@
 # just where Hyprland parks them, and it is never shown. The per-workspace
 # behaviour comes from the state file, not from the compositor.
 
+# ---------------------------------------------------------------------------
+# SUBCOMMANDS
+#
+#   (none) | toggle    the LIFO toggle described above. This is what
+#                      SUPER + SHIFT + A has always run, and its behaviour is
+#                      unchanged -- the argument handling below is additive.
+#   stash [address]    always hide. Never restores, whatever is on the stack.
+#   restore            always restore. Never hides.
+#
+# `stash` exists for the yellow dot in the window-control cluster
+# (~/.config/quickshell/modules/windowcontrols/WindowControls.qml). A minimize
+# BUTTON must minimize: routing it through the toggle meant that clicking it on
+# a workspace that already had something stashed un-minimized that other window
+# instead, which is indistinguishable from the button being broken.
+#
+# The optional address makes `stash` explicit about its target rather than
+# trusting focus. The cluster only ever appears on the focused window, so the
+# two agree -- but "agree in every case I thought of" is not the same as "cannot
+# disagree", and the cost of being exact here is one selector.
+# ---------------------------------------------------------------------------
+
 set -u
+
+mode="${1:-toggle}"
+target_address="${2:-}"
+
+case "$mode" in
+toggle | stash | restore) ;;
+*)
+    printf 'Usage: %s [toggle|stash [address]|restore]\n' "$0" >&2
+    exit 2
+    ;;
+esac
 
 STATE="$HOME/.cache/hyprland-minimized-windows"
 mkdir -p "$(dirname "$STATE")"
@@ -52,7 +84,7 @@ line=$(awk -F'|' -v ws="$current_ws" '$2 == ws { n = NR } END { if (n) print n }
 # ---------------------------------------------------------------------------
 # Something stashed here -> restore it
 # ---------------------------------------------------------------------------
-if [ -n "$line" ]; then
+if [ -n "$line" ] && [ "$mode" != "stash" ]; then
     address=$(sed -n "${line}p" "$STATE" | cut -d'|' -f1)
 
     # Workspace selector: numbers stay bare, named ones need the name: prefix.
@@ -83,9 +115,26 @@ end
 fi
 
 # ---------------------------------------------------------------------------
-# Nothing stashed here -> stash the focused window
+# Nothing stashed here -> stash the window
 # ---------------------------------------------------------------------------
-window=$(hyprctl activewindow -j)
+
+# `restore` asked for a restore and there was nothing to restore. Falling
+# through to the stash branch here would hide the focused window instead, which
+# is the opposite of what was asked.
+if [ "$mode" = "restore" ]; then
+    exit 0
+fi
+
+if [ -n "$target_address" ]; then
+    window=$(hyprctl clients -j | jq -c --arg a "$target_address" 'first(.[] | select(.address == $a)) // empty')
+    # The address was handed to us by another process; by the time we look, the
+    # window may already be gone. Silently doing nothing is right -- there is no
+    # user action left to serve.
+    [ -z "$window" ] && exit 0
+else
+    window=$(hyprctl activewindow -j)
+fi
+
 address=$(echo "$window" | jq -r '.address')
 ws_name=$(echo "$window" | jq -r '.workspace.name')
 
@@ -97,7 +146,7 @@ fi
 # Never stash a scratchpad window, or one already stashed. Those have their own
 # toggle keys, and hiding them here would strand them outside it.
 case "$ws_name" in
-    special:*) exit 0 ;;
+special:*) exit 0 ;;
 esac
 
 echo "$address|$ws_name" >>"$STATE"
@@ -117,9 +166,15 @@ echo "$address|$ws_name" >>"$STATE"
 # monitor:set_special_workspace("") rather than the toggle_special dispatcher
 # because the dispatcher only ever acts on the FOCUSED monitor, and on a
 # two-monitor setup the stash can surface on the other one.
+# The window is selected by address rather than by hl.get_active_window(), so an
+# explicit `stash <address>` cannot hide whatever happens to be focused at the
+# moment the chunk runs. The focus dispatch in front of it is what makes the
+# fullscreen-unset and the move -- both of which act on the ACTIVE window and
+# take no selector -- apply to the right one.
 hyprctl eval "
-local w = hl.get_active_window()
+local w = hl.get_window(\"address:$address\")
 if w == nil then return end
+hl.dispatch(hl.dsp.focus({ window = w }))
 if w.fullscreen ~= 0 then
     hl.dispatch(hl.dsp.window.fullscreen({ mode = \"fullscreen\", action = \"unset\" }))
 end

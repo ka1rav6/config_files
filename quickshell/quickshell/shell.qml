@@ -87,6 +87,11 @@ ShellRoot {
         void Settings.loaded;
         void Theme.name;
         void Hypr.usingLua;
+        // WindowPolicy — pushes the SUPER+drag policy into the compositor's Lua
+        // state at startup and on every `hyprctl reload`. That has to happen
+        // whether or not the control cluster is enabled, so it cannot be left
+        // to WindowControls constructing it lazily.
+        void WindowPolicy.visible;
     }
 
     // -----------------------------------------------------------------
@@ -186,6 +191,18 @@ ShellRoot {
     Loader {
         active: Settings.features.dashboard
         sourceComponent: Dashboard {}
+    }
+
+    // The macOS-style control cluster on the active window's top-right corner.
+    //
+    // Gated on Settings.windows.controls rather than on a features flag: it is
+    // one small surface per output with no service subscriptions, so it belongs
+    // with the other window settings rather than in Components. `false` still
+    // means nothing is constructed -- no surface, no tracking timer, no socket
+    // traffic (see the tracking note in services/WindowPolicy.qml).
+    Loader {
+        active: Settings.windows.controls
+        sourceComponent: WindowControls {}
     }
 
     // -----------------------------------------------------------------
@@ -379,6 +396,43 @@ ShellRoot {
         // built-in fallback.
         function current(): string {
             return Theme.name + (Theme.fromDisk ? "" : " (fallback)");
+        }
+    }
+
+    // Window controls. `toggle` is the same switch as Settings > Windows, so a
+    // keybind and the GUI cannot disagree about it.
+    //
+    // `suspend` / `resume` are called by the SUPER+drag mouse binds in
+    // ~/.config/hypr/bindings.lua, on press and on release. They exist because
+    // Hyprland emits no geometry event: without them the cluster would
+    // rubber-band a frame behind a window being dragged. The suspension
+    // self-clears after 8 s, so a `resume` lost to a shell restart mid-drag
+    // cannot hide the cluster permanently.
+    IpcHandler {
+        target: "windowcontrols"
+
+        function toggle(): string {
+            Settings.windows.controls = !Settings.windows.controls;
+            return Settings.windows.controls ? "on" : "off";
+        }
+
+        function on(): void { Settings.windows.controls = true; }
+        function off(): void { Settings.windows.controls = false; }
+
+        function suspend(): void { WindowPolicy.beginInteraction(); }
+        function resume(): void { WindowPolicy.endInteraction(); }
+
+        // Why the cluster is or is not on screen, in one line.
+        function status(): string {
+            if (!Settings.windows.controls) return "off";
+            if (WindowPolicy.visible) {
+                const win = WindowPolicy.active;
+                return "visible on " + (win ? win.cls + " @ " + win.x + "," + win.y
+                                              + " " + win.width + "x" + win.height
+                                        : "?")
+                    + (WindowPolicy.trackingFast ? " [following 8Hz]" : " [event-driven]");
+            }
+            return "hidden: " + WindowPolicy.suppressedBecause;
         }
     }
 

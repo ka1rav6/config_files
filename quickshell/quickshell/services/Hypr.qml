@@ -188,6 +188,15 @@ Singleton {
             case "changefloatingmode":
             case "fullscreen":
             case "pin":
+            // Focus changes did not used to invalidate the model, and for the
+            // dock they genuinely do not -- the same windows exist either way.
+            // They matter now that something hangs off the FOCUSED window's
+            // geometry (modules/windowcontrols): the newly focused window may
+            // have moved since it was last fetched, and `focusHistoryID` -- which
+            // is what WindowPolicy falls back on when the activewindow event has
+            // never fired -- is only correct as of the last refresh.
+            case "activewindow":
+            case "activewindowv2":
                 root.scheduleToplevelRefresh();
                 break;
             }

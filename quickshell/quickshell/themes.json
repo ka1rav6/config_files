@@ -102,13 +102,13 @@
     {
       "id": "auto",
       "label": "Wallpaper",
-      "desc": "matugen tonal-spot from wallhaven-4lepol.jpg",
-      "bg": "#1a120e",
-      "surface": "#271e19",
-      "text": "#f0dfd8",
-      "a1": "#ffb691",
-      "a2": "#cfc890",
-      "a3": "#ffabac"
+      "desc": "matugen tonal-spot from wallhaven-nkp2pm.png",
+      "bg": "#111318",
+      "surface": "#1e1f25",
+      "text": "#e2e2e9",
+      "a1": "#adc6ff",
+      "a2": "#debcdf",
+      "a3": "#ffb4ab"
     }
   ]
 }

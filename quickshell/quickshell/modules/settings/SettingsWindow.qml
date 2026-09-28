@@ -48,6 +48,7 @@ Panel {
         { id: "audio",       label: "Audio",       icon: "volume-high" },
         { id: "network",     label: "Network",     icon: "wifi-4" },
         { id: "shell",       label: "Dock & Launcher", icon: "dock" },
+        { id: "windows",     label: "Windows",     icon: "monitor" },
         { id: "components",  label: "Components",  icon: "widgets" },
         { id: "visualizer",  label: "Visualizer",  icon: "visualizer" },
         { id: "performance", label: "Performance", icon: "performance" },
@@ -174,6 +175,7 @@ Panel {
                     case "audio": return audioPage;
                     case "network": return networkPage;
                     case "shell": return shellPage;
+                    case "windows": return windowsPage;
                     case "components": return componentsPage;
                     case "visualizer": return visualizerPage;
                     case "performance": return performancePage;
@@ -209,6 +211,7 @@ Panel {
         Component { id: audioPage;       SettingsAudio {} }
         Component { id: networkPage;     SettingsNetwork {} }
         Component { id: shellPage;       SettingsShell {} }
+        Component { id: windowsPage;     SettingsWindows {} }
         Component { id: componentsPage;  SettingsComponents {} }
         Component { id: visualizerPage;  SettingsVisualizer {} }
         Component { id: performancePage; SettingsPerformance {} }

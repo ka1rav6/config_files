@@ -67,6 +67,7 @@ singleton ThemeCatalogue 1.0 services/ThemeCatalogue.qml
 singleton Wallpaper     1.0 services/Wallpaper.qml
 singleton SysInfo       1.0 services/SysInfo.qml
 singleton Matugen       1.0 services/Matugen.qml
+singleton WindowPolicy  1.0 services/WindowPolicy.qml
 
 # --- Design system -----------------------------------------------------------
 # The shared vocabulary. Every surface in the shell is a Card, every switch is a
@@ -107,6 +108,7 @@ SettingsAbout       1.0 modules/settings/SettingsAbout.qml
 SettingsAudio       1.0 modules/settings/SettingsAudio.qml
 SettingsNetwork     1.0 modules/settings/SettingsNetwork.qml
 SettingsShell       1.0 modules/settings/SettingsShell.qml
+SettingsWindows     1.0 modules/settings/SettingsWindows.qml
 Lock            1.0 modules/lock/Lock.qml
 LockSurface     1.0 modules/lock/LockSurface.qml
 LockWidget      1.0 modules/lock/LockWidget.qml
@@ -129,5 +131,6 @@ Dock            1.0 modules/dock/Dock.qml
 DockItem        1.0 modules/dock/DockItem.qml
 DockMenu        1.0 modules/dock/DockMenu.qml
 Dashboard       1.0 modules/dashboard/Dashboard.qml
+WindowControls  1.0 modules/windowcontrols/WindowControls.qml
 Calendar        1.0 modules/dashboard/Calendar.qml
 StatBar         1.0 modules/dashboard/StatBar.qml

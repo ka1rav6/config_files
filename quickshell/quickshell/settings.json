@@ -104,6 +104,13 @@
         "showSettings": true,
         "width": 640
     },
+    "lid": {
+        "disableCamera": true,
+        "disableInternal": true,
+        "enabled": true,
+        "keepSessionOnExternal": true,
+        "lockOnClose": true
+    },
     "osd": {
         "position": "bottom",
         "showBrightness": true,
@@ -141,5 +148,20 @@
         "perMonitor": false,
         "random": false,
         "randomInterval": 30
+    },
+    "windows": {
+        "controls": true,
+        "controlsExclude": [
+            "com.scratchpad.ghostty",
+            "com.yazi.ghostty",
+            "hyprtodo",
+            "hyprland-share-picker"
+        ],
+        "controlsInset": 8,
+        "controlsOnFloating": true,
+        "controlsPosition": "top-right",
+        "controlsSize": 12,
+        "dragToFloat": true,
+        "floatScale": 0.55
     }
 }

@@ -58,6 +58,13 @@ hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", ac
 -- Throw the focused window at the next monitor (wraps, so it round-trips).
 hl.bind(mod .. " + SHIFT + M", hl.dsp.window.move({ monitor = "+1" }))
 hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
+-- The complement to SUPER + left-drag: put the focused window back in the
+-- layout. Deliberately idempotent ("tile this") rather than another toggle --
+-- SUPER + SHIFT + SPACE above is already the toggle, and a key you can press
+-- twice without undoing yourself is the one you want on the way out of a pile of
+-- floating windows. T was free: SUPER + W then T is the tmux workspace (a
+-- different leader) and SUPER + SHIFT + T is themes.
+hl.bind(mod .. " + T", windows.tile)
 hl.bind(mod .. " + SHIFT + C", hl.dsp.window.center())
 
 -- Focus windows. hjkl covers all four directions; the arrows only cover up and
@@ -134,8 +141,30 @@ hl.bind(mod .. " + RIGHT", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mod .. " + SHIFT + LEFT", hl.dsp.window.move({ workspace = "e-1" }))
 hl.bind(mod .. " + SHIFT + RIGHT", hl.dsp.window.move({ workspace = "e+1" }))
 
--- Move and resize floating windows with the mouse.
-hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
+-- Move and resize windows with the mouse.
+--
+-- SUPER + LEFT-DRAG is the one bind in this file whose MEANING depends on the
+-- window. windows.drag() in windows.lua decides:
+--
+--   floating window -> move it. Byte for byte what this key always did.
+--   tiled window    -> pop it out of the layout: shrink it around the pointer,
+--                      float it there, and hand it to the same drag so it keeps
+--                      following the mouse. (Settings > Windows can turn this
+--                      half off, in which case the key is the plain dispatcher
+--                      again.)
+--
+-- NOTHING WAS TAKEN AWAY. The plain Hyprland behaviour for a tiled window --
+-- drag to swap tiles -- moved one modifier across to SUPER + SHIFT + LEFT-DRAG
+-- rather than being removed, because the two gestures cannot share a key: one
+-- of them has to mean "float this" and the other "swap this".
+--
+-- The release bind carries no action of its own. Hyprland ends its own drag on
+-- button release without being asked; this only tells the shell the interaction
+-- is over, so the window-control cluster stops hiding. `release = true` is the
+-- BindOptions flag for that (see HL.BindOptions in /usr/share/hypr/stubs).
+hl.bind(mod .. " + mouse:272", windows.drag, { mouse = true })
+hl.bind(mod .. " + mouse:272", windows.drag_release, { mouse = true, release = true })
+hl.bind(mod .. " + SHIFT + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
 -- Cycle windows without leaving the keyboard.
@@ -234,7 +263,11 @@ hl.bind(mod .. " + ALT + E", hl.dsp.exec_cmd(fileBrowser))
 -- thumbnail grid is genuinely the better tool.
 hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mod .. " + C", hl.dsp.exec_cmd("google-chrome --new-window"))
-hl.bind(mod .. " + V", hl.dsp.exec_cmd("cliphist list | wofi --dmenu | cliphist decode | wl-copy"))
+-- Clipboard history, through the SAME single-instance guard as SUPER + S. The
+-- pipeline itself moved into scripts/wofi-launch.sh so that the two wofi modes
+-- know about each other -- previously this one could open a second wofi directly
+-- on top of the launcher's, since neither knew the other existed.
+hl.bind(mod .. " + V", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/wofi-launch.sh clip"))
 hl.bind(mod .. " + SHIFT + V", hl.dsp.exec_cmd("code"))
 -- Stash the focused window away and bring it back, on one key. Which of the
 -- two a press means depends on the workspace you are standing on: if it has

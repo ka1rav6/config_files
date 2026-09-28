@@ -29,6 +29,15 @@ yazi = os.getenv("HOME") .. "/.local/bin/yazi"
 -- a class, a window rule and a special workspace to go with it.
 fileBrowser = terminal .. " --title=yazi -e " .. yazi
 
-launcher = "wofi --show drun --conf ~/.config/wofi/config --style ~/.config/wofi/style.css"
+-- The launcher goes through a guard script rather than invoking wofi directly.
+--
+-- SUPER + S used to run this command unconditionally on every press, so holding
+-- the key -- or pressing it twice while the first wofi was still mapping -- got
+-- you two overlapping layer surfaces both holding a keyboard grab. The wofi
+-- flags and the clipboard pipeline now live in scripts/wofi-launch.sh, which
+-- serialises the decision behind an flock and keeps exactly one instance per
+-- mode. See that file for why the obvious `pgrep wofi || wofi` is both racy and
+-- self-matching.
+launcher = os.getenv("HOME") .. "/.config/hypr/scripts/wofi-launch.sh drun"
 
 mainMod = "SUPER"

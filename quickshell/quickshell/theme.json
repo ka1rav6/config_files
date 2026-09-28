@@ -1,13 +1,13 @@
 {
-  "name": "auto",
-  "desc": "matugen tonal-spot from wallhaven-4lepol.jpg",
-  "bg": "#1a120e",
-  "surface": "#271e19",
-  "surface2": "#322823",
-  "border": "#52443d",
-  "text": "#f0dfd8",
-  "muted": "#d7c2b9",
-  "a1": "#ffb691",
-  "a2": "#cfc890",
-  "a3": "#ffabac"
+  "name": "catppuccin",
+  "desc": "Catppuccin Mocha \u2014 soft pastels on warm dark purple",
+  "bg": "#1e1e2e",
+  "surface": "#313244",
+  "surface2": "#45475a",
+  "border": "#585b70",
+  "text": "#cdd6f4",
+  "muted": "#a6adc8",
+  "a1": "#a6e3a1",
+  "a2": "#f9e2af",
+  "a3": "#f38ba8"
 }
