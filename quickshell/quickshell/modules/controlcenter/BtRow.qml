@@ -13,12 +13,41 @@ Rectangle {
 
     readonly property bool paired: !!(device && (device.paired || device.bonded))
     readonly property bool connected: !!(device && device.connected)
-    readonly property string label: device ? (device.deviceName || device.name || device.address) : ""
+    readonly property string address: device && device.address ? device.address : ""
+
+    // Bluetooth.label() rather than `deviceName || name || address`, because
+    // that chain cannot do what it looks like it does -- BlueZ substitutes the
+    // ADDRESS into the alias for a device that has never reported a name, so
+    // `name` is truthy and the row rendered a MAC address as if it were the
+    // device's name. See the long comment on hasRealName() in
+    // services/Bluetooth.qml.
+    readonly property string label: Bluetooth.label(root.device)
+
+    // No name of its own -- almost always a BLE beacon. The address is still
+    // worth showing for these, but on the second line and labelled as what it
+    // is, not impersonating a name on the first.
+    readonly property bool anonymous: !!root.device && !Bluetooth.hasRealName(root.device)
+
+    // Pairing goes out to a subprocess (it needs a BlueZ agent this shell does
+    // not register), so its progress arrives on the service rather than on the
+    // device object -- device.pairing only ever reflects Quickshell's own
+    // pair(), which is no longer the path taken.
+    readonly property bool pairing: root.address !== ""
+                                    && Bluetooth.pairingAddress === root.address
+    readonly property bool failed: root.address !== ""
+                                   && Bluetooth.pairingErrorAddress === root.address
+                                   && Bluetooth.pairingError !== ""
+
+    // Some other device is mid-pairing: one agent, one pairing at a time.
+    readonly property bool blocked: Bluetooth.pairingBusy && !root.pairing
 
     height: content.implicitHeight + Appearance.sm * 2
     radius: Appearance.radiusInner
-    color: root.connected ? Theme.wash(Theme.accent, 0.16)
+    color: root.failed ? Theme.wash(Theme.error, 0.12)
+         : root.connected || root.pairing ? Theme.wash(Theme.accent, 0.16)
          : mouse.containsMouse ? Theme.hover : "transparent"
+
+    opacity: root.blocked ? 0.45 : 1.0
 
     Behavior on color {
         enabled: !Appearance.motionless
@@ -50,7 +79,8 @@ Rectangle {
             // Pulse while pairing or connecting, so a device that takes ten
             // seconds does not look like a dead row.
             SequentialAnimation on opacity {
-                running: !!(root.device && root.device.pairing) && !Appearance.motionless
+                running: (root.pairing || !!(root.device && root.device.pairing))
+                         && !Appearance.motionless
                 loops: Animation.Infinite
                 NumberAnimation { to: 0.35; duration: 600 }
                 NumberAnimation { to: 1.0; duration: 600 }
@@ -77,6 +107,8 @@ Rectangle {
                 visible: text !== ""
                 text: {
                     if (root.confirmingForget) return "Forget this device?";
+                    if (root.pairing) return Bluetooth.pairingStatus || "Pairing…";
+                    if (root.failed) return Bluetooth.pairingError;
                     if (root.device && root.device.pairing) return "Pairing…";
                     if (root.connected) {
                         // Headset battery, when the device reports it. Genuinely
@@ -86,12 +118,21 @@ Rectangle {
                         return "Connected";
                     }
                     if (root.paired) return "Not connected";
-                    return "";
+                    // Unpaired. An anonymous device gets its address here --
+                    // the one place it is honest -- and a named one gets told
+                    // what clicking will do, since "click a row to pair" is not
+                    // obvious when every other row in the panel is a toggle.
+                    if (root.anonymous) return root.address + " · no name";
+                    return "Click to pair";
                 }
-                color: root.confirmingForget ? Theme.error
-                     : root.connected ? Theme.accent : Theme.muted
+                color: root.confirmingForget || root.failed ? Theme.error
+                     : root.connected || root.pairing ? Theme.accent : Theme.muted
                 font.family: Appearance.font
                 font.pixelSize: Appearance.fontCaption
+                // A failure reason is a sentence and needs the room; every
+                // other state here is short enough to elide on one line.
+                wrapMode: root.failed ? Text.WordWrap : Text.NoWrap
+                maximumLineCount: root.failed ? 3 : 1
                 elide: Text.ElideRight
             }
         }
@@ -143,6 +184,11 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
         onClicked: {
             if (root.confirmingForget) { root.confirmingForget = false; return; }
+            // Clicking the row that is already pairing cancels it -- otherwise
+            // a device that is never going to answer holds the only agent for
+            // the full 60-second timeout.
+            if (root.pairing) { Bluetooth.cancelPairing(); return; }
+            if (root.blocked) return;
             if (root.connected) Bluetooth.disconnectDevice(root.device);
             else Bluetooth.connectDevice(root.device);
         }

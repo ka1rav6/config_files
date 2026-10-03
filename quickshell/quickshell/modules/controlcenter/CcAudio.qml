@@ -1,4 +1,10 @@
 import QtQuick
+// Quickshell, for execDetached() -- see the handler that opens the external
+// tool below. WITHOUT THIS IMPORT the `Quickshell` name is simply undefined,
+// the click handler dies on a ReferenceError, and the button does nothing at
+// all with no visible error: the qmldir header's warning about singletons,
+// one level up.
+import Quickshell
 import qs
 
 // =============================================================================

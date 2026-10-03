@@ -14,12 +14,24 @@ import qs
 // resident (52 + 44, measured) and two Python/GTK processes, to provide a tray
 // icon and a menu.
 //
-// The applet is still needed for ONE thing -- registering the BlueZ pairing
-// agent, without which a NEW device cannot be paired -- so ~/.local/bin/bt-pair
-// starts it for the length of a pairing session and stops it again. Note that
-// stopping it means stopping the systemd USER UNIT (it is D-Bus activated) and
-// blueman-tray alongside it; a plain `pkill -x blueman-applet` leaves both
-// resident, which leaked that full 97 MiB after every pair.
+// PAIRING NEEDS AN AGENT, AND THIS SHELL IS NOT ONE
+//   BlueZ refuses to pair with anything unless some process has registered an
+//   org.bluez.Agent1 to answer "confirm this passkey". Quickshell exposes
+//   BluetoothDevice.pair() but registers no such agent, so pair() on its own
+//   fails on the bus and looks, on screen, like a dead button.
+//
+//   ~/.local/bin/bt-connect supplies one by holding a single short-lived
+//   bluetoothctl session open for the length of one pairing (bluetoothctl
+//   registers an agent of its own the moment it connects to bluetoothd). That
+//   covers everything that pairs with a yes: headphones, speakers, mice, TVs,
+//   controllers. See pairDevice() below.
+//
+//   ~/.local/bin/bt-pair -- the blueman detour -- is now only the fallback for
+//   devices that need a PIN typed IN, which no unattended agent can answer. It
+//   still starts blueman-applet for its AuthAgent and stops it again; note that
+//   stopping it means stopping the systemd USER UNIT (it is D-Bus activated)
+//   and blueman-tray alongside it, since a plain `pkill -x blueman-applet`
+//   leaves both resident and leaked that full 97 MiB after every pair.
 //
 // DISCOVERY IS GATED, FOR THE SAME REASON SCANNING IS IN Network.qml
 //   Bluetooth discovery keeps the radio transmitting and is a genuine battery
@@ -45,22 +57,86 @@ Singleton {
 
     readonly property var allDevices: Bluetooth.devices ? Bluetooth.devices.values : []
 
+    // --- Names ---------------------------------------------------------
+    //
+    // WHY A DEVICE WITH NO NAME IS NOT A DEVICE WITH AN EMPTY NAME
+    //   BlueZ exposes two names. `Name` is what the device actually told us,
+    //   and is ABSENT as a property entirely until it has told us something.
+    //   `Alias` is the writable display name -- and when there is no `Name`,
+    //   BlueZ fills `Alias` in with the device's own ADDRESS. Quickshell maps
+    //   `Name` to `deviceName` and `Alias` to `name`.
+    //
+    //   So `deviceName || name || address` -- the obvious-looking fallback
+    //   chain, and the one this shell used -- can never reach its `address`
+    //   arm, because `name` is already the address wearing a name's clothes.
+    //   Confirmed over D-Bus on this machine:
+    //
+    //       dev_5A_54_5D_F4_72_FA   Name:  <no such property>
+    //                               Alias: "5A:54:5D:F4:72:FA"
+    //       dev_88_92_CC_2B_3E_B0   Name:  "JBL TUNE770NC"
+    //
+    //   That is where the panel's rows of bare MAC addresses came from. They
+    //   were never a rendering bug: the shell genuinely believed those strings
+    //   were the devices' names. Worse, the "has a name" filter below was
+    //   written as `d.deviceName || d.name`, which is therefore TRUE for every
+    //   anonymous BLE beacon in radio range -- and since the page caps itself
+    //   at six rows, a real device could be, and was, pushed off the list by
+    //   other people's fitness trackers.
+    function hasRealName(device) {
+        if (!device) return false;
+        if (device.deviceName && device.deviceName.length > 0) return true;
+
+        const alias = device.name || "";
+        if (alias.length === 0) return false;
+
+        // BlueZ writes the placeholder colon-separated, but aliases imported
+        // from other tools turn up dash- or underscore-separated; normalise
+        // before comparing so none of those spellings reads as a real name.
+        const address = (device.address || "").toUpperCase();
+        return alias.toUpperCase().replace(/[-_]/g, ":") !== address;
+    }
+
+    // The string to put in front of a human. Never an address -- the address
+    // belongs in the second line, where BtRow puts it, labelled as what it is.
+    function label(device) {
+        if (!device) return "";
+        if (device.deviceName && device.deviceName.length > 0) return device.deviceName;
+        if (root.hasRealName(device)) return device.name;
+        return "Unknown device";
+    }
+
     // Paired devices, connected first. This is the list worth showing when the
     // panel opens -- the things you actually own.
     readonly property var pairedDevices: {
         const list = root.allDevices.filter(d => d.paired || d.bonded);
         list.sort((a, b) => {
             if (a.connected !== b.connected) return a.connected ? -1 : 1;
-            return (a.deviceName || a.name || "").localeCompare(b.deviceName || b.name || "");
+            return root.label(a).localeCompare(root.label(b));
         });
         return list;
     }
 
-    // Everything else in range, only meaningful while discovering.
+    // In range, unpaired, and has told us what it is. Only meaningful while
+    // discovering.
     readonly property var availableDevices: {
         return root.allDevices
-            .filter(d => !d.paired && !d.bonded && (d.deviceName || d.name))
-            .sort((a, b) => (a.deviceName || a.name).localeCompare(b.deviceName || b.name));
+            .filter(d => !d.paired && !d.bonded && root.hasRealName(d))
+            .sort((a, b) => root.label(a).localeCompare(root.label(b)));
+    }
+
+    // In range, unpaired, and anonymous.
+    //
+    // Kept as a SEPARATE list rather than filtered away, because "anonymous"
+    // and "useless" are not the same thing: a device that has not advertised a
+    // name yet often has one a few seconds later, and a few genuinely never
+    // advertise one. But they are overwhelmingly BLE beacons -- random-address
+    // trackers, phones' privacy addresses, somebody's earbud case -- so they
+    // are not allowed to share a list with the thing the user is looking for.
+    // The page shows the count and reveals them on request.
+    readonly property var unnamedDevices: {
+        return root.allDevices
+            .filter(d => !d.paired && !d.bonded && !root.hasRealName(d))
+            .sort((a, b) => (a.address || "").localeCompare(b.address || ""));
     }
 
     readonly property var connectedDevices: root.allDevices.filter(d => d.connected)
@@ -71,7 +147,7 @@ Singleton {
         if (!root.enabled) return "Off";
         const c = root.connectedDevices;
         if (c.length === 0) return "On";
-        if (c.length === 1) return c[0].deviceName || c[0].name || "Connected";
+        if (c.length === 1) return root.label(c[0]);
         return c.length + " connected";
     }
 
@@ -151,11 +227,178 @@ Singleton {
         }
     }
 
+    // --- Pairability --------------------------------------------------
+    //
+    // The adapter on this machine sits at `Pairable: no` with nothing to change
+    // it -- blueman-manager used to turn it on while its window was open, and
+    // nothing took that job over. Pairable governs pair requests arriving FROM
+    // a device, which is how phones and some keyboards insist on doing it, so
+    // with it off those devices cannot be added at all.
+    //
+    // Discoverable is the matching half: it is what makes this machine appear
+    // in the other device's own Bluetooth list.
+    //
+    // BOTH ARE GATED ON `scanning`, i.e. on the Bluetooth page being open, for
+    // the same reason discovery is -- an always-discoverable machine is a
+    // standing invitation, and there is no reason to advertise except while
+    // somebody is actually adding a device. `discoverableTimeout` is a backstop
+    // for the case where the shell dies with it still on; BlueZ then clears it
+    // itself after three minutes.
+    //
+    // UNLIKE THE `discovering` BINDING ABOVE, THESE NEED NO `when` GUARD.
+    //   That one is guarded because stopping discovery is a METHOD CALL that
+    //   BlueZ rejects when there is nothing to stop. Pairable and Discoverable
+    //   are plain D-Bus properties -- setting one to the value it already holds
+    //   is accepted silently -- so a permanent binding writing `false` at
+    //   startup costs nothing and produces no warning.
+    // `|| root.pairingBusy`, because the panel closing must not pull pairability
+    // out from under a pairing that is still running. Observed live: closing the
+    // Control Center during a phone pairing set Pairable back to false while
+    // bt-connect was still mid-exchange, which is exactly the state that makes a
+    // device-initiated pairing fail.
+    Binding {
+        target: root.adapter
+        property: "pairable"
+        value: (root.scanning || root.pairingBusy) && root.enabled
+    }
+
+    Binding {
+        target: root.adapter
+        property: "discoverableTimeout"
+        value: 180
+    }
+
+    Binding {
+        target: root.adapter
+        property: "discoverable"
+        value: (root.scanning || root.pairingBusy) && root.enabled
+    }
+
+    // --- Pairing ------------------------------------------------------
+    //
+    // WHY THIS IS NOT JUST device.pair()
+    //   It was, and that is why clicking a new device did nothing at all.
+    //   BlueZ refuses every pairing attempt unless some process has registered
+    //   an org.bluez.Agent1 to answer "confirm this passkey" / "enter this
+    //   PIN". Quickshell's Bluetooth module drives the adapter and exposes
+    //   pair(), but registers no agent (there is no Agent1 or AgentManager1
+    //   anywhere in its source) -- so pair() was an error on the bus and a
+    //   no-op in the UI, with nothing on screen to say so.
+    //
+    //   ~/.local/bin/bt-connect supplies the missing agent by holding one short
+    //   bluetoothctl session open for the length of a single pairing -- see its
+    //   header for why bluetoothctl and not blueman -- and then pairs, TRUSTS
+    //   and connects the device. Trusting is the part that makes the headset
+    //   reconnect on its own afterwards, when no agent is running at all.
+    //
+    // ONE AT A TIME
+    //   Two concurrent pairings would mean two agents fighting over the same
+    //   prompts, and the Process below has one `command` property anyway -- the
+    //   exact shape of bug that bit the audio-profile queue further down.
+    //   Pairing is a thing a person does once, deliberately, so the second
+    //   request is refused rather than queued.
+
+    // Address currently being paired, "" when idle.
+    property string pairingAddress: ""
+
+    // Progress for the row to show while it runs.
+    property string pairingStatus: ""
+
+    // Last failure, and which device it belonged to -- the row needs both, or a
+    // failure on one device renders under all of them.
+    property string pairingError: ""
+    property string pairingErrorAddress: ""
+
+    // Set when the failure was specifically "this device wants a PIN typed in",
+    // which bt-connect cannot answer and blueman can. The page uses it to point
+    // at the right button instead of just saying no.
+    property bool pairingNeedsManager: false
+
+    readonly property bool pairingBusy: root.pairingAddress !== ""
+
+    function pairDevice(device) {
+        if (!device) return;
+        if (root.pairingBusy) return;
+
+        const address = device.address || "";
+        if (address === "") return;
+
+        root.pairingAddress = address;
+        root.pairingStatus = "Starting…";
+        root.pairingError = "";
+        root.pairingErrorAddress = "";
+        root.pairingNeedsManager = false;
+
+        pairProc.command = [Quickshell.env("HOME") + "/.local/bin/bt-connect", address];
+        pairProc.running = true;
+    }
+
+    function cancelPairing() {
+        if (pairProc.running) pairProc.signal(15);
+    }
+
+    Process {
+        id: pairProc
+
+        running: false
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const text = line.trim();
+                if (text === "") return;
+
+                console.log("[bluetooth] pair", root.pairingAddress, text);
+
+                if (text.startsWith("status: ")) {
+                    const key = text.substring(8);
+                    root.pairingStatus = key === "starting agent" ? "Starting…"
+                                       : key === "pairing"        ? "Pairing…"
+                                       : key === "paired"         ? "Paired, connecting…"
+                                       : key === "connecting"     ? "Connecting…"
+                                       : key;
+                } else if (text.startsWith("passkey: ")) {
+                    // Shown so it can be compared against the device's screen.
+                    root.pairingStatus = "Passkey " + text.substring(9);
+                } else if (text.startsWith("error: ")) {
+                    root.pairingErrorAddress = root.pairingAddress;
+                    root.pairingError = text.substring(7);
+                } else if (text.startsWith("ok: ")) {
+                    root.pairingError = "";
+                    root.pairingErrorAddress = "";
+                }
+            }
+        }
+
+        // Exit 2 is bt-connect's "needs a PIN typed in"; 3 is "paired but could
+        // not connect", which is a half-success -- the device is in My devices
+        // now and one click away, so it is not worth a scary message.
+        onExited: (code) => {
+            root.pairingNeedsManager = (code === 2);
+            root.pairingAddress = "";
+            root.pairingStatus = "";
+            if (root.pairingError !== "") errorExpiry.restart();
+        }
+    }
+
+    // Don't leave a failure on screen indefinitely -- the device list is live,
+    // and a red line under a row the user has since successfully paired is
+    // worse than no line at all.
+    Timer {
+        id: errorExpiry
+
+        interval: 20000
+        onTriggered: {
+            root.pairingError = "";
+            root.pairingErrorAddress = "";
+            root.pairingNeedsManager = false;
+        }
+    }
+
     function connectDevice(device) {
         if (!device) return;
-        // An unpaired device has to be paired first; BlueZ will not connect to
-        // a stranger. Pairing normally auto-connects afterwards.
-        if (!device.paired && !device.bonded) device.pair();
+        // An unpaired device has to be paired first, and pairing needs an agent
+        // this shell does not have -- hence the subprocess. See above.
+        if (!device.paired && !device.bonded) root.pairDevice(device);
         else device.connect();
     }
 

@@ -1,0 +1,333 @@
+#!/usr/bin/env bash
+# =============================================================================
+# bt-connect — pair, trust and connect ONE Bluetooth device, with an agent.
+# =============================================================================
+# Usage: bt-connect <MAC>
+#
+# Called from the Control Center's Bluetooth page (services/Bluetooth.qml,
+# pairDevice()). Prints machine-readable progress on stdout for the panel to
+# display, and exits non-zero on failure.
+#
+# THE PROBLEM THIS SOLVES
+#   BlueZ refuses to pair with anything unless some process has registered an
+#   org.bluez.Agent1 -- the object that answers "confirm this passkey" and
+#   "enter this PIN". Quickshell's Bluetooth module drives the adapter and
+#   exposes BluetoothDevice.pair(), but registers NO agent (verified: no
+#   Agent1/AgentManager1 anywhere in its source). So clicking an unpaired
+#   device in the panel called pair(), BlueZ rejected it for want of an agent,
+#   and the row did nothing -- which is exactly what it looks like when the
+#   button is broken.
+#
+#   The old answer was ~/.local/bin/bt-pair: start blueman-applet for its
+#   AuthAgent, open blueman-manager, stop the applet again. That still exists
+#   and is still the right fallback (see WHEN THIS GIVES UP below), but it is a
+#   125 MiB GTK detour to connect a pair of headphones.
+#
+# WHY bluetoothctl IS THE AGENT
+#   bluetoothctl registers an agent of its own the moment it connects to
+#   bluetoothd -- it prints "Agent registered" unprompted, before any command
+#   is typed. Verified on this machine with bluez 5.72:
+#
+#       $ { sleep 2; echo default-agent; echo quit; } | bluetoothctl
+#       Agent registered
+#       Default agent request successful
+#
+#   So an interactive bluetoothctl held open for the length of one pairing IS a
+#   working pairing agent, at the cost of one short-lived C process. No Python,
+#   no GTK, no tray icon, nothing resident afterwards.
+#
+# WHY A COPROCESS AND NOT A PIPED HEREDOC
+#   bluetoothctl's agent prompts arrive WITHOUT a trailing newline
+#   ("[agent] Confirm passkey 123456 (yes/no): ") and arrive at times that
+#   depend on the device, not on us. Blind `{ sleep 1; echo yes; } |
+#   bluetoothctl` guesses at that timing and cannot tell success from failure.
+#   This reads bluetoothd's side character by character instead, so a prompt is
+#   recognised the moment it is complete, and every outcome is observed rather
+#   than assumed.
+#
+#   The first attempt here piped commands in with no delay at all, and got
+#       Waiting to connect to bluetoothd... / Failed to register agent object
+#   because the commands were consumed before the bus connection existed. That
+#   is why step 1 below WAITS for "Agent registered" instead of sleeping.
+#
+# WHAT IT AUTO-ANSWERS, AND WHAT THAT COSTS
+#   Pairing modes that only need a yes ("Confirm passkey", "Accept pairing",
+#   "Authorize service") are answered yes automatically -- the user just
+#   clicked this device by name in their own panel, so a second confirmation
+#   dialog would be theatre. The passkey, when there is one, is still printed
+#   (and notified) so it can be compared against the device's screen.
+#
+# WHEN THIS GIVES UP
+#   Prompts that need a value only the user can supply -- "Enter PIN code:",
+#   "Enter passkey:", i.e. a keyboard you must type a code INTO -- cannot be
+#   answered from here. The script exits 2 and the panel points at "Pair a new
+#   device…", which opens blueman and its real dialogs. Exit 2 is the only
+#   case that still needs blueman.
+#
+# WHAT IT DOES NOT DO
+#   Audio routing. Selecting the A2DP card profile stays in
+#   services/Bluetooth.qml (ensureAudioProfile), which fires off the device's
+#   connected state regardless of who connected it -- see that file's header
+#   for why a connected headset with no sink is a thing that happens.
+# -----------------------------------------------------------------------------
+set -uo pipefail
+
+MAC="${1:-}"
+
+# Addresses go into bluetoothctl commands, so validate rather than interpolate
+# whatever arrived. Upper-cased because bluetoothctl matches case-sensitively
+# against BlueZ's own upper-case form.
+if ! printf '%s' "$MAC" | grep -qiE '^([0-9A-F]{2}:){5}[0-9A-F]{2}$'; then
+    echo "error: not a Bluetooth address: ${MAC:-<none>}"
+    exit 64
+fi
+MAC=$(printf '%s' "$MAC" | tr '[:lower:]' '[:upper:]')
+
+if ! command -v bluetoothctl >/dev/null 2>&1; then
+    echo "error: bluetoothctl is not installed"
+    exit 1
+fi
+
+# How long each phase may take. Pairing is the slow one: a device that has to
+# be woken, or a user walking over to press a button on it, routinely takes
+# half a minute.
+AGENT_TIMEOUT=10
+PAIR_TIMEOUT=60
+CONNECT_TIMEOUT=30
+
+notify() {
+    command -v notify-send >/dev/null 2>&1 \
+        && notify-send -a "Bluetooth" -i bluetooth "$1" "${2:-}" >/dev/null 2>&1 &
+    return 0
+}
+
+# -----------------------------------------------------------------------------
+# The session.
+#
+# stdbuf -oL, because bluetoothctl's stdout is a PIPE here, not a terminal, so
+# libc switches it to 4 KiB block buffering and nothing arrives until it exits
+# -- the reader below would see no prompts at all and time out on every pair.
+# The sed strips the colour escapes and \r that bluetoothctl emits even when not
+# on a tty, which would otherwise sit inside the strings being matched.
+# -----------------------------------------------------------------------------
+coproc BT { stdbuf -oL bluetoothctl 2>&1 | stdbuf -oL sed -u 's/\x1b\[[0-9;?]*[a-zA-Z]//g; s/\r//g'; }
+
+# Copy the pid out NOW, under a name bash does not manage.
+#
+# `coproc BT` makes bash maintain a variable literally called BT_PID -- and bash
+# UNSETS it again the moment the coprocess dies. Reading $BT_PID from the exit
+# trap (where the coprocess is, by definition, usually already gone) therefore
+# aborted the trap with "BT_PID: unbound variable" under `set -u`, on every
+# single run, after the real work had already finished. Harmless to the pairing
+# but it printed a bash error into the panel's output.
+BTCTL_PID="${BT_PID:-}"
+
+cleaned=0
+cleanup() {
+    # Idempotent: the signal path below reaches this through EXIT, and a double
+    # `quit` into a closed fd is noise at best.
+    [ "$cleaned" = "1" ] && return 0
+    cleaned=1
+
+    # `quit` lets bluetoothctl unregister its agent and drop its discovery
+    # reference cleanly; the kill is only for a session that has already wedged.
+    printf 'quit\n' >&"${BT[1]}" 2>/dev/null || true
+    sleep 0.2
+    [ -n "$BTCTL_PID" ] || return 0
+    kill "$BTCTL_PID" 2>/dev/null || true
+    wait "$BTCTL_PID" 2>/dev/null || true
+}
+
+# SIGNALS NEED THEIR OWN TRAP, AND IT MUST EXIT.
+#
+# `trap cleanup EXIT INT TERM HUP` -- which is what this was -- does not stop
+# the script on a signal. Bash runs the handler and then RESUMES where it was
+# interrupted, so a SIGTERM tore down the bluetoothctl session and then carried
+# on reading from a dead coprocess until the 60-second pair timeout. Cancelling
+# a pairing from the panel (Bluetooth.cancelPairing(), which sends SIGTERM) would
+# have looked like it did nothing for a minute.
+#
+# Delegating to `exit` rather than calling cleanup here means the EXIT trap does
+# the work exactly once, whichever way the script ends.
+trap cleanup EXIT
+trap 'exit 143' INT TERM HUP
+
+send() { printf '%s\n' "$1" >&"${BT[1]}" 2>/dev/null; }
+
+# Read one unit of output: a whole line, OR a prompt that will never be
+# newline-terminated. `buf` is deliberately global so a partial prompt survives
+# between calls.
+buf=""
+CHUNK=""
+read_chunk() {
+    local ch
+    CHUNK=""
+    while IFS= read -r -N 1 -t "$1" ch <&"${BT[0]}"; do
+        if [ "$ch" = $'\n' ]; then
+            CHUNK="$buf"; buf=""
+            return 0
+        fi
+        buf+="$ch"
+        # Prompt terminators. Matching on the trailing colon is what makes a
+        # promptless line readable at all.
+        case "$buf" in
+            *"(yes/no):"*|*"Enter PIN code:"*|*"Enter passkey"*":"*)
+                CHUNK="$buf"; buf=""
+                return 0
+                ;;
+        esac
+    done
+    return 1
+}
+
+# The last prompt actually answered. bluetoothctl runs readline, which REDRAWS
+# its prompt -- so "[agent] Confirm passkey 667910 (yes/no):" arrives again on
+# every redraw, and the reader below cannot tell a redraw from a new question.
+# Observed live: one phone pairing logged the same passkey sixteen times and sent
+# sixteen `yes` replies, the extras landing in bluetoothctl as stray commands.
+# Answering an identical prompt once is sufficient and correct.
+last_prompt=""
+
+# Answer whatever agent prompt is in CHUNK. Returns 2 if it is one that needs a
+# human at a keyboard.
+handle_prompt() {
+    # Strip the variable part (readline padding) before comparing.
+    local fingerprint
+    fingerprint=$(printf '%s' "$CHUNK" | tr -s ' ')
+    [ "$fingerprint" = "$last_prompt" ] && return 0
+    last_prompt="$fingerprint"
+
+    case "$CHUNK" in
+        *"Enter PIN code:"*|*"Enter passkey"*":"*)
+            echo "error: this device needs a PIN typed in; use Pair a new device…"
+            return 2
+            ;;
+        *"Confirm passkey"*"(yes/no):"*)
+            # "[agent] Confirm passkey 123456 (yes/no):"
+            local key
+            key=$(printf '%s' "$CHUNK" | grep -oE 'passkey [0-9]+' | grep -oE '[0-9]+')
+            [ -n "$key" ] && echo "passkey: $key" \
+                          && notify "Pairing $MAC" "Passkey $key"
+            send "yes"
+            ;;
+        *"(yes/no):"*)
+            # Accept pairing / Authorize service / Request authorization.
+            send "yes"
+            ;;
+    esac
+    return 0
+}
+
+# --- 1. wait for the agent ---------------------------------------------------
+echo "status: starting agent"
+agent_ok=0
+deadline=$((SECONDS + AGENT_TIMEOUT))
+while [ "$SECONDS" -lt "$deadline" ]; do
+    read_chunk 1 || continue
+    case "$CHUNK" in
+        *"Agent registered"*) agent_ok=1; break ;;
+    esac
+done
+
+if [ "$agent_ok" != "1" ]; then
+    echo "error: no pairing agent (bluetoothd not reachable)"
+    exit 1
+fi
+
+send "default-agent"
+# Accept pair requests coming the OTHER way too, for the length of this
+# session -- a device that insists on initiating, which some phones do.
+send "pairable on"
+
+# DELIBERATELY NO `scan on` HERE.
+#
+# It was here, on the theory that BlueZ must have SEEN a device to resolve it
+# for Pair. It does -- but the Bluetooth page is already scanning whenever there
+# is a row to click, so the device is known, and starting a SECOND discovery
+# from a second D-Bus client made `adapter.discovering` read true for a session
+# Quickshell does not own. Quickshell then tried to stop it when its own page
+# closed, and BlueZ answered
+#
+#     Failed to stop discovery ...: "No discovery started"
+#
+# on every pairing -- the exact warning services/Bluetooth.qml goes to some
+# length to avoid. Letting the panel own discovery outright is simpler and
+# removes the cross-client interference entirely.
+
+# --- 2. pair -----------------------------------------------------------------
+echo "status: pairing"
+send "pair $MAC"
+
+paired=0
+rc=1
+deadline=$((SECONDS + PAIR_TIMEOUT))
+while [ "$SECONDS" -lt "$deadline" ]; do
+    read_chunk 2 || continue
+    case "$CHUNK" in
+        *"(yes/no):"*|*"Enter PIN code:"*|*"Enter passkey"*":"*)
+            handle_prompt || { rc=$?; exit "$rc"; }
+            ;;
+        # "Pairing successful" is bluetoothctl's own line; the [CHG] property
+        # change is bluetoothd's. Accepting either means a reworded client
+        # message cannot make a successful pair look like a timeout.
+        *"Pairing successful"*|*"Paired: yes"*)
+            paired=1; break ;;
+        # Re-clicking a device that paired a moment ago, or one BlueZ already
+        # knows: not an error, just skip ahead to connecting.
+        *"AlreadyExists"*|*"Already paired"*)
+            paired=1; break ;;
+        *"Failed to pair"*)
+            reason=$(printf '%s' "$CHUNK" | sed 's/.*org\.bluez\.Error\.//; s/.*Failed to pair: *//')
+            echo "error: pairing failed (${reason:-unknown})"
+            notify "Pairing failed" "$MAC: ${reason:-unknown}"
+            exit 1 ;;
+        *"not available"*)
+            echo "error: device is out of range or switched off"
+            notify "Pairing failed" "$MAC is not reachable"
+            exit 1 ;;
+    esac
+done
+
+if [ "$paired" != "1" ]; then
+    echo "error: pairing timed out after ${PAIR_TIMEOUT}s"
+    notify "Pairing timed out" "$MAC did not respond"
+    exit 1
+fi
+
+echo "status: paired"
+
+# --- 3. trust ----------------------------------------------------------------
+# Without this, BlueZ asks for service authorisation on every single
+# reconnection -- and with no agent running at that point (this script is long
+# gone), the device silently fails to come back after a reboot. Trusting at
+# pair time is what makes "turn the headphones on and they connect" work.
+send "trust $MAC"
+read_chunk 2 >/dev/null 2>&1 || true
+
+# --- 4. connect --------------------------------------------------------------
+echo "status: connecting"
+send "connect $MAC"
+
+deadline=$((SECONDS + CONNECT_TIMEOUT))
+while [ "$SECONDS" -lt "$deadline" ]; do
+    read_chunk 2 || continue
+    case "$CHUNK" in
+        *"(yes/no):"*)
+            handle_prompt || { rc=$?; exit "$rc"; }
+            ;;
+        *"Connection successful"*|*"Connected: yes"*)
+            echo "ok: connected"
+            exit 0 ;;
+        *"Failed to connect"*)
+            reason=$(printf '%s' "$CHUNK" | sed 's/.*org\.bluez\.Error\.//; s/.*Failed to connect: *//')
+            # Paired but not connected is a partial success worth reporting as
+            # such: the device is in "My devices" now and one click away.
+            echo "error: paired, but connecting failed (${reason:-unknown})"
+            notify "Bluetooth" "Paired, but could not connect: ${reason:-unknown}"
+            exit 3 ;;
+    esac
+done
+
+echo "error: paired, but connecting timed out"
+notify "Bluetooth" "Paired, but connecting timed out"
+exit 3

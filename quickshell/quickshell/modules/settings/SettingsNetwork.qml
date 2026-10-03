@@ -57,7 +57,13 @@ Column {
             model: Network.wifiEnabled ? Network.networks.slice(0, 10) : []
 
             Rectangle {
+                id: row
+
                 required property var modelData
+
+                // Whether this row's Forget button is armed. Per row, so
+                // arming one disarms nothing else and nothing else arms it.
+                property bool confirming: false
 
                 width: parent.width
                 height: Appearance.controlHeight
@@ -98,7 +104,7 @@ Column {
 
                 Text {
                     id: netState
-                    anchors.right: parent.right
+                    anchors.right: forgetButton.left
                     anchors.rightMargin: Appearance.sm
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.connected ? "Connected"
@@ -115,6 +121,7 @@ Column {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
+                        row.confirming = false;
                         // A passphrase prompt belongs in the Control Center,
                         // which is built around one-handed operation. From here
                         // an unknown network opens the proper editor.
@@ -125,6 +132,51 @@ Column {
                             Shell.panels["control-center"].page = "wifi";
                         } else Network.connect(modelData);
                     }
+                }
+
+                // Forget, so a router whose password changed can be re-joined
+                // at all: a `known` network never prompts, so until the stored
+                // profile is deleted (or overwritten from the Control Center's
+                // key button) the stale secret is retried forever.
+                //
+                // DECLARED AFTER THE ROW'S MouseArea ON PURPOSE -- later
+                // siblings are on top, and a fill-the-row MouseArea written
+                // after this would swallow every click aimed at it.
+                //
+                // Confirmed in place rather than with a dialog: the first click
+                // turns the icon into the word, the second does it. A Settings
+                // list row is not worth a modal, but deleting a passphrase you
+                // may not have written down anywhere is worth a second look.
+                Button {
+                    id: forgetButton
+
+                    visible: modelData.known
+                    width: visible ? implicitWidth : 0
+                    height: Appearance.controlHeight
+                    anchors.right: parent.right
+                    anchors.rightMargin: Appearance.sm
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: row.confirming ? "Forget?" : ""
+                    icon: row.confirming ? "" : "trash"
+                    variant: row.confirming ? "danger" : "ghost"
+                    onClicked: {
+                        if (row.confirming) {
+                            Network.forget(modelData);
+                            row.confirming = false;
+                            confirmTimeout.stop();
+                        } else {
+                            row.confirming = true;
+                            confirmTimeout.restart();
+                        }
+                    }
+                }
+
+                // An armed Forget that is walked away from disarms itself, so
+                // it can never be the thing sitting under the next stray click.
+                Timer {
+                    id: confirmTimeout
+                    interval: 4000
+                    onTriggered: row.confirming = false
                 }
             }
         }

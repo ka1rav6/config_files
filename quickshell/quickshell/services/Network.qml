@@ -54,7 +54,7 @@ Singleton {
 
     readonly property var wiredDevice: {
         for (const d of root.devices) {
-            if (d.type === DeviceType.Ethernet) return d;
+            if (d.type === DeviceType.Wired) return d;
         }
         return null;
     }
@@ -182,18 +182,34 @@ Singleton {
     // --- Actions ------------------------------------------------------
 
     function setWifiEnabled(enabled) {
+        if (!enabled) root.clearError();
         Networking.wifiEnabled = enabled;
     }
 
     function toggleWifi() {
-        Networking.wifiEnabled = !Networking.wifiEnabled;
+        root.setWifiEnabled(!Networking.wifiEnabled);
     }
 
     // Join a network. A `known` network already has its passphrase stored, so
     // it connects with no prompt -- which is the case wifi-menu.sh got right
     // and nm-connection-editor never handled at all.
+    //
+    // PASSING A PASSPHRASE FOR A KNOWN NETWORK IS AN EDIT, NOT A DUPLICATE.
+    //   quickshell's WifiNetwork::connectWithPsk checks for existing settings
+    //   first and, when it finds them, does an Update on that profile and
+    //   reactivates it -- it only falls back to AddAndActivate when the SSID
+    //   has never been saved. So this one call is also how a rotated router
+    //   password is fixed: hand it the new secret and the stored one is
+    //   overwritten in place, with the rest of the profile left alone.
+    //
+    //   Two things it will NOT do, both enforced in C++ with nothing but a
+    //   critical log line to show for it -- so callers must not offer them:
+    //     * rewrite the secret of a network that is currently CONNECTED, and
+    //     * accept a passphrase for anything canUsePassphrase() rejects.
     function connect(network, passphrase) {
         if (!network) return;
+        root.clearError();
+        root.pendingNetwork = network;
         if (passphrase !== undefined && passphrase !== "")
             network.connectWithPsk(passphrase);
         else
@@ -202,7 +218,32 @@ Singleton {
 
     function disconnect() {
         const n = root.activeNetwork;
+        root.pendingNetwork = null;
+        root.clearError();
         if (n) n.disconnect();
+    }
+
+    // Delete every saved profile NetworkManager holds for this network.
+    //
+    // NMNetwork::forget() walks all the NMSettings the SSID owns and Deletes
+    // each over D-Bus, so an SSID that got saved twice (easy to do: joining
+    // once by hand and once from a QR code leaves two profiles) is genuinely
+    // forgotten rather than half forgotten. If the profile being deleted is
+    // the active one, NetworkManager tears the link down as it goes.
+    //
+    // WHY THIS EXISTS
+    //   `known` short-circuits needsPassphrase(), so a saved network never
+    //   prompts -- it just quietly retries the stored secret. When a router's
+    //   password changes, that is unrecoverable from inside the shell: the row
+    //   fails forever and there is nowhere to type the new key. connect() with
+    //   a passphrase is the gentle fix; this is the one for a profile that is
+    //   wrong in some other way (wrong security type, a stale EAP identity, a
+    //   duplicate NetworkManager made behind your back).
+    function forget(network) {
+        if (!network) return;
+        if (root.pendingNetwork === network) root.pendingNetwork = null;
+        root.clearError();
+        network.forget();
     }
 
     // Whether joining this network will need a passphrase typed.
@@ -219,5 +260,103 @@ Singleton {
         if (network.known) return false;                  // saved already
         const s = network.security;
         return s !== WifiSecurityType.Open && s !== WifiSecurityType.Owe;
+    }
+
+    // Whether a passphrase box can do anything for this network at all.
+    //
+    // connectWithPsk() hard-refuses any security type that is not WpaPsk,
+    // Wpa2Psk or Sae: src/network/wifi.cpp logs "has the wrong security type
+    // for a PSK" and returns WITHOUT emitting, so the UI sees no failure, no
+    // state change, nothing. An enterprise (EAP) or WEP network offered a
+    // password field therefore gets a field that silently cannot work, which
+    // is worse than not offering one. Anything this returns false for belongs
+    // in nm-connection-editor, and the panels say so.
+    function canUsePassphrase(network) {
+        if (!network) return false;
+        const s = network.security;
+        return s === WifiSecurityType.WpaPsk
+            || s === WifiSecurityType.Wpa2Psk
+            || s === WifiSecurityType.Sae;
+    }
+
+    // --- Failure reporting --------------------------------------------
+    //
+    // A FAILED JOIN USED TO BE COMPLETELY SILENT. NetworkManager reports why
+    // over D-Bus and quickshell re-emits it as Network::connectionFailed, but
+    // nothing in this shell was listening -- so the single most common failure
+    // of all, a stored passphrase that no longer matches the router, looked
+    // exactly like clicking the row and having nothing happen. That silence is
+    // half of what made a changed password unrecoverable here; forget() and
+    // the passphrase re-entry above are the other half.
+    //
+    // ONLY THE JOIN WE STARTED IS WATCHED.
+    //   The obvious alternative -- a Connections per visible network -- would
+    //   rebuild one object per AP every time `networks` re-evaluates, and that
+    //   binding re-runs on every signal-strength tick while a panel is
+    //   scanning. One target, swapped on connect(), costs nothing and is the
+    //   only attribution anyone actually wants: "the thing I just clicked".
+
+    // The network a join is outstanding on, or null.
+    property var pendingNetwork: null
+
+    // Human-readable reason the last join failed, or "" if nothing has.
+    property string lastError: ""
+    property string lastErrorSsid: ""
+
+    // True when re-typing the passphrase is a plausible fix, so panels know
+    // whether to offer that as the next step rather than just reporting.
+    property bool lastErrorWasAuth: false
+
+    function clearError() {
+        root.lastError = "";
+        root.lastErrorSsid = "";
+        root.lastErrorWasAuth = false;
+    }
+
+    function failureText(reason) {
+        switch (reason) {
+        case ConnectionFailReason.NoSecrets:
+            return "Wrong password.";
+        case ConnectionFailReason.WifiAuthTimeout:
+            return "Timed out authenticating — the password may have changed.";
+        case ConnectionFailReason.WifiClientFailed:
+            return "The Wi-Fi client rejected the connection.";
+        case ConnectionFailReason.WifiClientDisconnected:
+            return "Disconnected during the handshake.";
+        case ConnectionFailReason.WifiNetworkLost:
+            return "That network went out of range.";
+        default:
+            return "Could not connect.";
+        }
+    }
+
+    // No ignoreUnknownSignals here, deliberately: a null target between
+    // attempts is simply inactive and silent, so the only thing that flag
+    // could ever hide is a handler named after a signal that does not exist --
+    // which is exactly the mistake worth hearing about at load time.
+    Connections {
+        target: root.pendingNetwork
+
+        function onConnectionFailed(reason) {
+            const n = root.pendingNetwork;
+            root.lastErrorSsid = n ? n.name : "";
+            // NoSecrets is the honest "wrong key" answer, but a router that
+            // simply stops replying to a bad key produces a supplicant timeout
+            // or failure instead, so those count as auth failures too -- all
+            // three have the same fix.
+            root.lastErrorWasAuth = reason === ConnectionFailReason.NoSecrets
+                || reason === ConnectionFailReason.WifiAuthTimeout
+                || reason === ConnectionFailReason.WifiClientFailed;
+            root.lastError = root.failureText(reason);
+            root.pendingNetwork = null;
+        }
+
+        function onConnectedChanged() {
+            const n = root.pendingNetwork;
+            if (n && n.connected) {
+                root.clearError();
+                root.pendingNetwork = null;
+            }
+        }
     }
 }

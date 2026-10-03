@@ -88,6 +88,7 @@ Text {
         "battery-charging": "\udb80\udc84",   // md-battery_charging  U+F0084
         "power":            "\udb81\udc25",   // md-power  U+F0425
         "lock":             "\udb80\udf3e",   // md-lock  U+F033E
+        "key":              "\udb80\udf06",   // md-key  U+F0306
         "logout":           "\udb80\udf43",   // md-logout  U+F0343
         "restart":          "\udb81\udf09",   // md-restart  U+F0709
         "suspend":          "\udb82\udd04",   // md-power_sleep  U+F0904

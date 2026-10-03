@@ -1,13 +1,13 @@
 {
-  "name": "catppuccin",
-  "desc": "Catppuccin Mocha \u2014 soft pastels on warm dark purple",
-  "bg": "#1e1e2e",
-  "surface": "#313244",
-  "surface2": "#45475a",
-  "border": "#585b70",
-  "text": "#cdd6f4",
-  "muted": "#a6adc8",
-  "a1": "#a6e3a1",
-  "a2": "#f9e2af",
-  "a3": "#f38ba8"
+  "name": "auto",
+  "desc": "matugen tonal-spot from wallhaven-m388vm.png",
+  "bg": "#1a1111",
+  "surface": "#271d1d",
+  "surface2": "#322827",
+  "border": "#524343",
+  "text": "#f0dede",
+  "muted": "#d7c1c1",
+  "a1": "#ffb3b3",
+  "a2": "#e5c18d",
+  "a3": "#ffabca"
 }

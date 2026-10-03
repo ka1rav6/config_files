@@ -212,7 +212,90 @@ local function prewarm_ghostty()
     )
 end
 
+-- Hand the session environment to the D-Bus activation environment.
+--
+-- THE BUG THIS FIXES -- kdeconnectd ABORTING WITH SIGNAL 6
+--   hl.env() above sets variables for processes HYPRLAND spawns. It does
+--   nothing for processes the SESSION BUS spawns, because dbus-daemon is
+--   started by GDM before Hyprland exists and keeps the environment it was
+--   born with. So a D-Bus-activated service saw DISPLAY=:0 (inherited from
+--   GDM) but NOT QT_QPA_PLATFORM=wayland;xcb.
+--
+--   For a Qt app that combination is fatal. With DISPLAY set and no platform
+--   hint, Qt picks "xcb", cannot reach a usable X server, and calls abort():
+--
+--     qt.qpa.xcb: could not connect to display
+--     qt.qpa.plugin: Could not load the Qt platform plugin "xcb"
+--     dbus-daemon: Activated service 'org.kde.kdeconnect' failed:
+--                  Process org.kde.kdeconnect received signal 6
+--
+--   Which is why `kdeconnect-cli --list-devices` answered only
+--   "org.freedesktop.DBus.Error.Spawn.ChildSignaled" while running
+--   /usr/lib/x86_64-linux-gnu/libexec/kdeconnectd BY HAND worked perfectly --
+--   launched from a terminal it inherited the right environment.
+--
+--   Exporting QT_QPA_PLATFORM is the whole fix. The Qt5 wayland plugin is
+--   present (qtwayland5), so "wayland;xcb" resolves to wayland and the xcb
+--   fallback is never reached.
+--
+-- WHY --systemd AS WELL
+--   It updates `systemctl --user show-environment` in the same call, so user
+--   units started later (hyprpolkitagent below, and anything D-Bus-activated
+--   from one) get the same variables. Without it the two environments drift.
+--
+-- This is cheap, idempotent and affects every Qt/D-Bus service, not just
+-- KDE Connect -- kdeconnect-app, kdeconnect-handler and kdeconnect-sms are
+-- all D-Bus activated and all crashed the same way.
+local function export_session_env_to_dbus()
+    hl.exec_cmd(
+        "exec dbus-update-activation-environment --systemd"
+            .. " QT_QPA_PLATFORM WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
+            .. " XDG_SESSION_TYPE HYPRLAND_INSTANCE_SIGNATURE DISPLAY"
+            .. " XCURSOR_THEME XCURSOR_SIZE"
+    )
+end
+
+-- KDE Connect daemon -- phone pairing, notifications, clipboard, file share.
+--
+-- WHY IT IS SPAWNED EXPLICITLY RATHER THAN LEFT TO D-BUS
+--   The package ships /etc/xdg/autostart/org.kde.kdeconnect.daemon.desktop,
+--   but nothing in this session reads XDG autostart files -- there is no
+--   dex/xdg-desktop-autostart here, that is what this file is for. It also
+--   ships a D-Bus .service file, so it WOULD start on demand, but on demand
+--   means "when something asks it a question". Until then nothing is
+--   listening on port 1716 and the phone cannot reach the desktop at all, so
+--   notifications and incoming files would only start arriving after the
+--   first manual poke.
+--
+--   pgrep -x is safe here: the daemon's process name really is "kdeconnectd"
+--   (it is a compiled binary, not a script), so the self-match trap described
+--   on spawn_once does not apply.
+--
+-- NOT A systemd UNIT
+--   `systemctl --user status kdeconnect` reports "could not be found" on
+--   Ubuntu and that is expected -- this package has no kdeconnect.service.
+--   The daemon is a D-Bus service, which is why the .service file above is
+--   the only registration it has.
+--
+-- THE FIREWALL IS PART OF THIS
+--   KDE Connect needs 1714-1764 on BOTH tcp and udp open inbound. ufw is
+--   active on this machine and denies incoming by default, which silently
+--   breaks discovery: the desktop's UDP broadcast goes out fine, the phone
+--   answers with a TCP connection, and that answer is dropped.
+--     sudo ufw allow 1714:1764/udp
+--     sudo ufw allow 1714:1764/tcp
+local kdeconnectd = "/usr/lib/x86_64-linux-gnu/libexec/kdeconnectd"
+
+local function start_kdeconnect()
+    hl.exec_cmd(
+        "[ -x " .. kdeconnectd .. " ] || exit 0;"
+            .. " pgrep -x kdeconnectd >/dev/null 2>&1 || exec " .. kdeconnectd
+    )
+end
+
 hl.on("hyprland.start", function()
+    -- First: every Qt/D-Bus service started below depends on this.
+    export_session_env_to_dbus()
     scratchpads.ensure_prespawned()
     prewarm_ghostty()
     spawn("hyprpaper")
@@ -283,5 +366,6 @@ hl.on("hyprland.start", function()
     --
     -- Reconnecting an already-paired device needs no agent, so headphones,
     -- mice and keyboards all come back on their own exactly as before.
+    start_kdeconnect()
     start_quickshell()
 end)
