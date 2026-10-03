@@ -303,3 +303,67 @@ clean-brave:
 clean-chrome:
     pkill -x chrome || true
     zsh -c 'setopt LOCAL_OPTIONS RM_STAR_SILENT; rm -rf ~/.cache/google-chrome/*'
+
+# --- KDE Connect / Galaxy S25+ -----------------------------------------------
+# The daemon is /usr/lib/x86_64-linux-gnu/libexec/kdeconnectd -- not on PATH,
+# and there is no kdeconnect.service, because it is a D-Bus activated service.
+# autostart.lua starts it at login and, crucially, exports QT_QPA_PLATFORM and
+# DISPLAY into the D-Bus activation environment first; without that the daemon
+# aborts with SIGABRT on the xcb platform plugin and every kdeconnect-* command
+# fails with Error.Spawn.ChildSignaled.
+#
+# The device id below is this phone's. Get it for any other device with:
+#   kdeconnect-cli -l --id-name-only
+PHONE := "26a9e7fafbb64e419200c54385669f33"
+
+# Pairing state, reachability and whether the filesystem is mounted
+phone-status:
+    #!/usr/bin/env bash
+    kdeconnect-cli -l || true
+    echo
+    echo -n "mounted: "
+    gdbus call --session --dest org.kde.kdeconnect \
+        --object-path /modules/kdeconnect/devices/{{PHONE}}/sftp \
+        --method org.kde.kdeconnect.device.sftp.isMounted 2>/dev/null || echo "(plugin not loaded)"
+    echo "incoming files land in: $(xdg-user-dir DOWNLOAD)"
+
+# Mount the phone and open its storage in a file manager
+phone-browse:
+    #!/usr/bin/env bash
+    # Two traps here, both of which produce an empty window rather than an error.
+    #
+    # 1. startBrowsing() opens mountPoint() -- the mount ROOT -- but Android
+    #    scoped storage lets the app enumerate only the directory it was
+    #    granted. The root, /storage and /storage/emulated are all traversable
+    #    yet readdir-empty, so the file manager truthfully shows "folder is
+    #    empty". getDirectories() names the listable one (/storage/emulated/0),
+    #    so ask for that rather than hardcoding it -- it changes if an SD card
+    #    is exposed too.
+    #
+    # 2. NOT xdg-open: antigravity.desktop declares inode/directory and holds
+    #    the default-handler slot, so xdg-open launches the editor. Name a file
+    #    manager explicitly.
+    set -euo pipefail
+    obj=/modules/kdeconnect/devices/{{PHONE}}/sftp
+    gdbus call --session --dest org.kde.kdeconnect --object-path "$obj" \
+        --method org.kde.kdeconnect.device.sftp.mountAndWait >/dev/null
+    dir=$(gdbus call --session --dest org.kde.kdeconnect --object-path "$obj" \
+        --method org.kde.kdeconnect.device.sftp.getDirectories |
+        python3 -c "import sys,re; m=re.findall(r\"'(/[^']+)':\", sys.stdin.read()); print(m[0] if m else '')")
+    if [ -z "$dir" ]; then echo "phone advertised no directories" >&2; exit 1; fi
+    echo "opening $dir"
+    setsid nautilus "$dir" >/dev/null 2>&1 &
+
+# Drop the phone's sshfs mount
+phone-unmount:
+    @gdbus call --session --dest org.kde.kdeconnect \
+        --object-path /modules/kdeconnect/devices/{{PHONE}}/sftp \
+        --method org.kde.kdeconnect.device.sftp.unmount
+
+# Send one or more files to the phone:  just phone-send a.pdf b.jpg
+phone-send +FILES:
+    #!/usr/bin/env bash
+    # --share takes a single value, so loop rather than passing them all at once.
+    for f in {{FILES}}; do
+        kdeconnect-cli -d {{PHONE}} --share "$f"
+    done

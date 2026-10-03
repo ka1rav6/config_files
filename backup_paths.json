@@ -148,5 +148,10 @@
     "path": "/home/kairav/.config/xdg-desktop-portal",
     "category": "xdg-desktop-portal",
     "description": "Custom backup: xdg-desktop-portal"
+  },
+  {
+    "path": "/home/kairav/.config/kdeconnect",
+    "category": "kdeconnect",
+    "description": "Custom backup: kdeconnect"
   }
 ]

@@ -601,3 +601,65 @@ export PATH=$PATH:/home/kairav/.local/share/config-backup/
 # hook that records each directory you visit. Must come after PATH is settled so
 # the zoxide binary in ~/.local/bin is findable.
 eval "$(zoxide init zsh --cmd z)"
+
+# KDE Connect: Galaxy S25+ device id (used by kdeconnect-cli -d and gdbus paths)
+export KDEPHONE=26a9e7fafbb64e419200c54385669f33
+
+# KDE Connect phone browsing.
+#
+# WHY A FUNCTION AND NOT JUST startBrowsing
+#   kdeconnect 23.08.5's startBrowsing() opens mountPoint() -- the mount ROOT --
+#   but Android scoped storage lets the app enumerate only the directory it was
+#   granted. The root, /storage and /storage/emulated are all traversable yet
+#   readdir-empty, so the file manager opens and truthfully reports "folder is
+#   empty". The listable root is what getDirectories() advertises
+#   (/storage/emulated/0, "Internal storage"), so ask for that instead of
+#   hardcoding it -- the path changes if the phone exposes an SD card too.
+#
+#   Also: an unset $KDEPHONE silently builds ".../devices//sftp", which fails as
+#   "not a valid object path" rather than as an obvious unset-variable error,
+#   hence the explicit guard.
+phone-browse() {
+    local dev=${1:-$KDEPHONE}
+    if [[ -z $dev ]]; then
+        print -u2 "phone-browse: no device id; set \$KDEPHONE or pass one"
+        return 1
+    fi
+    local obj=/modules/kdeconnect/devices/$dev/sftp
+    if ! gdbus call --session --dest org.kde.kdeconnect --object-path "$obj" \
+            --method org.kde.kdeconnect.device.sftp.mountAndWait >/dev/null 2>&1; then
+        print -u2 "phone-browse: mount failed (is the phone reachable?)"
+        return 1
+    fi
+    local dir
+    dir=$(gdbus call --session --dest org.kde.kdeconnect --object-path "$obj" \
+            --method org.kde.kdeconnect.device.sftp.getDirectories 2>/dev/null |
+          python3 -c "import sys,re; m=re.findall(r\"'(/[^']+)':\", sys.stdin.read()); print(m[0] if m else '')")
+    if [[ -z $dir ]]; then
+        print -u2 "phone-browse: phone advertised no directories"
+        return 1
+    fi
+    # NOT xdg-open: antigravity.desktop in ~/.local/share/applications declares
+    # inode/directory, so it won the default-handler slot and xdg-open launched
+    # the editor instead of a file manager. Electron editors register that to
+    # make "Open Folder" work. Pick a real file manager explicitly instead of
+    # depending on a mime default that any installed app can steal.
+    local fm
+    for fm in nautilus nemo thunar dolphin pcmanfm; do
+        if command -v "$fm" >/dev/null 2>&1; then
+            print "opening $dir with $fm"
+            setsid "$fm" "$dir" >/dev/null 2>&1 &
+            return 0
+        fi
+    done
+    print -u2 "phone-browse: no file manager found; the path is $dir"
+    return 1
+}
+
+phone-unmount() {
+    local dev=${1:-$KDEPHONE}
+    [[ -n $dev ]] || { print -u2 "phone-unmount: no device id"; return 1 }
+    gdbus call --session --dest org.kde.kdeconnect \
+        --object-path /modules/kdeconnect/devices/$dev/sftp \
+        --method org.kde.kdeconnect.device.sftp.unmount
+}
