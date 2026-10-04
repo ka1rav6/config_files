@@ -66,15 +66,100 @@
     // scripts/power-menu.sh, and modules/power/PowerMenu.qml was built,
     // registered a `power` IPC target and was never bound to anything. wlogout
     // is now the fallback for when the shell is not running.)
-    //   tray                     -> removed with nm-applet / blueman-applet
+    //   tray                     -> was removed with nm-applet / blueman-applet;
+    //                               back now, for kdeconnect-indicator alone
     //
     // What is left is persistent STATUS -- the four things worth reading
     // without opening anything. They are grouped so they render as one pill
     // rather than four separate islands; see #status-group in style.css.
     "modules-right": [
+        "custom/kdeconnect",
         "group/status",
         "battery"
     ],
+
+    // KDE Connect  —  one button, two jobs.
+    //
+    //   left-click    the Command Center (the GUI for ~/Justfile and the
+    //                 system CLI), which is also SUPER + SHIFT + K
+    //   right-click   kdeconnect-app, the KDE GUI, exactly as before
+    //   middle-click  ring the phone
+    //
+    // WHY THIS REPLACED THE TRAY RATHER THAN SITTING NEXT TO IT
+    //   This started as a second button beside the tray, and two buttons for
+    //   one corner of the bar was the wrong answer. The tray could not simply
+    //   be retargeted: it is a StatusNotifier HOST, not a module with a
+    //   command. Its single item belonged to kdeconnect-indicator -- the icon,
+    //   the Active/Passive state and the whole context menu were drawn and
+    //   handled by that process over D-Bus, and waybar has no per-item
+    //   on-click override to give it.
+    //
+    //   So the tray is no longer in modules-right and this module stands in
+    //   its place. Nothing is lost that is not replaced:
+    //
+    //     the indicator's menu   ring, ping, browse storage, unmount, settings
+    //                            are the KDE Connect page of the Command
+    //                            Center -- which is what left-click opens.
+    //     Active/Passive         the script below reports reachability, and
+    //                            #custom-kdeconnect.away in style.css dims it
+    //                            the same way #tray > .passive did.
+    //     the KDE GUI            right-click, same as it was.
+    //
+    //   The "tray" block below is DELIBERATELY LEFT IN PLACE. A module only
+    //   renders if it is also listed in a modules-* array (see the note at the
+    //   top of this file), so keeping its configuration and its reasoning here
+    //   costs nothing and makes restoring it a one-word edit: put "tray" back
+    //   in modules-right above.
+    //
+    //   kdeconnect-indicator is still started at login by autostart.lua. With
+    //   no tray host it now runs invisibly -- harmless, but it can be dropped
+    //   from autostart if you never want its menu back.
+    //
+    // interval 30 / signal 9 is the same shape as custom/hyprtodo above: a
+    // cheap fallback poll plus `pkill -SIGRTMIN+9 waybar` for an immediate
+    // refresh after pairing or connecting something.
+    "custom/kdeconnect": {
+        "exec": "~/.config/waybar/scripts/waybar-kdeconnect.sh",
+        "return-type": "json",
+        "interval": 30,
+        "signal": 9,
+        "on-click": "quickshell ipc call commandcenter toggle",
+        "on-click-right": "kdeconnect-app",
+        // xargs -r, not $(...): with no device reachable the substitution is
+        // empty and `kdeconnect-cli -d  --ring` reads "--ring" as the device
+        // id, prints "Couldn't find device" and still exits 0 -- the same
+        // silent no-op the $KDEPHONE recipes in ~/Justfile used to have.
+        // -r simply runs nothing when there is nothing to run.
+        "on-click-middle": "kdeconnect-cli -a --id-only | head -1 | xargs -r -I{} kdeconnect-cli -d {} --ring"
+    },
+
+    // System tray -- one consumer, deliberately.
+    //
+    // WHY IT IS BACK
+    //   It went away with nm-applet and blueman-applet, because the Wi-Fi and
+    //   Bluetooth UIs moved into the Control Center. kdeconnect-indicator is the
+    //   one StatusNotifierItem left with no replacement: its menu (ring, send
+    //   file, browse device, run command, SMS) is considerably richer than
+    //   kdeconnect-app's window, and Quickshell implements no StatusNotifier
+    //   host, so with no tray here the indicator ran completely invisibly --
+    //   which is exactly what it had been doing.
+    //
+    // show-passive-items IS LOAD-BEARING
+    //   indicator/main.cpp does setStatus(count == 0 ? Passive : Active), so the
+    //   item goes Passive whenever NO device is connected -- and waybar hides
+    //   passive items by default. Without this the icon would vanish precisely
+    //   when the phone is away, which is when you most want to glance at it,
+    //   leaving an empty pill that reads as broken. It is Active, not Passive,
+    //   whenever the phone is reachable.
+    //
+    // If this ever holds more than one icon, prefer moving the newcomer into the
+    // Quickshell Control Center instead of letting the row grow -- that is the
+    // rule the four status readings above already follow.
+    "tray": {
+        "icon-size": 16,
+        "spacing": 10,
+        "show-passive-items": true
+    },
 
     // One visual unit. `drawer` would collapse it behind a single icon, which
     // is the opposite of what is wanted here -- these should all be readable

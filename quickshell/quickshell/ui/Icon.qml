@@ -134,6 +134,15 @@ Text {
         "download":    "\udb80\uddda",   // md-download  U+F01DA
         "trash":       "\udb80\uddb4",   // md-delete  U+F01B4
         "pin":         "\udb81\udc03",   // md-pin  U+F0403
+        // Added for the Command Center's KDE Connect commands. Resolved the
+        // same way as everything above -- by looking the Material Design glyph
+        // NAME up in the installed font, not by typing a codepoint.
+        "send":        "\udb81\udc8a",   // md-send  U+F048A
+        "file-send":   "\udb80\ude2a",   // md-file_send  U+F022A
+        "link":        "\udb80\udf39",   // md-link_variant  U+F0339
+        "keyboard":    "\udb80\udf0c",   // md-keyboard  U+F030C
+        "share":       "\udb81\udc97",   // md-share_variant  U+F0497
+        "paste":       "\udb80\udd92",   // md-content_paste  U+F0192
         "drag":        "\udb80\udddb",   // md-drag  U+F01DB
         "eye":         "\udb80\ude08",   // md-eye  U+F0208
         "eye-off":     "\udb80\ude09"   // md-eye_off  U+F0209

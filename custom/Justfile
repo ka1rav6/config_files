@@ -314,7 +314,60 @@ clean-chrome:
 #
 # The device id below is this phone's. Get it for any other device with:
 #   kdeconnect-cli -l --id-name-only
+#
+# USE {{PHONE}}, NOT $KDEPHONE, IN THESE RECIPES.
+#   ~/.zshrc exports KDEPHONE with the same value, and four of the recipes
+#   below used to read that instead of this variable. It worked when they were
+#   typed at a prompt and nowhere else: .zshrc is only sourced for INTERACTIVE
+#   shells, so from a script, a systemd unit, a keybind or the Quickshell
+#   Command Center the variable is simply unset -- and the failure is silent
+#   rather than loud, because `kdeconnect-cli -d  --ring` makes
+#   kdeconnect-cli read `--ring` as the device id, print
+#   "Couldn't find device with id "--ring"", and still exit 0. So the command
+#   did nothing, said nothing, and reported success.
+#
+#   {{PHONE}} is substituted by just itself and cannot be unset. The zsh export
+#   stays where it is -- the `phone-browse` / `phone-unmount` shell functions in
+#   .zshrc use it, and they take an optional device id argument that this
+#   variable is the default for.
 PHONE := "26a9e7fafbb64e419200c54385669f33"
+
+phone-ring:
+    kdeconnect-cli -d {{PHONE}} --ring
+
+# --- Why these four take "$@" rather than {{VAR}} ----------------------------
+# `{{MSG}}` is substituted into the line and THEN word-split by the shell, so
+# every one of these silently truncated anything with a space in it:
+#
+#     just phone-ping "Command Center test"
+#       -> kdeconnect-cli ... --ping-msg Command Center test
+#       -> the phone shows "Command"; "Center" and "test" became stray argv
+#
+# `just phone-send ~/"My Document.pdf"` was worse: the loop split the path in
+# two and tried to send two files that do not exist, reporting success for
+# neither. That matters more now that the Quickshell Command Center drives
+# these through a file picker, where a filename with a space is the norm
+# rather than the exception.
+#
+# [positional-arguments] gives the recipe body the real argv as "$@"/"$1", with
+# no re-splitting -- the same idiom `restore`, `add` and `theme-matugen` above
+# already use, and for the same reason. Quoting "$1" is what makes it hold.
+# -----------------------------------------------------------------------------
+
+# Send a notification to the phone:  just phone-ping "on my way"
+[positional-arguments]
+phone-ping MSG="Ping":
+    kdeconnect-cli -d {{PHONE}} --ping-msg "$1"
+
+# Open a URL on the phone:  just phone-open "https://example.com/a b"
+[positional-arguments]
+phone-open URL:
+    kdeconnect-cli -d {{PHONE}} --share "$1"
+
+# Type text into whatever has focus on the phone:  just phone-type "hello there"
+[positional-arguments]
+phone-type TEXT:
+    kdeconnect-cli -d {{PHONE}} --send-keys "$1"
 
 # Pairing state, reachability and whether the filesystem is mounted
 phone-status:
@@ -361,9 +414,15 @@ phone-unmount:
         --method org.kde.kdeconnect.device.sftp.unmount
 
 # Send one or more files to the phone:  just phone-send a.pdf b.jpg
+[positional-arguments]
 phone-send +FILES:
     #!/usr/bin/env bash
     # --share takes a single value, so loop rather than passing them all at once.
-    for f in {{FILES}}; do
+    #
+    # "$@", not {{FILES}}: the latter is substituted as one string and then
+    # word-split, so a path containing a space became two non-existent paths.
+    # See the note above phone-ping.
+    set -euo pipefail
+    for f in "$@"; do
         kdeconnect-cli -d {{PHONE}} --share "$f"
     done

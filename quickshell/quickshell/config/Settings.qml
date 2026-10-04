@@ -74,6 +74,7 @@ Singleton {
     // a read).
     readonly property alias windows: adapter.windows
     readonly property alias lid: adapter.lid
+    readonly property alias commands: adapter.commands
 
     // False until the first read finishes. UI that would otherwise flash its
     // defaults for a frame before the real values land should gate on this.
@@ -152,6 +153,14 @@ Singleton {
                 property bool widgets: true
                 property bool controlCenter: true
                 property bool settings: true
+
+                // The Command Center (SUPER + SHIFT + K): a front-end for
+                // ~/Justfile and the system CLI. Off means the panel is never
+                // constructed, the keybind and the waybar button become
+                // no-ops, and every command it fronts is still one `just`
+                // away -- which is exactly why it shells out to `just` rather
+                // than reimplementing anything.
+                property bool commandCenter: true
                 // OFF. hyprlock is the locker.
                 //
                 // This was on for one afternoon and the session died while
@@ -592,6 +601,69 @@ Singleton {
                 // ~/.config/hypr/scripts/install-camera-guard.sh. Without it
                 // this is a no-op that logs and carries on.
                 property bool disableCamera: true
+            }
+
+            // =============================================================
+            // commands — the Command Center's own state.  SUPER + SHIFT + K
+            //
+            // Read by modules/commandcenter/CommandRunner.qml. None of it is
+            // a setting in the Settings-window sense: it is what the user has
+            // arranged, and it is here rather than in a file of its own for
+            // the same reason the dock's pins are -- one watched, atomically
+            // written, hand-editable JSON document per desktop, not one per
+            // component.
+            //
+            // Everything here is a list of command or category IDs from
+            // modules/commandcenter/CommandRegistry.qml, and every read of it
+            // is reconciled against that registry. An ID that no longer
+            // exists is skipped rather than rendered as a dead row, so
+            // renaming a command cannot corrupt this and editing it by hand
+            // cannot either.
+            // =============================================================
+            property JsonObject commands: JsonObject {
+                // Quick Actions, in the order they are shown. Hand-ordered by
+                // drag-and-drop, so the order is data, not a sort.
+                //
+                // The default is the eight things most likely to be wanted
+                // from a cold start of a desktop that has never had this
+                // panel: the theme, the two cheap toggles, the two reloads,
+                // the phone, and the way out to Wi-Fi.
+                // Night light is deliberately NOT one of these, despite being
+                // the obvious candidate: this machine's compositor runs with
+                // AQ_NO_ATOMIC=1 (legacy DRM), which cannot apply gamma at
+                // all, so the tile would sit in a prime slot permanently
+                // greyed out. It is still in the registry under Appearance,
+                // where its status row explains why -- which is more useful
+                // than hiding it, and it starts working the day that changes.
+                property var favourites: [
+                    "theme",
+                    "theme-auto",
+                    "dnd",
+                    "open-controlcenter",
+                    "hypr-reload",
+                    "qs-reload",
+                    "phone-ring",
+                    "wallpaper-random"
+                ]
+
+                // Most recently run, most recent first. Also the ranking
+                // search uses within a match tier.
+                property var recent: []
+
+                // Category card order on the home page. Empty means registry
+                // order; drag-and-drop writes the ids here.
+                property var order: []
+
+                // Show the equivalent terminal command under each row.
+                //
+                // OFF by default. It was on, and a fourth line of text per row
+                // is what turned the list into a wall -- see the density note
+                // at the top of modules/commandcenter/CmdRow.qml. The command
+                // is still in the confirmation sheet and the output view,
+                // which is where it is actually wanted, and the eye button in
+                // the panel header turns it back on for when you are learning
+                // which recipe a row fronts.
+                property bool showCli: false
             }
         }
     }

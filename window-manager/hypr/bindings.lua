@@ -369,6 +369,9 @@ hl.bind(mod .. " + bracketright", hl.dsp.group.next())
 --     SUPER + SHIFT + T  themes           (SUPER+W then T is the tmux
 --                                          workspace -- different leader,
 --                                          no conflict)
+--     SUPER + SHIFT + K  Command Center   (SUPER+K is focus-up and stays
+--                                          that way; see the long note at
+--                                          the bind itself)
 --
 --   wofi remains on SUPER + S. It is not replaced: it is the fallback for when
 --   the shell is not running, and it is what SUPER+V (cliphist) pipes through.
@@ -397,6 +400,30 @@ hl.bind(mod .. " + SHIFT + W", hl.dsp.exec_cmd(qs("wallpaper", "toggle")))
 -- and inventing one would duplicate ~/.local/bin/theme-switch's job).
 hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd(qs("theme", "toggle")))
 hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd(qs("visualizer", "toggle")))
+
+-- The Command Center: a GUI for the commands in ~/Justfile and the system CLI.
+-- Search it, or click the ⌘ button on waybar.
+--
+-- WHY SUPER + SHIFT + K AND NOT SUPER + K
+--   SUPER + K is focus-up, one of the four vim-direction binds at the top of
+--   this file, and those are the most-pressed keys on the machine. K is still
+--   the right letter -- it is the only mnemonic this panel has -- so it moved
+--   one modifier across, which is the same move SUPER+SHIFT+W (wallpapers,
+--   around the SUPER+W submap) and SUPER+SHIFT+T (themes, around SUPER+W then
+--   T) already make.
+--
+--   SUPER+SHIFT+K was free. The near-misses, checked against every bind in
+--   this file before choosing it:
+--
+--     SUPER + K              focus up          (the four hjkl focus binds)
+--     SUPER + ALT + K        move window up
+--     SUPER + CTRL + K       resize up
+--     K (bare)               resize up, inside the SUPER+R resize submap
+--     SUPER + SHIFT + <1-0>  move window to workspace -- digits, not letters
+--
+--   so nothing with K on it is disturbed, and SHIFT+K was the one combination
+--   of the four modifiers that nothing had taken.
+hl.bind(mod .. " + SHIFT + K", hl.dsp.exec_cmd(qs("commandcenter", "toggle")))
 
 -- Two small utilities on the function row, where nothing else lives.
 --   F1  GNOME Calculator -- the real app, not a prompt

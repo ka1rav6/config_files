@@ -26,6 +26,21 @@ hl.window_rule({
     center = true,
 })
 
+-- The file picker the Command Center opens for `just phone-send`
+-- (~/.config/quickshell/modules/commandcenter/CommandRunner.qml). zenity is a
+-- plain GTK window with no dialog hint, so without this it TILES into the
+-- workspace -- a modal picker shoving the window you were working in aside.
+-- Floated and centred, like every other dialog above.
+--
+-- The class is lowercase "zenity"; matched loosely because GTK4 builds of it
+-- report org.gnome.Zenity instead.
+hl.window_rule({
+    name = "floating-file-picker",
+    match = { class = "^([Zz]enity|org%.gnome%.Zenity)$" },
+    float = true,
+    center = true,
+})
+
 hl.window_rule({
     name = "floating-calculator",
     match = { class = "^(org.gnome.Calculator|galculator|qalculate-gtk)$" },
@@ -178,6 +193,7 @@ for _, component in ipairs({
     "osd",             -- volume / brightness / mic / media indicator
     "control-center",  -- the quick-settings panel
     "settings",        -- the full settings window
+    "command-center",  -- the GUI for ~/Justfile and the system CLI
     "launcher",        -- application launcher
     "dashboard",       -- calendar / system overview
     "dock",            -- application dock
@@ -194,8 +210,16 @@ end
 
 -- Dim the desktop behind the modal shell surfaces, the same way wlogout does
 -- below. Separates "a panel I summoned" from "the window I was working in",
--- which matters most for the two that can change system state.
-for _, component in ipairs({ "launcher", "power" }) do
+-- which matters most for the ones that can change system state.
+--
+-- The Command Center is on this list rather than the blur-only one for exactly
+-- that reason: it is the surface from which a browser gets killed, a cache gets
+-- deleted and the shell gets restarted, and a confirmation sheet reads very
+-- differently depending on whether it looks like part of the window underneath
+-- it. (The panel also draws its own animated scrim, which is what fades IN STEP
+-- with it -- a static dim_around cannot. Both are wanted: this one covers the
+-- gap before the surface is mapped.)
+for _, component in ipairs({ "launcher", "power", "command-center" }) do
     hl.layer_rule({
         name = "dim-qs-" .. component,
         match = { namespace = "^qs-" .. component .. "$" },

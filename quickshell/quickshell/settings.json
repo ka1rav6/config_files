@@ -11,6 +11,24 @@
         "shadows": true,
         "spacing": 12
     },
+    "commands": {
+        "favourites": [
+            "theme",
+            "theme-auto",
+            "dnd",
+            "open-controlcenter",
+            "hypr-reload",
+            "qs-reload",
+            "phone-ring",
+            "wallpaper-random"
+        ],
+        "order": [
+        ],
+        "recent": [
+            "kdeconnect-settings"
+        ],
+        "showCli": false
+    },
     "desktop": {
         "battery": true,
         "calendar": true,
@@ -80,6 +98,7 @@
     },
     "features": {
         "calendar": true,
+        "commandCenter": true,
         "controlCenter": true,
         "dashboard": true,
         "dock": true,

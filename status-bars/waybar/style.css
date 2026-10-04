@@ -195,6 +195,106 @@ window#waybar {
     background-color: @panel-hover;
 }
 
+/* --- KDE Connect button ---------------------------------------------------
+   Stands where the tray pill used to, so it is deliberately the same material:
+   same @panel-bg, same 11px radius, same 4px 3px margin as #status and
+   #battery. The right-hand row stays three surfaces of one material.
+
+   NOT styled like #custom-launcher, the bar's other "opens a Quickshell
+   surface" button: that one is bare (no pill, just the accent glyph at 17px)
+   because it is the leftmost thing on the bar and a pill there would fight the
+   bar's own rounded corner. This one sits in a row of pills, so it is a pill.
+
+   .away dims the glyph when no device is reachable, which is what
+   `#tray > .passive { -gtk-icon-effect: dim }` did for the indicator this
+   replaced -- visible rather than hidden, so the pill never reads as broken.
+   Colour is @mint, the accent define-color from the THEME block at the top of
+   this file, so the button rethemes with `just theme` like everything else.
+   Nothing here is a hard-coded colour.
+   ------------------------------------------------------------------------ */
+#custom-kdeconnect {
+    background-color: @panel-bg;
+    border-radius: 11px;
+    margin: 4px 3px;
+    padding: 0 11px;
+    font-size: 14px;
+    color: @mint;
+}
+
+#custom-kdeconnect.away {
+    color: @muted;
+}
+
+#custom-kdeconnect:hover {
+    background-color: @panel-hover;
+    color: @text;
+}
+
+/* --- System tray ---------------------------------------------------------
+   One more pill in the right-hand row, deliberately identical to #status and
+   #battery: same @panel-bg, same 11px radius, same 4px 3px margin. The row
+   reads as three surfaces of the same material rather than a styled bar with
+   a stock tray bolted on.
+
+   No font-size here, unlike every other module: tray children are real
+   application icons, not Nerd Font glyphs, so "icon-size" in config.jsonc is
+   what sizes them. 16px against the 12px text is the smallest size where a
+   multi-colour app icon still reads, and it matches the pill's optical weight.
+   ------------------------------------------------------------------------ */
+#tray {
+    background-color: @panel-bg;
+    border-radius: 11px;
+    margin: 4px 3px;
+    padding: 0 10px;
+}
+
+#tray:hover {
+    background-color: @panel-hover;
+}
+
+/* waybar puts these classes on individual items, not on the container.
+   Passive items are shown rather than hidden (show-passive-items in
+   config.jsonc) but dimmed -- and Passive here means NO device connected, so a
+   phone that is away stays visible as a dimmed icon instead of disappearing,
+   without competing with the live readings beside it. The same restraint the
+   status group uses, where colour only appears on the state that matters. */
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+}
+
+/* The item's right-click menu. Matched to `tooltip` at the bottom of this
+   file, so the popup belongs to the same design instead of arriving as a
+   stock grey GTK menu -- which is the exact "differently-styled popup"
+   problem config.jsonc describes for the modules that moved to Quickshell. */
+#tray menu {
+    background-color: #181b20;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 7px;
+    color: @text;
+    padding: 4px;
+}
+
+#tray menu menuitem {
+    border-radius: 5px;
+    padding: 4px 10px;
+    min-height: 22px;
+}
+
+#tray menu menuitem:hover {
+    background-color: @panel-hover;
+    color: @text;
+}
+
+/* Separators inside that menu, kept to the same hairline as the status group. */
+#tray menu separator {
+    background-color: rgba(255, 255, 255, 0.09);
+    margin: 3px 2px;
+}
+
 /* --- Standalone right-hand modules --------------------------------------- */
 #clock,
 #battery {

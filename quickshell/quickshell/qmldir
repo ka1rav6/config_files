@@ -69,6 +69,15 @@ singleton SysInfo       1.0 services/SysInfo.qml
 singleton Matugen       1.0 services/Matugen.qml
 singleton WindowPolicy  1.0 services/WindowPolicy.qml
 
+# --- Command Center ----------------------------------------------------------
+# The registry is DATA, the state layer is derived from the services above, and
+# the runner is the only thing in the tree that spawns a process on the user's
+# behalf. Singletons, because all three are asked about by name from several
+# files and none of them should ever exist twice.
+singleton CommandRegistry 1.0 modules/commandcenter/CommandRegistry.qml
+singleton CommandState    1.0 modules/commandcenter/CommandState.qml
+singleton CommandRunner   1.0 modules/commandcenter/CommandRunner.qml
+
 # --- Design system -----------------------------------------------------------
 # The shared vocabulary. Every surface in the shell is a Card, every switch is a
 # Toggle, every slider is a Slider -- which is what stops the Control Center and
@@ -134,3 +143,16 @@ Dashboard       1.0 modules/dashboard/Dashboard.qml
 WindowControls  1.0 modules/windowcontrols/WindowControls.qml
 Calendar        1.0 modules/dashboard/Calendar.qml
 StatBar         1.0 modules/dashboard/StatBar.qml
+
+CommandCenter   1.0 modules/commandcenter/CommandCenter.qml
+CmdHome         1.0 modules/commandcenter/CmdHome.qml
+CmdList         1.0 modules/commandcenter/CmdList.qml
+CmdOptions      1.0 modules/commandcenter/CmdOptions.qml
+CmdRow          1.0 modules/commandcenter/CmdRow.qml
+CmdTile         1.0 modules/commandcenter/CmdTile.qml
+CmdDragGrid     1.0 modules/commandcenter/CmdDragGrid.qml
+CmdSectionLabel 1.0 modules/commandcenter/CmdSectionLabel.qml
+CmdConfirm      1.0 modules/commandcenter/CmdConfirm.qml
+CmdPrompt       1.0 modules/commandcenter/CmdPrompt.qml
+CmdOutput       1.0 modules/commandcenter/CmdOutput.qml
+CmdToast        1.0 modules/commandcenter/CmdToast.qml
