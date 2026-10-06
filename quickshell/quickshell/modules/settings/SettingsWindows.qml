@@ -156,10 +156,11 @@ Column {
 
         SettingRow {
             width: parent.width
-            label: "SUPER + drag floats a tiled window"
-            description: "Grab any tiled window with SUPER and the left button: it pops out of "
-                + "the layout, shrinks around the pointer and follows it. SUPER + SHIFT + drag "
-                + "keeps the plain tile swap, and SUPER + right-drag still resizes."
+            label: "SUPER + SHIFT + drag floats a tiled window"
+            description: "Grab any tiled window with SUPER + SHIFT and the left button: it pops "
+                + "out of the layout, shrinks around the pointer and follows it. Plain SUPER + "
+                + "drag is untouched — a tiled window stays tiled and swaps place in the layout, "
+                + "so the others reflow around it. SUPER + right-drag still resizes."
             Toggle {
                 checked: Settings.windows.dragToFloat
                 onToggled: (v) => Settings.windows.dragToFloat = v
@@ -195,7 +196,9 @@ Column {
             width: parent.width
             label: "Back to tiling"
             description: "SUPER + T tiles the focused window; SUPER + SHIFT + SPACE toggles it. "
-                + "Both are keybinds, not settings — listed here so the pair is discoverable."
+                + "The green window-control dot does it too: it un-maximizes first if the window "
+                + "is maximized, then puts it back in the layout. Keybinds, not settings — "
+                + "listed here so the set is discoverable."
             Text {
                 text: "SUPER + T"
                 color: Theme.muted

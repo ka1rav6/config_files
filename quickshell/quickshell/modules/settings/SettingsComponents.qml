@@ -41,6 +41,20 @@ Column {
             }
         }
 
+        // The one switch on this page that unloads a part of THIS window rather
+        // than a separate surface. It is here anyway: it is a Loader-gated
+        // component like the rest of them, it used to gate a panel of its own,
+        // and the sidebar entry is the only visible difference.
+        SettingRow {
+            width: parent.width
+            label: "Commands"
+            description: "The Justfile / CLI front-end, as the first page of this window · SUPER + SHIFT + K"
+            Toggle {
+                checked: Settings.features.commandCenter
+                onToggled: (v) => Settings.features.commandCenter = v
+            }
+        }
+
         SettingRow {
             width: parent.width
             label: "On-screen display"

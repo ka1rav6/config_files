@@ -269,8 +269,16 @@ Singleton {
     //   through. Suppressing on those would take the visualizer away exactly
     //   when it is most visible.
     //
-    //   A fullscreen window does, and is caught by the tiled test -- fullscreen
-    //   windows report floating = false.
+    //   A MAXIMIZED OR FULLSCREEN window does, floating or not. This note used
+    //   to claim the tiled test already caught that case, "because fullscreen
+    //   windows report floating = false". It does not, and they do not:
+    //   `floating` and `fullscreen` are INDEPENDENT flags in Hyprland. A window
+    //   popped out of the layout by SUPER + SHIFT + drag and then maximized
+    //   reports floating = true AND fullscreen = 1 while covering the entire
+    //   output -- and the old test skipped it as "floating", so the visualizer
+    //   went on rendering a full-monitor-width surface at 60 Hz behind an opaque
+    //   window. That is the exact wasted work this whole mechanism exists to
+    //   avoid, which is why the flag is checked and not assumed.
     //
     // COST
     //   Derived from the toplevel model Quickshell already maintains off the
@@ -291,7 +299,10 @@ Singleton {
         for (const toplevel of Hyprland.toplevels.values) {
             const ipc = toplevel.lastIpcObject;
             if (!ipc) continue;
-            if (ipc.floating) continue;          // see the note above
+            // Floating leaves the desktop showing AROUND the window -- but
+            // only while the window is actually window-sized. Maximized and
+            // fullscreen cover the output whether they are floating or not.
+            if (ipc.floating && !ipc.fullscreen) continue;
             if (ipc.hidden) continue;            // parked on a special workspace
 
             const workspace = toplevel.workspace;

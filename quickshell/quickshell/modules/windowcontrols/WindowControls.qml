@@ -78,9 +78,9 @@ import qs
 //
 // Hyprland resolves keybinds -- mouse binds included -- before delivering the
 // click to any surface, and `binds.pass_mouse_when_bound` is false by default.
-// So SUPER + left-drag over this cluster still starts the window drag from
-// ~/.config/hypr/bindings.lua rather than pressing a button. Plain clicks, with
-// no modifier, are the cluster's.
+// So a SUPER (or SUPER+SHIFT) left-drag over this cluster still starts the
+// window drag from ~/.config/hypr/bindings.lua rather than pressing a button.
+// Plain clicks, with no modifier, are the cluster's.
 //
 // NO BLUR RULE, DELIBERATELY. Blur on this system is opt-in per namespace in
 // ~/.config/hypr/rules.lua, and "qs-windowcontrols" is deliberately not listed:
@@ -282,9 +282,32 @@ Scope {
 
                             Text {
                                 anchors.centerIn: parent
-                                text: dot.modelData.id === "maximize" && WindowPolicy.active
-                                    && WindowPolicy.active.fullscreen === 1
-                                        ? "⬍" : dot.modelData.glyph
+
+                                // The green dot's glyph tracks what the button
+                                // will actually DO next, read from the same
+                                // WindowPolicy.zoomAction the click dispatches
+                                // on -- so the icon can never promise one
+                                // action and perform another.
+                                //
+                                //   maximize -> ⬌  fill the monitor
+                                //   restore  -> ⬍  back to the size it had
+                                //   tile     -> ⊞  back into the layout
+                                //
+                                // Inter has none of these three, so all of them
+                                // come from fontconfig fallback. ⊞ (U+229E) was
+                                // picked over the other "put it in the grid"
+                                // candidates because it has far the widest
+                                // coverage on this machine -- 63 installed
+                                // families, against 18 for the ⬌/⬍ pair that
+                                // has been rendering here all along.
+                                text: {
+                                    if (dot.modelData.id !== "maximize") return dot.modelData.glyph;
+                                    switch (WindowPolicy.zoomAction) {
+                                    case "restore": return "⬍";
+                                    case "tile":    return "⊞";
+                                    default:        return dot.modelData.glyph;
+                                    }
+                                }
                                 color: Theme.onAccent(dot.color)
                                 font.family: Appearance.font
                                 font.pixelSize: Math.round(WindowPolicy.dotSize * 0.72)

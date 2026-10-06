@@ -123,6 +123,9 @@
         "return-type": "json",
         "interval": 30,
         "signal": 9,
+        // The Command Center is the Commands page of the Settings window now,
+        // not a panel of its own. The target name is unchanged on purpose --
+        // see the note on SUPER+SHIFT+K in ~/.config/hypr/bindings.lua.
         "on-click": "quickshell ipc call commandcenter toggle",
         "on-click-right": "kdeconnect-app",
         // xargs -r, not $(...): with no device reachable the substitution is

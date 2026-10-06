@@ -58,7 +58,7 @@ hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", ac
 -- Throw the focused window at the next monitor (wraps, so it round-trips).
 hl.bind(mod .. " + SHIFT + M", hl.dsp.window.move({ monitor = "+1" }))
 hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
--- The complement to SUPER + left-drag: put the focused window back in the
+-- The complement to SUPER + SHIFT + left-drag: put the focused window back in the
 -- layout. Deliberately idempotent ("tile this") rather than another toggle --
 -- SUPER + SHIFT + SPACE above is already the toggle, and a key you can press
 -- twice without undoing yourself is the one you want on the way out of a pile of
@@ -143,28 +143,38 @@ hl.bind(mod .. " + SHIFT + RIGHT", hl.dsp.window.move({ workspace = "e+1" }))
 
 -- Move and resize windows with the mouse.
 --
--- SUPER + LEFT-DRAG is the one bind in this file whose MEANING depends on the
--- window. windows.drag() in windows.lua decides:
+--   SUPER + left-drag          Hyprland's own drag, unwrapped. A tiled window
+--                              STAYS TILED and swaps place in the layout, so
+--                              the other windows reflow around it; a floating
+--                              window is simply moved. Nothing in this config
+--                              sits in front of this gesture.
+--   SUPER + SHIFT + left-drag  Pop a tiled window OUT of the layout: shrink it
+--                              around the pointer, float it there, and hand it
+--                              to the same drag so it keeps following the
+--                              mouse. windows.drag() in windows.lua does that,
+--                              and Settings > Windows can turn it off, in which
+--                              case this key falls through to the plain drag
+--                              above.
+--   SUPER + right-drag         Resize.
 --
---   floating window -> move it. Byte for byte what this key always did.
---   tiled window    -> pop it out of the layout: shrink it around the pointer,
---                      float it there, and hand it to the same drag so it keeps
---                      following the mouse. (Settings > Windows can turn this
---                      half off, in which case the key is the plain dispatcher
---                      again.)
---
--- NOTHING WAS TAKEN AWAY. The plain Hyprland behaviour for a tiled window --
--- drag to swap tiles -- moved one modifier across to SUPER + SHIFT + LEFT-DRAG
--- rather than being removed, because the two gestures cannot share a key: one
--- of them has to mean "float this" and the other "swap this".
+-- WHY THE FLOAT GESTURE IS ON SHIFT AND NOT ON THE BARE MODIFIER
+--   The two gestures cannot share a key -- one of them has to mean "float this"
+--   and the other "swap this". The bare SUPER + drag is the one with the muscle
+--   memory behind it, so it keeps the compositor's own meaning; popping a window
+--   out of the layout is the deliberate, rarer act, which is what the extra
+--   modifier is for. (This is the reverse of how the pair was first wired, where
+--   the bare modifier floated and SHIFT swapped.)
 --
 -- The release bind carries no action of its own. Hyprland ends its own drag on
 -- button release without being asked; this only tells the shell the interaction
 -- is over, so the window-control cluster stops hiding. `release = true` is the
 -- BindOptions flag for that (see HL.BindOptions in /usr/share/hypr/stubs).
-hl.bind(mod .. " + mouse:272", windows.drag, { mouse = true })
-hl.bind(mod .. " + mouse:272", windows.drag_release, { mouse = true, release = true })
-hl.bind(mod .. " + SHIFT + mouse:272", hl.dsp.window.drag(), { mouse = true })
+--
+-- It is paired with windows.drag and nothing else, because that is the only one
+-- of these gestures that suspends the cluster in the first place.
+hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
+hl.bind(mod .. " + SHIFT + mouse:272", windows.drag, { mouse = true })
+hl.bind(mod .. " + SHIFT + mouse:272", windows.drag_release, { mouse = true, release = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
 -- Cycle windows without leaving the keyboard.
@@ -315,6 +325,27 @@ hl.bind(mod .. " + ALT + SHIFT + P", hl.dsp.exec_cmd(screenshot .. "full-save"))
 -- Kept: the old muscle memory for "save a region".
 hl.bind(mod .. " + SHIFT + S", hl.dsp.exec_cmd(screenshot .. "region-save"))
 
+-- Armed by screenshot.sh for exactly as long as slurp is on screen, so RETURN
+-- means "the whole screen" there and nothing anywhere else.
+--
+-- It has to be the compositor that catches Enter: slurp 1.5.0 reads two keys,
+-- Escape and Space, and neither is retargetable. A plain global bind would
+-- have to be non-consuming to leave Enter working in every other app, and
+-- would then fork a process on every newline typed on this machine.
+--
+-- No catchall here, unlike the workspaces submap: anything not bound has to
+-- fall through to slurp untouched, Space included -- that is slurp's "move the
+-- selection instead of resizing it" modifier.
+hl.define_submap("screenshot", function()
+    hl.bind("RETURN", hl.dsp.exec_cmd(screenshot .. "select-all"))
+    hl.bind("KP_Enter", hl.dsp.exec_cmd(screenshot .. "select-all"))
+    -- Safety net only -- screenshot.sh resets the submap itself on every exit
+    -- path. non_consuming so slurp still receives the Escape and cancels;
+    -- without this bind, a screenshot.sh killed hard enough to skip its trap
+    -- would strand the session in a submap with no global keybinds at all.
+    hl.bind("ESCAPE", hl.dsp.submap("reset"), { non_consuming = true })
+end)
+
 -- Eyedropper. hyprpicker was already installed but had never been bound;
 -- -a copies straight to the clipboard, -r gives the raw hex with no "#".
 hl.bind(mod .. " + I", hl.dsp.exec_cmd("hyprpicker -a"))
@@ -403,6 +434,13 @@ hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd(qs("visualizer", "toggle")))
 
 -- The Command Center: a GUI for the commands in ~/Justfile and the system CLI.
 -- Search it, or click the ⌘ button on waybar.
+--
+-- IT IS A PAGE OF SETTINGS NOW, NOT A PANEL OF ITS OWN. The `commandcenter`
+-- IPC target is unchanged and deliberately kept -- it opens the Settings window
+-- on its Commands page, and `commandcenter page|find|run|set` all still work.
+-- Pressing this with that page already showing closes the window, so the key is
+-- still a toggle; pressing it while Settings is open on another page brings you
+-- to Commands instead of closing what you were reading.
 --
 -- WHY SUPER + SHIFT + K AND NOT SUPER + K
 --   SUPER + K is focus-up, one of the four vim-direction binds at the top of

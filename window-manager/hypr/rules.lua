@@ -192,8 +192,7 @@ end
 for _, component in ipairs({
     "osd",             -- volume / brightness / mic / media indicator
     "control-center",  -- the quick-settings panel
-    "settings",        -- the full settings window
-    "command-center",  -- the GUI for ~/Justfile and the system CLI
+    "settings",        -- the full settings window, Commands page included
     "launcher",        -- application launcher
     "dashboard",       -- calendar / system overview
     "dock",            -- application dock
@@ -212,14 +211,17 @@ end
 -- below. Separates "a panel I summoned" from "the window I was working in",
 -- which matters most for the ones that can change system state.
 --
--- The Command Center is on this list rather than the blur-only one for exactly
--- that reason: it is the surface from which a browser gets killed, a cache gets
--- deleted and the shell gets restarted, and a confirmation sheet reads very
--- differently depending on whether it looks like part of the window underneath
--- it. (The panel also draws its own animated scrim, which is what fades IN STEP
--- with it -- a static dim_around cannot. Both are wanted: this one covers the
--- gap before the surface is mapped.)
-for _, component in ipairs({ "launcher", "power", "command-center" }) do
+-- Settings is on this list rather than the blur-only one for exactly that
+-- reason: its Commands page is the surface from which a browser gets killed, a
+-- cache gets deleted and the shell gets restarted, and a confirmation sheet
+-- reads very differently depending on whether it looks like part of the window
+-- underneath it. (It used to be "command-center" here; that panel is now the
+-- first page of this one -- see modules/settings/SettingsWindow.qml.)
+--
+-- The panel also draws its own animated scrim, which is what fades IN STEP with
+-- it -- a static dim_around cannot. Both are wanted: this one covers the gap
+-- before the surface is mapped.
+for _, component in ipairs({ "launcher", "power", "settings" }) do
     hl.layer_rule({
         name = "dim-qs-" .. component,
         match = { namespace = "^qs-" .. component .. "$" },

@@ -127,24 +127,21 @@ ShellRoot {
     // exits 255 when no shell is reachable, which is what drives the ||).
     PowerMenu {}
 
+    // Settings.  SUPER + , for the window, SUPER + SHIFT + K and the waybar
+    // ⌘ button for its Commands page.
+    //
+    // THE COMMAND CENTER IS A PAGE OF THIS NOW, NOT A SECOND PANEL. It used to
+    // be its own Loader here, gated on Settings.features.commandCenter, built
+    // from modules/commandcenter/CommandCenter.qml (kept as .bak). Two windows
+    // of identical size and placement, each with a button linking to the other,
+    // is one window that had been split in half. The flag still exists and
+    // still unloads the whole thing -- it now gates the sidebar entry and the
+    // page behind it (see the `pages` list in SettingsWindow.qml), so turning
+    // it off leaves the keybind and the waybar button saying so, and every
+    // command they front is still one `just` away.
     Loader {
         active: Settings.features.settings
         sourceComponent: SettingsWindow {}
-    }
-
-    // The Command Center.  SUPER + SHIFT + K, or the waybar ⌘ button.
-    //
-    // A front-end for ~/Justfile and the system CLI, not a third settings app
-    // -- see the header of modules/commandcenter/CommandCenter.qml for where
-    // the line between this, the Control Center and Settings is drawn.
-    //
-    // Gated on its own feature flag like every other component, so it can be
-    // unloaded entirely; the keybind and the waybar button then do nothing at
-    // all, and every command they front is still one `just` away. That is the
-    // whole point of the panel calling `just` rather than copying it.
-    Loader {
-        active: Settings.features.commandCenter
-        sourceComponent: CommandCenter {}
     }
 
     // The visualizer is a Scope that creates its own per-monitor surfaces only
@@ -365,6 +362,11 @@ ShellRoot {
         function close(): void { Shell.close("settings"); }
 
         // Jump straight to a page: `quickshell ipc call settings page visualizer`
+        //
+        // "commands" is one of them -- it is the former Command Center -- but
+        // the `commandcenter` target below is the one to reach it with: it
+        // checks the feature flag, and it can land on a category or a search
+        // rather than only on the page.
         function page(name: string): string {
             if (!Shell.has("settings")) return "settings is disabled";
             Shell.open("settings");
@@ -373,31 +375,65 @@ ShellRoot {
         }
     }
 
+    // The Command Center, which is now the Commands page of Settings.
+    //
+    // THE TARGET NAME IS KEPT ON PURPOSE. `commandcenter` is what
+    // ~/.config/hypr/bindings.lua binds SUPER + SHIFT + K to, what the waybar
+    // ⌘ button calls, and what every `just` recipe and note in this config
+    // refers to. Renaming it would break all of them to express a refactor
+    // nobody outside this file needs to know about. What changed is where the
+    // calls land: `Shell.panels["settings"]`, on `page = "commands"`.
+    //
+    // Everything below therefore has TWO things to check rather than one --
+    // that Settings exists at all, and that the Commands page inside it is
+    // enabled -- where the old panel had a single `Shell.has`.
     IpcHandler {
         target: "commandcenter"
 
-        function toggle(): string { return Shell.toggle("command-center") ? "ok" : "command center is disabled"; }
-        function open(): string { return Shell.open("command-center") ? "ok" : "command center is disabled"; }
-        function close(): void { Shell.close("command-center"); }
+        // Open on Commands, or close if that is already what is showing.
+        // Sitting on another settings page counts as not showing, so the
+        // keybind brings you here rather than closing a window you were
+        // reading -- the same rule the `theme` target below uses.
+        function toggle(): string {
+            if (!Shell.has("settings")) return "settings is disabled";
+            if (!Settings.features.commandCenter) return "command center is disabled";
+            const panel = Shell.panels["settings"];
+            if (panel.open && panel.page === "commands") { panel.hide(); return "ok"; }
+            Shell.open("settings");
+            panel.page = "commands";
+            return "ok";
+        }
+
+        function open(): string {
+            if (!Shell.has("settings")) return "settings is disabled";
+            if (!Settings.features.commandCenter) return "command center is disabled";
+            Shell.open("settings");
+            Shell.panels["settings"].page = "commands";
+            return "ok";
+        }
+
+        function close(): void { Shell.close("settings"); }
 
         // Open straight onto one category: appearance, shell, kdeconnect,
         // session, system, maintenance, tools. For a waybar module or a `just`
         // recipe that wants to land somewhere specific.
         function page(name: string): string {
-            if (!Shell.has("command-center")) return "command center is disabled";
-            const panel = Shell.panels["command-center"];
+            if (!Shell.has("settings")) return "settings is disabled";
+            if (!Settings.features.commandCenter) return "command center is disabled";
+            const panel = Shell.panels["settings"];
             if (!CommandRegistry.category(name))
                 return "no such category: " + name
                     + " (" + CommandRegistry.categories.map(c => c.id).join(", ") + ")";
             // OPEN FIRST, then navigate. Opening a closed panel fires its
-            // `opened()` handler, which resets it to the home page with an
-            // empty search -- so setting the page before opening silently
-            // landed on home instead. It only looked correct while testing
-            // because the panel happened to be open already, which is the
-            // worst way for an ordering bug to hide.
-            Shell.open("command-center");
+            // `opened()` handler, which resets the Commands page to home with
+            // an empty search -- so setting the sub-page before opening
+            // silently landed on home instead. It only looked correct while
+            // testing because the panel happened to be open already, which is
+            // the worst way for an ordering bug to hide.
+            Shell.open("settings");
+            panel.page = "commands";
             panel.categoryId = name;
-            panel.page = "category";
+            panel.cmdPage = "category";
             panel.selected = -1;
             return "ok";
         }
@@ -407,9 +443,11 @@ ShellRoot {
         // of search -- and the only way to check the ranking without clicking.
         function find(query: string): string {
             const hits = CommandRegistry.search(query);
-            if (Shell.has("command-center")) {
-                Shell.open("command-center");
-                Shell.panels["command-center"].query = query;
+            if (Shell.has("settings") && Settings.features.commandCenter) {
+                Shell.open("settings");
+                const panel = Shell.panels["settings"];
+                panel.page = "commands";
+                panel.query = query;
             }
             if (hits.length === 0) return "no match for " + JSON.stringify(query);
             return hits.length + (hits.length === 1 ? " match" : " matches") + "\n"
@@ -515,11 +553,13 @@ ShellRoot {
         // about to happen. So a keybind or a script can offer "restart the
         // shell?" properly rather than either doing it silently or not at all.
         function prompt(id: string): string {
-            if (!Shell.has("command-center")) return "command center is disabled";
+            if (!Shell.has("settings")) return "settings is disabled";
+            if (!Settings.features.commandCenter) return "command center is disabled";
             const cmd = CommandRegistry.get(id);
             if (!cmd) return "no such command: " + id;
-            const panel = Shell.panels["command-center"];
-            Shell.open("command-center");
+            const panel = Shell.panels["settings"];
+            Shell.open("settings");
+            panel.page = "commands";
 
             // Whatever gate this command has, arm it: the input sheet for one
             // that takes a value, the file picker for one that takes paths,
@@ -586,8 +626,9 @@ ShellRoot {
         // What the panel knows, without opening it. Mostly here so a failing
         // keybind can be told apart from a failing registry.
         function status(): string {
-            if (!Shell.has("command-center")) return "command center is disabled";
-            const panel = Shell.panels["command-center"];
+            if (!Shell.has("settings")) return "settings is disabled";
+            if (!Settings.features.commandCenter) return "command center is disabled";
+            const panel = Shell.panels["settings"];
             // Reconciled counts, not raw list lengths: an id left in
             // settings.json whose command has been renamed is skipped when the
             // panel renders, so counting the raw array would make this
@@ -603,7 +644,9 @@ ShellRoot {
                 + (pinned !== pinnedStored ? " (of " + pinnedStored + " stored)" : "")
                 + " · " + recent + " recent"
                 + (recent !== recentStored ? " (of " + recentStored + " stored)" : "")
-                + " · " + (panel.open ? "open on " + panel.page : "closed")
+                + " · " + (panel.open && panel.page === "commands"
+                            ? "open on " + panel.cmdPage
+                            : panel.open ? "settings open on " + panel.page : "closed")
                 + (CommandRunner.running ? " · running " + CommandRunner.runningId : "");
         }
     }

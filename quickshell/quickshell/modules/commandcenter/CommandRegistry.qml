@@ -377,6 +377,27 @@ Singleton {
             output: true
         },
         {
+            id: "window-controls",
+            name: "Window controls",
+            category: "shell",
+            desc: "The macOS-style close / minimise / maximise cluster that floats on the focused window",
+            icon: "monitor",
+            tags: ["window", "controls", "close", "minimise", "minimize",
+                   "maximise", "maximize", "buttons", "traffic lights", "mac",
+                   "macos", "titlebar", "cluster", "overlay"],
+            ui: "toggle",
+            safety: "safe",
+            // The SAME switch as Settings > Windows and as the IPC target, so
+            // the three can never disagree about it -- all of them write this
+            // one property, and shell.qml's Loader is bound to it. Off means
+            // the surface is not constructed at all: no tracking timer, no
+            // socket traffic.
+            cli: "quickshell ipc call windowcontrols toggle",
+            state: "windowcontrols",
+            status: "windowcontrols",
+            run: () => { Settings.windows.controls = !Settings.windows.controls; }
+        },
+        {
             id: "qs-viz",
             name: "Demo the visualiser",
             category: "shell",
@@ -843,20 +864,33 @@ Singleton {
             safety: "safe",
             cli: "quickshell ipc call controlcenter toggle",
             status: "connectivity",
-            run: () => { Shell.close("command-center"); Shell.open("control-center"); }
+            run: () => { Shell.close("settings"); Shell.open("control-center"); }
         },
         {
+            // Was "Settings", opening the other window. There is no other
+            // window now -- this page lives inside it -- so the row became a
+            // jump to the sidebar entry next door instead of a dead link that
+            // closed and reopened the thing you were already looking at.
+            //
+            // `ui: "action"` rather than "link" for the same reason: a link
+            // leaves the panel open because it has moved you somewhere ELSE,
+            // and this has not. Nothing is spawned, so there is no toast to
+            // close for either.
             id: "open-settings",
-            name: "Settings",
+            name: "Shell settings",
             category: "tools",
-            desc: "Every option this desktop shell has — appearance, components, performance, windows",
+            desc: "Appearance, components, performance, windows — the rest of this window",
             icon: "settings",
             tags: ["settings", "preferences", "options", "configure",
                    "appearance", "font", "radius", "density", "dock"],
             ui: "link",
             safety: "safe",
-            cli: "quickshell ipc call settings toggle",
-            run: () => { Shell.close("command-center"); Shell.open("settings"); }
+            cli: "quickshell ipc call settings page appearance",
+            run: () => {
+                if (!Shell.has("settings")) return;
+                Shell.open("settings");
+                Shell.panels["settings"].page = "appearance";
+            }
         },
         {
             id: "open-wallpaper",
@@ -869,7 +903,7 @@ Singleton {
             safety: "safe",
             cli: "quickshell ipc call wallpaper toggle",
             status: "wallpaper",
-            run: () => { Shell.close("command-center"); Shell.open("wallpaper"); }
+            run: () => { Shell.close("settings"); Shell.open("wallpaper"); }
         },
         {
             id: "open-network-editor",
@@ -910,7 +944,7 @@ Singleton {
             ui: "link",
             safety: "safe",
             cli: "quickshell ipc call power toggle",
-            run: () => { Shell.close("command-center"); Shell.open("power"); }
+            run: () => { Shell.close("settings"); Shell.open("power"); }
         }
     ]
 

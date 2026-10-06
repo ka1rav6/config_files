@@ -127,6 +127,23 @@ Singleton {
             tone: Network.connected ? "good" : "bad"
         },
 
+        // The macOS-style control cluster.
+        //
+        // DELIBERATELY NOT WindowPolicy.visible. That property is false
+        // whenever a shell panel is open -- which is always true while you are
+        // reading this row, since this row is inside one. It would therefore
+        // read "hidden: a shell panel is open (settings)" every single time,
+        // which says nothing about the switch and looks like a fault. The
+        // live "why is it not drawn" line stays where it is useful, in
+        // `quickshell ipc call windowcontrols status`.
+        "windowcontrols": {
+            text: Settings.windows.controls
+                ? "On · " + Settings.windows.controlsPosition.replace("-", " ")
+                    + (Settings.windows.controlsOnFloating ? "" : " · tiled only")
+                : "Off",
+            tone: Settings.windows.controls ? "good" : "idle"
+        },
+
         "displays": {
             text: Quickshell.screens.length === 1
                 ? Quickshell.screens[0].name + " only"
@@ -155,7 +172,12 @@ Singleton {
     // -----------------------------------------------------------------
     readonly property var states: ({
         "nightlight": NightLight.active,
-        "dnd": Notifications.dnd
+        "dnd": Notifications.dnd,
+        // A settings property rather than a service, but the rule is the same:
+        // this is a READ of the thing the switch controls, so the Settings >
+        // Windows checkbox, the IPC target and this row all follow each other
+        // without any of them knowing the others exist.
+        "windowcontrols": Settings.windows.controls
     })
 
     // Whether a toggle can be operated at all, with the reason if not.

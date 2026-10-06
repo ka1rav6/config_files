@@ -5,19 +5,22 @@
 -- ---------------------------------------------------------------------------
 -- WHAT THIS ADDS, AND WHAT IT DELIBERATELY DOES NOT TAKE AWAY
 --
---   SUPER + left-drag         tiled  -> pop out to floating and follow the
---                                       pointer   (NEW)
---                             float  -> move it    (unchanged)
---   SUPER + SHIFT + left-drag tiled  -> swap tiles (the plain Hyprland
---                                       behaviour this gesture used to have,
---                                       moved one modifier across rather than
---                                       removed)
+--   SUPER + left-drag         Hyprland's own drag, which this file is NOT in
+--                             front of. Tiled stays tiled and swaps place in
+--                             the layout; floating is moved.
+--   SUPER + SHIFT + left-drag tiled  -> pop out to floating and follow the
+--                                       pointer   (the gesture below)
+--                             float  -> move it    (plain drag)
 --   SUPER + right-drag        resize            (untouched)
 --   SUPER + SHIFT + SPACE     float toggle      (untouched)
---   SUPER + T                 back to tiling    (NEW)
+--   SUPER + T                 back to tiling
+--
+-- The float gesture lives on SHIFT rather than on the bare modifier so that
+-- SUPER + drag keeps meaning exactly what it means in a stock Hyprland. See the
+-- matching note in bindings.lua.
 --
 -- Tiling itself is not touched. Windows still open tiled, dwindle still splits
--- the way it did, and nothing here runs unless a SUPER+click happens.
+-- the way it did, and nothing here runs unless a SUPER+SHIFT+click happens.
 --
 -- ---------------------------------------------------------------------------
 -- WHY THE CONFIG VALUES ARE GLOBALS AND NOT A FILE READ
@@ -114,10 +117,10 @@ local function clamp(value, low, high)
     return value
 end
 
---- SUPER + left-drag.
+--- SUPER + SHIFT + left-drag.
 ---
 --- Floating window, or the feature turned off -> hand straight to Hyprland's
---- own drag, which is byte-for-byte what this key did before.
+--- own drag, which is what the bare SUPER + drag does too.
 ---
 --- Tiled window -> shrink it around the pointer, float it there, then hand it
 --- to the same drag so the pointer keeps carrying it. The order matters:

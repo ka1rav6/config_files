@@ -16,8 +16,9 @@ import qs
 //      cluster off its top-right corner. modules/windowcontrols reads this.
 //
 //   2. PUSHING THE TWO MOUSE-POLICY VALUES INTO THE COMPOSITOR, so the
-//      SUPER+drag keybind in ~/.config/hypr/windows.lua honours what is in
-//      Settings without having to read a JSON file from a mouse-press handler.
+//      SUPER+SHIFT+drag keybind in ~/.config/hypr/windows.lua honours what is
+//      in Settings without having to read a JSON file from a mouse-press
+//      handler.
 //
 // -----------------------------------------------------------------------------
 // WHY THERE IS A POLL HERE AT ALL, IN A SHELL THAT AVOIDS THEM
@@ -39,9 +40,9 @@ import qs
 //                               (SUPER+CTRL+hjkl) and SUPER+R resize mode.
 //   * FLOATING and visible   -> 8 Hz. This is the case that matters: a floating
 //                               window is the one that moves continuously under
-//                               the pointer, and SUPER+drag makes a tiled window
-//                               floating before it moves it, so a drag lands
-//                               here within one frame of starting.
+//                               the pointer, and SUPER+SHIFT+drag makes a tiled
+//                               window floating before it moves it, so that drag
+//                               lands here within one frame of starting.
 //   * cluster not visible    -> nothing at all. No timer, no socket traffic.
 //     (disabled, fullscreen,
 //      scratchpad, excluded)
@@ -126,10 +127,14 @@ Singleton {
             hidden: !!ipc.hidden,
             mapped: ipc.mapped !== false,
             // 0 = neither, 1 = maximized, 2 = fullscreen. The controls treat
-            // these very differently: maximized keeps its cluster (and the
-            // middle button becomes "restore"), fullscreen loses it, because a
-            // fullscreen window is the one case where an overlay on top of the
-            // content is unambiguously wrong.
+            // these very differently: maximized keeps its cluster (and turns the
+            // green dot into "restore" -- see `zoomAction`), fullscreen loses
+            // it, because a fullscreen window is the one case where an overlay
+            // on top of the content is unambiguously wrong.
+            //
+            // INDEPENDENT OF `floating` above. A window can be floating AND
+            // maximized at the same time; services/Hypr.qml has a note on the
+            // bug that assuming otherwise caused.
             fullscreen: ipc.fullscreen || 0,
             cls: ipc.class || ""
         };
@@ -263,15 +268,68 @@ Singleton {
         Hypr.closeWindow(win.address);
     }
 
-    // Maximize / restore. Hyprland's "maximized" mode keeps gaps, borders and
-    // the bar -- it is the macOS green button, not the F11 one, which is what
-    // makes it the right third action here. SUPER+SHIFT+F is the same thing on
-    // the keyboard.
+    // The green button: one step back towards normal, or maximize if already
+    // there. Hyprland's "maximized" mode keeps gaps, borders and the bar -- it
+    // is the macOS green button, not the F11 one. SUPER + SHIFT + F is the
+    // keyboard equivalent of the maximize step, SUPER + T of the tile step.
+    //
+    //   maximized           -> un-maximize, back to the size it had
+    //   floating, not max'd -> back INTO THE LAYOUT (tiled)
+    //   tiled, not max'd    -> maximize
+    //
+    // WHY IT UNFLOATS INSTEAD OF BEING A PURE MAXIMIZE TOGGLE
+    //   On this desktop TILED IS NORMAL -- every window opens tiled and the
+    //   layout is the resting state. A pure maximize toggle has no way back to
+    //   it, so a window popped out by SUPER + SHIFT + drag could only be put
+    //   back from the keyboard, and the one button that looks like "restore this
+    //   window" restored it to a floating rectangle instead. Pressed on an
+    //   already-small floating window it then appeared to do nothing at all,
+    //   because un-maximizing something that is not maximized is a no-op.
+    //
+    //   So the button walks the window back one state per press, and is never a
+    //   no-op: whatever it does, something visibly changes.
+    //
+    // WHY MAXIMIZED IS HANDLED FIRST AND SEPARATELY
+    //   Unfloating a MAXIMIZED window leaves Hyprland holding a maximized tile,
+    //   which is the same ordering hazard ~/.config/hypr/windows.lua documents
+    //   on the way INTO a float ("leave that state first, or the float lands
+    //   underneath it"). Taking one step per press means the two never combine.
+    readonly property string zoomAction: {
+        const win = root.active;
+        if (!win) return "";
+        // Non-zero covers maximized (1); fullscreen (2) never reaches the
+        // button, because `suppressedBecause` hides the cluster on it.
+        if (win.fullscreen !== 0) return "restore";
+        return win.floating ? "tile" : "maximize";
+    }
+
     function toggleMaximize() {
         const win = root.active;
         if (!win || !win.address) return;
         Hypr.dispatch("hl.dsp.focus({ window = " + JSON.stringify("address:" + win.address) + " })");
-        Hypr.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })');
+
+        switch (root.zoomAction) {
+        case "restore":
+            Hypr.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "unset" })');
+            break;
+        case "tile":
+            Hypr.dispatch('hl.dsp.window.float({ action = "unset" })');
+            break;
+        case "maximize":
+            Hypr.dispatch('hl.dsp.window.fullscreen({ mode = "maximized", action = "set" })');
+            break;
+        default:
+            return;
+        }
+
+        // `set`/`unset` rather than `toggle` on purpose: the branch already
+        // knows which way it is going, and a toggle would fight the state read
+        // above if it went stale between the read and the dispatch.
+        //
+        // None of the three emit a geometry event -- changefloatingmode fires
+        // for the tile step but carries no size -- so ask once instead of
+        // waiting up to a second for the follow timer.
+        Hypr.refreshToplevels();
     }
 
     // Minimize, i.e. stash on the special:minimized workspace.
@@ -352,10 +410,10 @@ Singleton {
     //
     // WHY A PUSH AND NOT A READ
     //   The consumer is a MOUSE-PRESS handler in the compositor's Lua state.
-    //   It has to decide "float this window or swap this tile" and then hand
-    //   the pointer to Hyprland's own drag in the same breath. Shelling out to
-    //   jq from there would put a process spawn in front of every SUPER+click.
-    //   So the values are pushed in as Lua globals whenever they change, and
+    //   It has to decide "float this window or hand it to the plain drag" and
+    //   then act in the same breath. Shelling out to jq from there would put a
+    //   process spawn in front of every SUPER+SHIFT+click. So the values are
+    //   pushed in as Lua globals whenever they change, and
     //   ~/.config/hypr/windows.lua carries identical defaults for the case
     //   where this process is not running.
     //

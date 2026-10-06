@@ -118,6 +118,7 @@ SettingsAudio       1.0 modules/settings/SettingsAudio.qml
 SettingsNetwork     1.0 modules/settings/SettingsNetwork.qml
 SettingsShell       1.0 modules/settings/SettingsShell.qml
 SettingsWindows     1.0 modules/settings/SettingsWindows.qml
+SettingsCommands    1.0 modules/settings/SettingsCommands.qml
 Lock            1.0 modules/lock/Lock.qml
 LockSurface     1.0 modules/lock/LockSurface.qml
 LockWidget      1.0 modules/lock/LockWidget.qml
@@ -144,7 +145,6 @@ WindowControls  1.0 modules/windowcontrols/WindowControls.qml
 Calendar        1.0 modules/dashboard/Calendar.qml
 StatBar         1.0 modules/dashboard/StatBar.qml
 
-CommandCenter   1.0 modules/commandcenter/CommandCenter.qml
 CmdHome         1.0 modules/commandcenter/CmdHome.qml
 CmdList         1.0 modules/commandcenter/CmdList.qml
 CmdOptions      1.0 modules/commandcenter/CmdOptions.qml
