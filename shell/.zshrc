@@ -232,7 +232,7 @@ alias bat='batcat'
 alias cd='z'
 
 # --- Application shortcuts ---------------------------------------------------
-alias pdf='zathura'       # keyboard-driven PDF reader, good for papers
+alias pdf='sioyek'       # keyboard-driven PDF reader, good for papers
 alias gmd='ghostwriter'  # markdown editor with live preview
 
 # --- General -----------------------------------------------------------------

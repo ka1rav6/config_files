@@ -273,7 +273,7 @@ end
 --- Hide whichever scratchpad currently owns the focused window.
 ---
 --- Called from outside the compositor, by
---- ~/.config/hypr/scripts/open-file.sh, which yazi's `o` bind runs:
+--- ~/.config/hypr/scripts/open-file.py, which yazi's `o` bind runs:
 ---
 ---   hyprctl eval 'scratchpads.dismiss_active()'
 ---
