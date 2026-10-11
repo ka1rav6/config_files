@@ -2,14 +2,16 @@
 
 Everything bound across the Hyprland session and the Wayland tools around it.
 Generated from `~/.config/hypr/bindings.lua`, `~/.config/hypr/scratchpads.lua`,
-`~/.config/hypr/input.lua`, `~/.config/waybar/config.jsonc`,
-`~/.config/quickshell/shell.qml` and `~/.config/mako/config`.
+`~/.config/hypr/windows.lua`, `~/.config/hypr/lid.lua`,
+`~/.config/hypr/defaults.lua`, `~/.config/waybar/config.jsonc`,
+`~/.config/quickshell/shell.qml`, `~/.config/quickshell/settings.json` and
+`~/.config/mako/config`.
 
 Hyprland is still the whole behaviour layer — every key below is declared in
-`bindings.lua` and nowhere else. The Quickshell keys are ordinary
-`exec_cmd` binds that call `quickshell ipc call <target> <function>`, so the
-shell never registers a global shortcut of its own and `hyprctl binds` remains
-the single source of truth.
+`bindings.lua` (plus the two lid switches in `lid.lua`) and nowhere else. The
+Quickshell keys are ordinary `exec_cmd` binds that call
+`quickshell ipc call <target> <function>`, so the shell never registers a global
+shortcut of its own and `hyprctl binds` remains the single source of truth.
 
 ## Conventions
 
@@ -21,7 +23,8 @@ the single source of truth.
   `Super + S`, and is what `Super + V` pipes clipboard history through. The
   Quickshell launcher still exists and still answers
   `quickshell ipc call launcher toggle`, but it is deliberately unbound —
-  `Super + Space` went to the workspace overview instead.
+  `Super + Space` went to the workspace overview instead. The `󰣇` button on
+  waybar is the only thing that opens it.
 - The desktop shell is Quickshell (`~/.config/quickshell`). Every surface it
   draws can be reached from a key, and every one of them is independently
   switchable off in its Settings app — nothing below is load-bearing.
@@ -42,14 +45,20 @@ the single source of truth.
 | `Super + Enter` | Open Ghostty |
 | `Super + Q` | Close the focused window |
 | `Alt + F4` | Close the focused window |
-| `Super + M` | Power menu (Lock / Logout / Restart / Shutdown) |
-| `Super + Escape` | Lock the screen with Hyprlock (Caps Lock sends Escape, so `Super + CapsLock` works too) |
+| `Super + M` | Power menu (Quickshell; falls back to wlogout if the shell is down) |
+| `Super + Escape` | Lock the screen (Caps Lock sends Escape, so `Super + CapsLock` works too) |
 | `Super + F` | Toggle fullscreen |
 | `Super + Shift + F` | Toggle maximized — fills the monitor but keeps gaps, borders and the bar |
 | `Super + Shift + Space` | Toggle floating |
+| `Super + T` | **Tile the focused window** — put it back in the layout |
 | `Super + Shift + C` | Center the focused window |
 | `Super + Shift + M` | Send the focused window to the next monitor (wraps) |
 | `Alt + Tab` | Cycle to the next window |
+
+`Super + T` is deliberately *not* a toggle. It unsets fullscreen and then
+unsets floating, so it means "tile this" rather than "swap this" — you can
+press it twice without undoing yourself, which is what you want on the way out
+of a pile of floating windows. `Super + Shift + Space` is already the toggle.
 
 ## Focusing Windows
 
@@ -74,8 +83,16 @@ named-workspace toggles.
 | `Super + Alt + J` | Move the window down |
 | `Super + Alt + K` | Move the window up |
 | `Super + Alt + L` | Move the window right |
-| `Super + left-drag` | Move a floating window |
-| `Super + right-drag` | Resize a floating window |
+| `Super + left-drag` | Hyprland's own drag — a **tiled** window stays tiled and swaps place in the layout; a floating one is simply moved |
+| `Super + Shift + left-drag` | **Pop a tiled window out of the layout** — shrink it around the pointer, float it there, and keep dragging |
+| `Super + right-drag` | Resize |
+
+The two drags cannot share a key: one has to mean "swap this" and the other
+"float this". The bare `Super + drag` keeps the compositor's own meaning
+because that is the one with the muscle memory behind it; popping a window out
+is the rarer, deliberate act, which is what the extra modifier is for.
+`Settings → Windows → dragToFloat` turns the Shift gesture off, in which case
+it falls through to the plain drag.
 
 ## Resizing
 
@@ -95,7 +112,8 @@ All of these repeat while held.
 ### Resize mode
 
 Tap `Super + R` once to enter a resize submap, then resize with bare keys —
-no modifier held:
+no modifier held. Unlike the workspace leader below, this submap **stays
+armed**, because resizing is something you repeat.
 
 | Key | Action |
 |---|---|
@@ -133,16 +151,21 @@ never swallows the keystroke after it.
 
 | Then press | Workspace | Launches |
 |---|---|---|
-| `T` or `Enter` | `tmux` | Ghostty attached to tmux session `default` |
+| `Enter` | `tmux` | Ghostty attached to tmux session `default` |
+| `T` | `top` | btop in Ghostty ("top") |
 | `N` | `nvim` | Neovim in Ghostty |
-| `M` | `top` | btop in Ghostty ("monitor") |
 | `G` | `chrome` | Google Chrome (new window) |
 | `B` | `brave` | Brave (new window) |
+| `C` | `claude` | Claude Desktop |
 | `D` | `debug` | Nothing — bare workspace |
 | `Escape` / `Q` | — | Back out, do nothing |
 
+btop needs the terminal around it: `exec btop` with no tty spawns a process
+that exits immediately, which looked like the workspace opening empty.
+
 Any other key also backs out silently (a `catchall` bind), so a mistype cannot
-strand you in the submap.
+strand you in the submap — and, more importantly, cannot land the letter in
+your editor while leaving the next keystroke hijacked.
 
 They launch their app if the workspace is empty, and pressing the same sequence
 again returns you to the previous workspace.
@@ -164,11 +187,18 @@ history and yazi keeps the directory you left it in.
 | `Super + E` | `special:files` | yazi in Ghostty | 1400 × 850 | Yes |
 | `Super + Y` | `special:music` | YouTube Music PWA | 1300 × 850 | No — starts on first press |
 | `Super + O` | `special:whatsapp` | WhatsApp Web PWA | 1200 × 850 | No — starts on first press |
+| `Super + Shift + H` | `special:todo` | hyprtodo | fills the workspace | No — starts on first press |
+
+Only the two Ghostty ones are pre-spawned. The three that are not are the
+expensive ones: a Chrome process per login is real memory, and hyprtodo was
+measured at 155 MB resident — the second-largest process on this machine after
+the shell itself — for a list opened a few times a day. The toggle cold-starts
+each of them on first press anyway; flip `prespawn = true` to trade the RAM for
+an instant first open.
 
 None of them appear in the dock, wherever they happen to be sitting —
 `Settings.dock.exclude` matches them by window class, so a scratchpad dragged
 onto a real workspace still stays out of the dock.
-| `Super + Shift + H` | `special:todo` | hyprtodo | fills the workspace | Yes |
 
 Quitting a scratchpad (exiting the shell, `q` in yazi, closing the PWA window)
 is harmless: the next press of its key starts it again.
@@ -179,8 +209,8 @@ you opened before, or a scratchpad you deliberately threw onto a real workspace
 copy.
 
 All five are declared in one table in `~/.config/hypr/scratchpads.lua`; adding
-another is a single entry there, and `prespawn = true` is what decides whether
-it starts at login.
+another is a single entry there, and `prespawn` is what decides whether it
+starts at login.
 
 ## Window Groups (tabs)
 
@@ -206,6 +236,12 @@ monitor around the laptop panel; the default placement is to its left.
 | `Super + Ctrl + Shift + Right` | Place the external display to the right |
 | `Super + Ctrl + Shift + Up` | Place the external display above |
 | `Super + Ctrl + Shift + Down` | Place the external display below |
+| `Super + Shift + R` | **`hyprctl reload`** — panel recovery |
+
+`Super + Shift + R` is worth knowing by feel, because by definition you cannot
+see the screen when you need it: if the display is black after a resume but the
+session is still alive, this re-enables the output and is the only thing that
+does (see the note in `hypridle.conf`).
 
 ## Applications and Utilities
 
@@ -233,7 +269,14 @@ The interactive UI layer: panels, the launcher, the dock, the OSD and the
 desktop widgets. Each one is a plain `exec_cmd` bind calling
 `quickshell ipc call`, so these keys keep working exactly as written even if a
 panel is disabled — a disabled target simply answers "unavailable" instead of
-opening.
+opening. List every target and function the running shell exposes with
+`just qs-ipc` (or `quickshell ipc show`); bring the shell back with
+`just qs-restart`.
+
+Keys stay declared in `bindings.lua`, in the one place keys have always been
+declared. Quickshell *can* register them itself through Hyprland's
+global-shortcuts protocol, and deliberately does not — otherwise half the
+desktop's keybindings would live in a file you would not think to grep.
 
 | Shortcut | Action |
 |---|---|
@@ -241,46 +284,109 @@ opening.
 | `Super + A` | **Control Center** — Wi-Fi, Bluetooth, audio, brightness, power profile, night light |
 | `Super + D` | Dashboard — clock, calendar, now playing, CPU/memory/disk/battery |
 | `Super + ,` | Settings — every toggle in the shell, in one window |
+| `Super + Shift + K` | **Command Center** — a searchable GUI over `~/Justfile` and the system CLI |
 | `Super + Shift + W` | Wallpaper picker |
-| `Super + Shift + T` | Theme switcher |
+| `Super + Shift + T` | Themes — Settings on its Appearance page, where the swatches live |
 | `Super + Shift + B` | Toggle the desktop audio visualizer |
 | `Super + Shift + G` | Arrange the desktop widgets (drag to move; `Escape` or click the desktop to finish) |
+| `Super + F2` | Emoji picker |
 | `Super + M` | Power menu — log out, suspend, restart, shut down |
 | `Super + Escape` | Lock the screen |
 
-`Super + D` used to toggle a `desktop` special workspace; that bind and the
-workspace are gone.
+`Escape` closes any of them, and so does clicking outside. Opening one closes
+whichever was already up, so two translucent panels can never overlap.
+
+### Why none of the existing binds moved
+
+Every shell key was checked against the rest of `bindings.lua` before it was
+chosen. The deliberate near-misses, so a future edit does not "tidy" them into
+a collision:
+
+| The shell key | Means | The near-miss it avoids |
+|---|---|---|
+| `Super + A` | Control Center | `Super + Shift + A` is stash/unstash |
+| `Super + Space` | Workspace overview | `Super + Shift + Space` floats; `Super + Alt + Space` toggles waybar |
+| `Super + D` | Dashboard | used to toggle a `desktop` special workspace — that bind and the workspace are gone |
+| `Super + Shift + W` | Wallpapers | `Super + W` is the workspace submap leader, untouched |
+| `Super + Shift + B` | Visualiser | chosen over `Super + Shift + V`, already `code` |
+| `Super + Shift + T` | Themes | `Super + W` then `T` is the `top` workspace — different leader |
+| `Super + Shift + K` | Command Center | `Super + K` is focus-up and stays that way |
+
+`Super + Shift + K` is the pattern the other two already follow: `K` is the
+only mnemonic the Command Center has, so it moved one modifier across rather
+than taking one of the four hjkl focus binds — the most-pressed keys on the
+machine. Nothing else with `K` on it is disturbed (`Super + Alt + K` moves,
+`Super + Ctrl + K` resizes, bare `K` resizes inside the `Super + R` submap, and
+`Super + Shift + <digit>` is digits, not letters).
+
+### Command Center
+
+`Super + Shift + K`, or the KDE Connect button on waybar. **It is a page of Settings
+now, not a panel of its own** — but the `commandcenter` IPC target is unchanged
+and deliberately kept, so `commandcenter page|find|run|set` all still work. The
+key is still a toggle: pressed with the Commands page already showing it closes
+the window, and pressed while Settings is open on another page it brings you to
+Commands instead of closing what you were reading.
 
 ### Locking
 
-`Super + Escape` goes through `~/.local/bin/lock-session`. **hyprlock is the
-locker.** hypridle also calls hyprlock directly for idle and sleep, so the
-automatic path never depends on the shell.
+Every lock path goes through `~/.local/bin/lock-session`: `Super + Escape`,
+hypridle's 300-second listener (via `loginctl lock-session`), its
+`before_sleep_cmd`, and the shell's own Lock button. One script, one decision.
 
-There is a Quickshell lock screen in the tree, and it is **off**. It was on for
-one afternoon; the session fell over while locked, and under ext-session-lock
-the compositor correctly keeps the screen locked when the lock client dies —
-which meant a TTY to get back in. Three things changed after that:
+**The Quickshell lock screen is on** (`Settings.features.lockScreen`), and
+`lock-session` picks it when it is enabled and the shell proves it actually
+locked; hyprlock is the fallback on anything else. That it is on at all is the
+result of three changes made after the session fell over while locked once —
+under ext-session-lock the compositor correctly keeps the screen locked when
+the lock client dies, which meant a TTY to get back in:
 
-- the lock screen moved into **its own quickshell process**
+- the lock screen runs as **its own quickshell process**
   (`~/.config/quickshell/lock.qml`), so a fault in the dock or the visualiser
   can no longer take the locker down;
-- `lock-session` **supervises** it — the lock writes a marker on a clean
-  unlock, and if the process exits without one, hyprlock is started
-  automatically;
+- `lock-session` **supervises** it — the lock writes
+  `$XDG_RUNTIME_DIR/qs-lock-clean` on a clean unlock, and if the process exits
+  without that marker hyprlock is started immediately, and retried until it
+  comes up;
 - `misc:allow_session_lock_restore` is **set at login** (`autostart.lua`), so a
   replacement locker can attach to a lock a dead one left behind. The session
   stays locked and still demands the password; it just no longer needs a TTY.
 
-One blocker remains before it is safe to turn back on. `hypridle.conf` runs
-`pidof hyprlock || hyprlock --grace 5` five minutes into idle; with the
-Quickshell locker holding the session that test fails, so hyprlock launches
-into an already-locked session. `lock_cmd` has to become
-`~/.local/bin/lock-session` first.
+A crash now looks like "hyprlock appeared" instead of "reboot".
 
+The `pidof hyprlock` test that used to guard `hypridle.conf` is gone, and with
+it the blocker that kept the Quickshell locker switched off: that test could
+not see a locker that was *not* hyprlock, so it launched hyprlock into an
+already-locked session. `lock_cmd` is `~/.local/bin/lock-session` now and an
+**flock** inside the script is what enforces one locker at a time — it covers
+every entry point without having to recognise which locker is in use. (Locking
+by hand does not set logind's `LockedHint`, so hypridle still fires its
+listener five minutes later; the flock is what makes that a silent no-op.)
 
-`Escape` closes any of them, and so does clicking outside. Opening one closes
-whichever was already up, so two translucent panels can never overlap.
+The `--grace 5` lives in `lock-session` too, applied only on the hyprlock
+fallback path.
+
+### Window controls
+
+A cluster of three dots floats near the focused window's corner (top-right,
+inset 8 px) — the macOS-style buttons, themed from `theme-switch`'s palette
+rather than three hardcoded hex values. It has no keybind; it is
+`Settings → Windows → controls`, or `quickshell ipc call windowcontrols
+toggle`.
+
+| Dot | Action |
+|---|---|
+| `×` red | Close the window |
+| `−` amber | Stash it — the same mechanism as `Super + Shift + A` |
+| `⬌` green | Maximize, or one step back towards normal if it is already there |
+
+Hovering any one of them lights all three: the dots are 12 px, and hunting for
+the exact one while they are still dim is not a control. The cluster hides
+itself during a `Super + drag` — Hyprland emits no geometry event, so without
+that it would rubber-band a frame behind the window — and the suspension
+self-clears after 8 seconds, so a drag interrupted by a shell restart cannot
+hide it permanently. `controlsExclude` keeps it off the scratchpads and the
+share picker.
 
 ### Emoji picker
 
@@ -338,6 +444,9 @@ Up is the past and down is the future, so both "back" directions are up-and-left
 and both "forward" directions are down-and-right. The grid slides in the
 direction of travel rather than swapping in place.
 
+The dashboard also carries a row of quick actions — Themes, Wallpaper, Settings
+and Power — which are the same IPC targets the keys above reach.
+
 ### What replaced what
 
 Nothing below was deleted — each fallback still works if Quickshell is not
@@ -348,13 +457,21 @@ running, which matters most for the power menu.
 | `blueman-applet` (resident) | Control Center + on-demand pairing | `bt-pair` starts blueman only while pairing |
 | Waybar cpu / memory pills | Dashboard | — |
 | Waybar microphone, idle inhibitor, power profile | Control Center | — |
-| Waybar tray + `nm-applet` | Control Center | `nm-connection-editor` on right-click |
+| Waybar `nm-applet` | Control Center | `nm-connection-editor` on right-click |
 | Brightness / volume slider popups | Control Center | `slider-popup.py` (433 lines of GTK3) |
 | Wi-Fi menu | Control Center | `wifi-menu.sh` (167 lines of shell + wofi) |
 | Clock → calendar | Dashboard (drops down from the clock) | `waycal` |
 | `nwg-dock-hyprland` | Quickshell dock | — |
 | `nwg-drawer` | Wofi on `Super + S` | — |
 | wlogout | Quickshell power menu | wlogout, then wofi |
+
+The tray is the one thing that came back. It went away with `nm-applet` and
+`blueman-applet`, but `kdeconnect-indicator` has no replacement: its menu
+(ring, send file, browse device, run command, SMS) is richer than
+`kdeconnect-app`'s window, and Quickshell implements no StatusNotifier host, so
+with no tray the indicator ran completely invisibly. `show-passive-items` is
+load-bearing there — the item goes Passive whenever no device is connected,
+which is exactly when you most want to glance at it.
 
 ## Clipboard and Notifications
 
@@ -363,6 +480,14 @@ running, which matters most for the power menu.
 | `Super + V` | Clipboard history — pick in Wofi, copies the selection |
 | `Super + N` | Browse notification history in fzf; Enter reposts the notification |
 | `Super + Ctrl + N` | Restore the most recently dismissed notification |
+
+`Super + S` and `Super + V` go through the same guard script
+(`scripts/wofi-launch.sh`), which serialises the decision behind an flock and
+keeps exactly one wofi per mode. Before that, either key could open a second
+layer surface on top of the first, both holding a keyboard grab.
+
+Mako is the notification daemon; the shell's own notification surface is off
+(`Settings.features.notifications`).
 
 ## Screenshots
 
@@ -376,6 +501,22 @@ Plain picks a region, `Alt` takes the whole screen; `Shift` saves to
 | `Super + Alt + P` | Whole screen, copy to clipboard |
 | `Super + Alt + Shift + P` | Whole screen, save to file |
 | `Super + Shift + S` | Same as `Super + Shift + P` — kept for muscle memory |
+
+### While the crosshair is up
+
+`screenshot.sh` arms a submap for exactly as long as slurp is on screen:
+
+| Key | Action |
+|---|---|
+| `Enter` (or keypad `Enter`) | Take the whole screen instead of a region |
+| `Escape` | Cancel |
+| `Space` | slurp's own modifier — move the selection instead of resizing it |
+
+It has to be the compositor that catches Enter: slurp 1.5.0 reads only Escape
+and Space, and neither is retargetable, while a plain global bind would have to
+be non-consuming and would then fork a process on every newline typed on this
+machine. There is no `catchall` here, unlike the workspaces submap — anything
+not bound has to fall through to slurp untouched.
 
 ## Hardware and Media Keys
 
@@ -391,6 +532,36 @@ Brightness and volume repeat while held.
 | `Mic Mute` | Toggle microphone mute |
 | `Play/Pause` | `playerctl play-pause` |
 | `Next` / `Previous` | Skip track |
+
+## The Lid
+
+The lid is a key too: `lid.lua` binds Hyprland's native switch keys —
+`switch:on:Lid Switch` when it shuts and `switch:off:...` when it opens — both
+`locked`, so closing the laptop on a locked session still works. The device
+name is read out of sysfs, so a machine with no lid switch registers no bind
+rather than one that can never fire.
+
+| Event | What happens |
+|---|---|
+| Lid closed, external attached | Internal panel **disabled**; the session continues out there |
+| Lid closed, no external | Internal panel **blanked**, never disabled — with zero outputs there is no screen to get back to |
+| Lid closed | Session locked, camera disabled |
+| Lid opened | Internal panel back on |
+
+`scripts/lid.sh` derives every action from state rather than from the event: it
+reads the lid's actual position out of sysfs and the actual monitor list out of
+Hyprland, and makes the world match. That is what makes a flapping lid, a lid
+already shut when Hyprland started, and an external unplugged while the lid is
+shut all one code path — `lid.lua` also calls it on startup and on
+monitor added/removed.
+
+logind's three `HandleLidSwitch*` keys are all set to `ignore`
+(`/etc/systemd/logind.conf.d/10-lid-ignore.conf`), which is what stops it
+suspending the machine out from under a build. But `ignore` means logind does
+*nothing*, and nothing is not the same as the right thing — everything it
+leaves undone is what `lid.sh` does. Each piece is a toggle in
+`Settings → Lid`: lock on close, disable the internal panel, disable the
+camera, keep the session on an external. All four are on.
 
 ## Touchpad
 
@@ -413,16 +584,24 @@ is status; the shell is where you change things.
 | Todo | Toggle the todo scratchpad | Jump to the todo workspace | — | — |
 | Window title | — | — | — | — |
 | Clock | **Dashboard**, dropping down from the clock | — | — | — |
+| KDE Connect `󰦉` | **Command Center** | `kdeconnect-app` | Ring the phone | — |
 | Network | Control Center | nm-connection-editor | — | — |
 | Temperature | Control Center | — | — | — |
 | Volume | Control Center | Toggle mute | pavucontrol | ∓5% (capped at 100%) |
 | Brightness | Control Center | — | — | ∓5% |
 | Battery | Control Center | — | — | — |
+| Tray | `kdeconnect-indicator`'s own menu | — | — | — |
+
+The KDE Connect button replaced the tray's position rather than sitting beside
+it — two buttons for one corner of the bar was the wrong answer, and the tray
+could not simply be retargeted because it is a StatusNotifier *host*, not a
+module with a command. The indicator's richer menu is still there, in the tray
+that now sits to its right.
 
 Opened from the clock the dashboard drops straight down out of the bar; opened
-from `Super + Shift + D` it comes in at the top right. Same panel either way —
-only where it lands differs, so the gesture that opened it is the one it appears
-to come from.
+from `Super + D` it comes in at the top right. Same panel either way — only
+where it lands differs, so the gesture that opened it is the one it appears to
+come from.
 
 ### On-screen display
 
@@ -443,7 +622,7 @@ change it. A pinned app that is also running is still one tile.
 
 ### Desktop widgets
 
-Clock, now playing, network, processor, memory and battery sit on the
+Clock, calendar, now playing, network, processor, memory and battery sit on the
 wallpaper. They disappear entirely when a window covers the wallpaper, which
 also stops the `/proc` reads behind the gauges.
 
@@ -480,7 +659,8 @@ Which widgets exist is Settings → Desktop.
 | Right click | Dismiss |
 
 Per-app overrides: notifications from Ghostty, Chrome/Chromium and Firefox focus
-that window on left click instead.
+that window on left click instead, and the Battery and Temperature ones just
+dismiss — there is nothing to open.
 
 ---
 
@@ -491,9 +671,10 @@ are written down rather than applied. Roughly in order of payoff.
 
 ### 1. `Super + Shift` is still a junk drawer
 
-It carries window ops, workspace-moves, app launches, screenshots and display
-layout — five unrelated meanings on one modifier. Everything below is really a
-consequence of fixing this. The target scheme:
+It carries window ops, workspace-moves, app launches, screenshots, display
+layout, shell panels and a compositor reload — seven unrelated meanings on one
+modifier. Everything below is really a consequence of fixing this. The target
+scheme:
 
 | Modifier | Means |
 |---|---|
@@ -510,20 +691,27 @@ from being purely "launch". Moving window-moving to `Super + Shift + hjkl` makes
 the three rows read focus / move / resize, and empties the `Alt` row for apps —
 where `Alt + E` and `Alt + G` already live.
 
-Blocked on: `Super + Shift + H` is the todo scratchpad (see 4).
+Blocked on: `Super + Shift + H` is the todo scratchpad (see 4), and
+`Super + Shift + K` is the Command Center.
 
 ### 3. Pair launch keys with workspace keys
 
 Same letter, different modifier — `Super + Alt + C` launches Chrome,
-`Super + W` `G` goes to its workspace. Today Chrome launches on `C` but its
-workspace is `G`, and Brave has a workspace with no launch key at all.
+`Super + W` `G` goes to its workspace. Today Chrome launches on `Super + C` but
+its workspace is `G`, while `Super + W` `C` is the *Claude Desktop* workspace —
+so `C` already means two different apps depending on the leader. Brave has a
+workspace on `B` with no launch key at all.
 
 ### 4. Scratchpads sit on five unrelated keys
 
 `` Super + ` `` (terminal), `Super + E` (files), `Super + Y` (music),
 `Super + O` (WhatsApp), `Super + Shift + H` (todo). The todo one is the odd one
-out *and* it is squatting on the `hjkl` grid that item 2 needs. `Super + T` is
-free and would fit the set.
+out *and* it is squatting on the `hjkl` grid that item 2 needs.
+
+`Super + T` used to be the obvious home for it and is now "tile the focused
+window", so this needs a different key. `Super + U` and `Super + Z` are the
+free ones left; neither is a mnemonic for a todo list, which is the real reason
+this has not moved.
 
 ### 5. `N` means three different things
 
@@ -538,21 +726,19 @@ keys — maximize / restore would be a natural home.
 
 ### 7. Keys currently free
 
-- **`Super`**: `B T U X Z`
-- **`Super + Shift`**: `D I J K L N O Q U Y Z`
+- **`Super`**: `B U X Z`
+- **`Super + Shift`**: `D I J L N O Q U Y Z`
 
-`Super + Shift + D` came free when the dashboard moved to `Super + D`. `O` went
-to the WhatsApp scratchpad, and `Space` to the workspace overview.
+`Super + Shift + D` came free when the dashboard moved to `Super + D`. Since
+the last pass, `T` went to tiling and `Super + Shift + K` to the Command
+Center, so the two shortest lists each lost a letter.
 
-Obvious remaining candidates: `T` for the todo scratchpad per item 4, `B` for
-the bar (today `Super + Alt + Space`).
+The shell migration took `A` (Control Center), `Space` (overview), `,`
+(Settings) and `Shift + B/G/K/T/W` (visualizer, widgets, Command Center, theme,
+wallpaper), so this drawer is still a good deal emptier than it was.
 
-The shell migration took `A` (Control Center), `Space` (launcher), `,`
-(Settings) and `Shift + B/D/G/T/W` (visualizer, dashboard, widgets, theme,
-wallpaper), so this drawer is a good deal emptier than it was.
-
-Obvious remaining candidates: `O` for a general "open", `T` for the todo
-scratchpad per item 4.
+Obvious remaining candidate: `B` for the bar, which is today on
+`Super + Alt + Space`.
 
 ### Non-keymap leftovers
 
