@@ -4,10 +4,10 @@
   "bg": "#1a1111",
   "surface": "#271d1d",
   "surface2": "#322827",
-  "border": "#524343",
-  "text": "#f0dede",
-  "muted": "#d7c1c1",
-  "a1": "#ffb3b3",
-  "a2": "#e5c18d",
-  "a3": "#ffabca"
+  "border": "#453736",
+  "text": "#d4c3c3",
+  "muted": "#af9b9b",
+  "a1": "#dd898a",
+  "a2": "#bc9b6a",
+  "a3": "#ff68a3"
 }

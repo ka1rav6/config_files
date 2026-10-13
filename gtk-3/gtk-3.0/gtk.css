@@ -12,69 +12,69 @@
 
 @define-color theme_bg_color #1a1111;
 @define-color theme_base_color #271d1d;
-@define-color theme_fg_color #f0dede;
-@define-color theme_text_color #f0dede;
-@define-color theme_selected_bg_color #ffb3b3;
+@define-color theme_fg_color #d4c3c3;
+@define-color theme_text_color #d4c3c3;
+@define-color theme_selected_bg_color #dd898a;
 @define-color theme_selected_fg_color #1a1111;
 @define-color theme_unfocused_bg_color #1a1111;
 @define-color theme_unfocused_base_color #271d1d;
-@define-color theme_unfocused_fg_color #f0dede;
-@define-color theme_unfocused_text_color #d7c1c1;
-@define-color theme_unfocused_selected_bg_color #ffb3b3;
+@define-color theme_unfocused_fg_color #d4c3c3;
+@define-color theme_unfocused_text_color #af9b9b;
+@define-color theme_unfocused_selected_bg_color #dd898a;
 @define-color theme_unfocused_selected_fg_color #1a1111;
 
 @define-color insensitive_bg_color #271d1d;
-@define-color insensitive_fg_color #d7c1c1;
+@define-color insensitive_fg_color #af9b9b;
 @define-color insensitive_base_color #1a1111;
 
-@define-color borders #524343;
-@define-color unfocused_borders #524343;
+@define-color borders #453736;
+@define-color unfocused_borders #453736;
 
-@define-color warning_color #e5c18d;
-@define-color error_color #ffabca;
-@define-color success_color #ffb3b3;
+@define-color warning_color #bc9b6a;
+@define-color error_color #ff68a3;
+@define-color success_color #dd898a;
 
 /* libadwaita (GTK4). Same names GNOME apps ask for by default. */
-@define-color accent_color #ffb3b3;
-@define-color accent_bg_color #ffb3b3;
+@define-color accent_color #dd898a;
+@define-color accent_bg_color #dd898a;
 @define-color accent_fg_color #1a1111;
-@define-color destructive_color #ffabca;
-@define-color destructive_bg_color #ffabca;
+@define-color destructive_color #ff68a3;
+@define-color destructive_bg_color #ff68a3;
 @define-color destructive_fg_color #1a1111;
-@define-color success_bg_color #ffb3b3;
+@define-color success_bg_color #dd898a;
 @define-color success_fg_color #1a1111;
-@define-color warning_bg_color #e5c18d;
+@define-color warning_bg_color #bc9b6a;
 @define-color warning_fg_color #1a1111;
-@define-color error_bg_color #ffabca;
+@define-color error_bg_color #ff68a3;
 @define-color error_fg_color #1a1111;
 
 @define-color window_bg_color #1a1111;
-@define-color window_fg_color #f0dede;
+@define-color window_fg_color #d4c3c3;
 @define-color view_bg_color #1a1111;
-@define-color view_fg_color #f0dede;
+@define-color view_fg_color #d4c3c3;
 @define-color headerbar_bg_color #271d1d;
-@define-color headerbar_fg_color #f0dede;
-@define-color headerbar_border_color #524343;
+@define-color headerbar_fg_color #d4c3c3;
+@define-color headerbar_border_color #453736;
 @define-color headerbar_backdrop_color #1a1111;
 @define-color sidebar_bg_color #271d1d;
-@define-color sidebar_fg_color #f0dede;
+@define-color sidebar_fg_color #d4c3c3;
 @define-color sidebar_backdrop_color #1a1111;
-@define-color sidebar_border_color #524343;
+@define-color sidebar_border_color #453736;
 @define-color secondary_sidebar_bg_color #271d1d;
-@define-color secondary_sidebar_fg_color #f0dede;
+@define-color secondary_sidebar_fg_color #d4c3c3;
 @define-color card_bg_color #322827;
-@define-color card_fg_color #f0dede;
+@define-color card_fg_color #d4c3c3;
 @define-color dialog_bg_color #271d1d;
-@define-color dialog_fg_color #f0dede;
+@define-color dialog_fg_color #d4c3c3;
 @define-color popover_bg_color #271d1d;
-@define-color popover_fg_color #f0dede;
+@define-color popover_fg_color #d4c3c3;
 @define-color thumbnail_bg_color #271d1d;
-@define-color thumbnail_fg_color #f0dede;
+@define-color thumbnail_fg_color #d4c3c3;
 
 /* Roles the house schema does not name -- matugen fills these in. */
 @define-color shade_color #000000;
 @define-color scrim_color #000000;
-@define-color accent_container_color #733335;
-@define-color on_accent_container_color #ffdad9;
+@define-color accent_container_color #632729;
+@define-color on_accent_container_color #ffb6b6;
 
 /* THEME:END */

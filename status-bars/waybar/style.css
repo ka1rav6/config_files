@@ -32,11 +32,11 @@
 @define-color bar-bg rgba(26, 17, 17, 0.94);
 @define-color panel-bg rgba(255, 255, 255, 0.07);
 @define-color panel-hover rgba(255, 255, 255, 0.13);
-@define-color text rgba(240, 222, 222, 0.92);
-@define-color muted rgba(215, 193, 193, 0.62);
-@define-color mint #ffb3b3;
-@define-color amber #e5c18d;
-@define-color coral #ffabca;
+@define-color text rgba(212, 195, 195, 0.92);
+@define-color muted rgba(175, 155, 155, 0.62);
+@define-color mint #dd898a;
+@define-color amber #bc9b6a;
+@define-color coral #ff68a3;
 /* THEME:END */
 
 /* Base typography for every module.

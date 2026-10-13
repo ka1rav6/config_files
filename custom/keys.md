@@ -563,6 +563,91 @@ leaves undone is what `lid.sh` does. Each piece is a toggle in
 `Settings → Lid`: lock on close, disable the internal panel, disable the
 camera, keep the session on an external. All four are on.
 
+## The Touchscreen
+
+Another switch bind, and the only one that exists for a performance reason.
+
+`touchscreen.lua` finds tablet-mode switches the same way `lid.lua` finds the
+lid — by capability bitmap, not by name. An input device *is* a tablet switch if
+it advertises `SW_TABLET_MODE` (bit 1 of `capabilities/sw`), which is a
+different device from `Lid Switch` (`sw = 1`): on a flip convertible the lid
+switch says the screen is shut, the tablet switch says it has been folded all
+the way back.
+
+It binds **every** candidate rather than picking one, and this machine is the
+reason. Two devices advertise `SW_TABLET_MODE` and only one of them works:
+
+| Device | Driver | Reports folds? |
+|---|---|---|
+| `HP WMI hotkeys` | `hp_wmi` | **No** — advertises the capability, never drives it |
+| `Intel HID switches` | `intel_hid` (`INTC107B:00`) | **Yes** |
+
+Worse, the one that works *does not exist at login*. `intel_hid` registers it
+lazily, on the first fold:
+
+```
+intel-hid INTC107B:00: switch event received, enable switches supports
+input: Intel HID switches as /devices/platform/INTC107B:00/input/input62
+```
+
+So a pure capability scan at config-parse time can only ever find the broken
+one. `KNOWN_LATE_SWITCHES` in `touchscreen.lua` pre-registers the Intel name so
+the first fold of a session works; binding a name that is not present is inert
+in Hyprland, so it costs nothing. This is the one place a device name is
+hardcoded rather than derived, because no capability is readable before the
+device exists — `lid.lua`'s "register no bind rather than one that can never
+fire" rule deliberately does not apply, since this bind *can* fire, just not
+yet.
+
+(`intel_vbtn` would be the usual driver for this on an Intel convertible —
+`INT33D6:00` is present and `chassis_type` is 31 — but it is unbound and not
+needed, because `intel_hid` already does the job. Not worth the moving part.)
+
+| Event | What happens |
+|---|---|
+| Folded to tablet / tent mode | Digitizer **attached** — touch works |
+| Opened back to laptop mode | Digitizer **detached** — costs nothing |
+| `Super + Shift + D` | Toggle it by hand, either way |
+| Session start | Settles on `START_ENABLED` (currently **off**) |
+
+Both switch binds are `locked`, because folding the machine on a locked session
+is exactly when touch is needed and there is no reachable keyboard to ask for it.
+
+### Why the touchscreen is off by default
+
+Measured, not assumed. While the digitizer's driver is attached, with nothing
+touching the panel:
+
+| | |
+|---|---|
+| `i2c_designware.2` (IRQ 20) | **41,601 interrupts/sec**, sustained |
+| Total since boot | 2.06 billion in 13.8 h — lifetime average 41,678/s, i.e. constant from boot |
+| Touchpad's bus, for scale | 12 M against the touchscreen bus's 2.06 B |
+
+The cost is not mainly CPU percentage. IRQ 20 is serviced by cpu2, and cpu2 was
+entering `C1` — the *shallowest* idle state — 31,975 times a second while
+reaching the deep states essentially never (`C2` 3/sec, `C3` 2/sec). cpu0 over
+the same window: `C1` 792/s, `C2` 813/s, `C3` 231/s. One of eight cores was
+permanently held out of deep idle. Detaching the driver took IRQ 20 to **0/sec**
+and cpu2's `C3` entries from 2/sec to **226/sec** — straight back to cpu0's
+profile.
+
+The underlying fault looks like the digitizer never being told to sleep: it
+emits **620 HID reports/sec** with nobody touching it (the 41.6 k is ~67
+controller FIFO interrupts per report), and `i2c-hid` only sends
+`SET_POWER(SLEEP)` when the HID device runtime-suspends, which cannot happen
+while libinput holds an input node open — which it does for the whole session.
+So it is not the `BOGUS_IRQ` quirk, and `i2c_hid` exposes no module parameters
+to tune. Nothing makes it cheap *while attached*, which is why the policy is
+about **when** it is attached rather than how much it costs.
+
+`scripts/touchscreen-toggle.sh` holds the policy; `scripts/touchscreen.sh` is
+the one privileged part (binding a driver means writing to `/sys`) and is
+installed root-owned behind a five-line sudoers drop-in by
+`sudo ~/.config/hypr/scripts/install-touchscreen.sh` — the same shape as the lid
+camera guard. Set `START_ENABLED = true` in `touchscreen.lua` for touch from
+login, at the cost in the table above.
+
 ## Touchpad
 
 - **Three-finger horizontal swipe** — slide between workspaces. The workspace
@@ -682,6 +767,11 @@ scheme:
 | `Super + Shift` | act on the focused window |
 | `Super + Alt` | launch an app |
 | `Super + Ctrl` | adjust (resize, nudge) |
+
+`Super + Shift + D` (touchscreen) is a new instance of exactly this problem: it
+is a hardware toggle, not an operation on the focused window. Under the scheme
+above it would belong with the other hardware keys, next to the brightness and
+volume controls, rather than on `Super + Shift` at all.
 
 ### 2. Complete the `hjkl` grid
 

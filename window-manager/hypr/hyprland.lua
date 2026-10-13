@@ -7,6 +7,7 @@
 --   rules.lua      - window rules
 --   windows.lua    - tiled <-> floating mouse policy (used by bindings.lua)
 --   lid.lua        - laptop lid / external monitor behaviour
+--   touchscreen.lua- digitizer on/off by tablet mode (it storms when attached)
 --   bindings.lua   - all keybindings
 --   autostart.lua  - apps started once at compositor launch
 --
@@ -27,5 +28,6 @@ dofile(os.getenv("HOME") .. "/.config/hypr/rules.lua")
 -- Before bindings.lua, which binds windows.drag to the mouse.
 dofile(os.getenv("HOME") .. "/.config/hypr/windows.lua")
 dofile(os.getenv("HOME") .. "/.config/hypr/lid.lua")
+dofile(os.getenv("HOME") .. "/.config/hypr/touchscreen.lua")
 dofile(os.getenv("HOME") .. "/.config/hypr/bindings.lua")
 dofile(os.getenv("HOME") .. "/.config/hypr/autostart.lua")
