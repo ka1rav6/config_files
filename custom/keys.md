@@ -51,6 +51,7 @@ shortcut of its own and `hyprctl binds` remains the single source of truth.
 | `Super + Shift + F` | Toggle maximized — fills the monitor but keeps gaps, borders and the bar |
 | `Super + Shift + Space` | Toggle floating |
 | `Super + T` | **Tile the focused window** — put it back in the layout |
+| `Super + Alt + T` | **Promote the showing scratchpad into the layout** — it becomes an ordinary tile here and a fresh scratchpad spawns hidden in its place. Falls back to `Super + T` when no scratchpad is showing |
 | `Super + Shift + C` | Center the focused window |
 | `Super + Shift + M` | Send the focused window to the next monitor (wraps) |
 | `Alt + Tab` | Cycle to the next window |
@@ -59,6 +60,9 @@ shortcut of its own and `hyprctl binds` remains the single source of truth.
 unsets floating, so it means "tile this" rather than "swap this" — you can
 press it twice without undoing yourself, which is what you want on the way out
 of a pile of floating windows. `Super + Shift + Space` is already the toggle.
+
+`Super + Alt + T` is the scratchpad-aware version of the same idea — see
+[Promoting a scratchpad](#promoting-a-scratchpad).
 
 ## Focusing Windows
 
@@ -211,6 +215,37 @@ copy.
 All five are declared in one table in `~/.config/hypr/scratchpads.lua`; adding
 another is a single entry there, and `prespawn` is what decides whether it
 starts at login.
+
+### Promoting a scratchpad
+
+`Super + Alt + T` promotes whichever scratchpad is currently showing: the window
+stops being a centred overlay on a hidden workspace and becomes an ordinary tile
+on the workspace you are looking at, and a fresh scratchpad spawns hidden in its
+place.
+
+It is for the quick thing that turned out not to be quick — the `tail -f` in the
+`` Super + ` `` terminal that became the build you watch for an hour, which you
+want *next to* the window you are watching it for rather than on top of it.
+
+It works on any of the five, not just the terminal, which is why it lives next
+to `Super + T` ("tile this") rather than hanging off any one toggle key. With no
+scratchpad showing it is exactly `Super + T`, so it is safe to reach for without
+checking what is focused.
+
+Two things worth knowing:
+
+- **The promoted window stops being that scratchpad's window.** Its key no
+  longer pulls it back — that is the point, otherwise the next `` Super + ` ``
+  would show you your build log instead of a clean terminal. It is marked with a
+  Hyprland window tag (`scratchpad-promoted`), which is how the toggle tells it
+  apart from a scratchpad you merely threw onto a real workspace by hand, and
+  which survives `hyprctl reload`.
+- **There is no "demote".** A promoted window is an ordinary window from then
+  on; close it when you are done with it. Its replacement is already waiting on
+  the special workspace.
+
+It still will not appear in the dock, for the same class-matching reason as
+above.
 
 ## Window Groups (tabs)
 

@@ -663,3 +663,4 @@ phone-unmount() {
         --object-path /modules/kdeconnect/devices/$dev/sftp \
         --method org.kde.kdeconnect.device.sftp.unmount
 }
+export TINYFISH_API_KEY='sk-tinyfish-k_6HGasJxwFAwHiRKyV_nO9q6rQbdVtH'

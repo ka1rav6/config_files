@@ -64,6 +64,8 @@ hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
 -- twice without undoing yourself is the one you want on the way out of a pile of
 -- floating windows. T was free: SUPER + W then T is the tmux workspace (a
 -- different leader) and SUPER + SHIFT + T is themes.
+-- SUPER + ALT + T is the scratchpad-aware version of this key -- see the
+-- scratchpad block further down.
 hl.bind(mod .. " + T", windows.tile)
 hl.bind(mod .. " + SHIFT + C", hl.dsp.window.center())
 
@@ -241,6 +243,32 @@ hl.bind(mod .. " + Y", scratchpads.toggle("music"))
 hl.bind(mod .. " + O", scratchpads.toggle("whatsapp"))
 hl.bind(mod .. " + SHIFT + H", scratchpads.toggle("todo"))
 
+-- SUPER + ALT + T -- promote the showing scratchpad into the layout: the window
+-- stops being a centred overlay on a hidden workspace and becomes an ordinary
+-- tile on the workspace you are looking at, and a fresh scratchpad spawns hidden
+-- in its place. For the quick thing in the SUPER+` terminal that turned out to
+-- be the thing you are now doing, and that you want NEXT to a window rather than
+-- on top of it. scratchpads.promote() documents the rest.
+--
+-- WHY IT IS PAIRED WITH SUPER + T AND NOT WITH SUPER + `
+--   It is not about the terminal -- it promotes whichever scratchpad is showing,
+--   so hanging it off any one toggle key would be a lie. SUPER + T already means
+--   "put the focused window in the layout", which is exactly the half of this
+--   that is not scratchpad-specific, and the ALT variant of it was free.
+--
+-- WHY IT FALLS THROUGH
+--   promote() returns false and touches nothing when no scratchpad is showing,
+--   so the key still means "put this window in the layout" on an ordinary
+--   floating window -- it only additionally leaves a replacement behind when
+--   there was a scratchpad to replace. That makes it safe to reach for without
+--   first checking what is focused, which is the whole point of a keybind you
+--   press mid-thought.
+hl.bind(mod .. " + ALT + T", function()
+    if not scratchpads.promote() then
+        windows.tile()
+    end
+end)
+
 -- Display layout. X toggles duplicate/extended; CTRL+SHIFT+arrows move the
 -- external monitor around the laptop panel (default: to its left).
 local display = home .. "/.config/hypr/scripts/display-layout.sh "
@@ -397,6 +425,9 @@ hl.bind(mod .. " + bracketright", hl.dsp.group.next())
 --                                          leader and is untouched)
 --     SUPER + SHIFT + B  visualiser       (chosen over SUPER+SHIFT+V, which is
 --                                          already `code`)
+--     SUPER + ALT + T    promote scratchpad to a tile (SUPER+T is plain
+--                                          "tile this"; SUPER+ALT+E is tiled
+--                                          yazi, a different key entirely)
 --     SUPER + SHIFT + T  themes           (SUPER+W then T is the tmux
 --                                          workspace -- different leader,
 --                                          no conflict)
