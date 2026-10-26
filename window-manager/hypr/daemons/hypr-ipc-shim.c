@@ -369,6 +369,20 @@ static ssize_t ask_hyprland(const char *req, char *buf, size_t cap) {
     return (ssize_t)len;
 }
 
+// Set HYPR_IPC_SHIM_DEBUG=1 to trace the cursor-follow arithmetic into
+// waybar's log (/tmp/waybar.log -- this process's stderr goes there).
+// Verifying this by reading cursorpos afterwards is unreliable: the user's
+// own hand moves the pointer between the dispatch and the measurement, which
+// is exactly what made the first attempt at checking it look broken.
+static int shim_debug(void) {
+    static int cached = -1;
+    if (cached < 0) {
+        const char *v = getenv("HYPR_IPC_SHIM_DEBUG");
+        cached = (v && *v && *v != '0') ? 1 : 0;
+    }
+    return cached;
+}
+
 static int focused_monitor(struct mon *mons, int n) {
     for (int i = 0; i < n; i++)
         if (mons[i].focused) return i;
@@ -436,6 +450,13 @@ static void follow_cursor_to_focus(int nbefore, int before) {
     char req[160];
     snprintf(req, sizeof req,
              "dispatch hl.dsp.cursor.move({ x = %d, y = %d })", (int)nx, (int)ny);
+
+    if (shim_debug())
+        fprintf(stderr,
+                "shim: follow mon%d->mon%d  cursor %.0f,%.0f  from(x=%.0f) "
+                "to(x=%.0f w=%.0f) -> %d,%d\n",
+                at, after, cx, cy, from->x, to->x, tw, (int)nx, (int)ny);
+
     ask_hyprland(req, buf, sizeof buf);
 }
 

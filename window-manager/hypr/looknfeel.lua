@@ -118,6 +118,16 @@ hl.config({
     -- prevent this; the monitor change is a separate warp, and this is the
     -- option that governs it.
     --
+    -- THE BAR IS A DELIBERATE EXCEPTION, and it is not implemented here.
+    -- Switching to workspace 10 from the bar SHOULD take the pointer to
+    -- eDP-1, or you have aimed at a workspace you then cannot reach and the
+    -- scroll gesture dies mid-flick. Hyprland offers no "follow to the new
+    -- monitor but stay out of the window" setting, so hypr-ipc-shim does it
+    -- for that one path: it puts the pointer at the same offset on the new
+    -- monitor's bar. Both of waybar's routes -- click and scroll -- go
+    -- through the shim, and nothing else does, so the dock (which talks to
+    -- Hyprland directly) keeps the stay-put behaviour above.
+    --
     -- The trade: focus can now be on a monitor the pointer is not over. With
     -- follow_mouse = 1 (input.lua) the next deliberate pointer movement over
     -- a window takes focus back, which is the behaviour you want anyway --

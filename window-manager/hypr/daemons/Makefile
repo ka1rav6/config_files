@@ -38,7 +38,7 @@ BINDIR  := $(PREFIX)/bin
 # backup tooling.
 OBJDIR  := build
 
-USER_NAMES := barfeed-hyprtodo barfeed-kdeconnect hypr-ipc-shim hypr-digitizer-ctl
+USER_NAMES := barfeed-hyprtodo barfeed-kdeconnect hypr-ipc-shim hypr-ipc-send hypr-digitizer-ctl
 ROOT_NAMES := hypr-digitizerd
 
 USER_BINS := $(addprefix $(OBJDIR)/,$(USER_NAMES))

@@ -256,12 +256,25 @@
         // workspaces, which is what makes scrolling land somewhere useful
         // instead of walking into an empty workspace 7.
         //
+        // Sent through hypr-ipc-send, NOT hyprctl, and that is deliberate.
+        //
+        // waybar is a child of hypr-ipc-shim, so its HYPRLAND_INSTANCE_SIGNATURE
+        // -- and therefore its children's -- points at the shim. hypr-ipc-send
+        // resolves that the ordinary way, so these two lines go through the
+        // shim exactly as the CLICK path does, and both pick up its
+        // cross-monitor cursor follow from one implementation instead of two
+        // that could drift apart. It is also a far smaller binary than hyprctl
+        // to spawn per tick.
+        //
+        // The legacy string form is on purpose: the shim is what turns it into
+        // Lua, so the translation lives in one place too.
+        //
         // These are commands rather than a built-in, so each tick costs a
         // shell. smooth-scrolling-threshold is what keeps that bounded: the
         // touchpad emits a continuous stream of small deltas, and without a
         // threshold one flick would fire dozens of dispatches.
-        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
-        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+        "on-scroll-up": "hypr-ipc-send 'dispatch workspace e+1'",
+        "on-scroll-down": "hypr-ipc-send 'dispatch workspace e-1'",
         "smooth-scrolling-threshold": 1.5
     },
 
