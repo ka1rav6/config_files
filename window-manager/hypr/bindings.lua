@@ -131,8 +131,15 @@ hl.bind("SUPER + TAB", function()
         hl.dispatch(hl.dsp.focus({ workspace = previous }))
     end
 end)
-hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
-hl.bind(mod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
+-- Scroll UP goes to the NEXT workspace: on workspace 1, wheel up lands on 2.
+-- The reverse reads as "the list scrolls past the pointer" and is what
+-- Hyprland's own examples do, but it means wheel-up on workspace 1 wraps
+-- backwards to 10, which is the opposite of what the numbers in the bar
+-- suggest. Keep these two the same way round as the waybar workspaces module
+-- ("on-scroll-up" in config.jsonc) -- the two gestures do the same thing and
+-- disagreeing about direction is worse than either choice.
+hl.bind(mod .. " + mouse_up", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "e-1" }))
 
 -- Keyboard equivalent of the 3-finger swipe: same workspaces, same slide.
 -- Not marked repeating, so holding the arrow down cannot stack up a queue of

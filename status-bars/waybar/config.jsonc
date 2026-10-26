@@ -244,8 +244,13 @@
         "on-click": "activate",
 
         // Scroll anywhere over the workspace numbers to walk through them,
-        // matching SUPER + scroll (bindings.lua:134) -- same dispatcher, same
+        // matching SUPER + scroll in bindings.lua -- same dispatcher, same
         // direction, so the two gestures cannot disagree.
+        //
+        // UP GOES TO THE NEXT WORKSPACE: on workspace 1, wheel up lands on 2.
+        // The other way round makes wheel-up on workspace 1 wrap backwards to
+        // 10, which reads wrong against the numbers sitting right there in the
+        // bar.
         //
         // `e+1` / `e-1` rather than `+1` / `-1`: the `e` prefix skips empty
         // workspaces, which is what makes scrolling land somewhere useful
@@ -255,8 +260,8 @@
         // shell. smooth-scrolling-threshold is what keeps that bounded: the
         // touchpad emits a continuous stream of small deltas, and without a
         // threshold one flick would fire dozens of dispatches.
-        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
-        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
         "smooth-scrolling-threshold": 1.5
     },
 
