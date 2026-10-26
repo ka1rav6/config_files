@@ -170,10 +170,12 @@ static int append_lua_value(char *out, size_t cap, size_t *o, const char *arg) {
 // forwarded unchanged. Only the four forms waybar actually emits are handled;
 // anything else -- every `j/` query, and any dispatcher a future waybar might
 // send -- passes through untouched rather than being guessed at.
-static int translate(const char *req, size_t len, char *out, size_t cap) {
+static int translate(const char *req, size_t len, char *out, size_t cap,
+                     int *changes_workspace) {
     static const char PFX[] = "dispatch ";
     const size_t plen = sizeof PFX - 1;
 
+    if (changes_workspace) *changes_workspace = 0;
     if (len < plen || strncmp(req, PFX, plen) != 0) return 0;
 
     const char *cmd = req + plen;
@@ -212,6 +214,10 @@ static int translate(const char *req, size_t len, char *out, size_t cap) {
 
         n = snprintf(out + o, cap - o, "%s", map[i].lua_close);
         if (n < 0 || (size_t)n >= cap - o) return 0;
+        // Only the two focus forms can land on another monitor. Toggling a
+        // special workspace opens it on the monitor you are already on, so it
+        // never needs the cursor to follow.
+        if (changes_workspace && i < 2) *changes_workspace = 1;
         return 1;
     }
 
@@ -247,6 +253,192 @@ static int connect_upstream(void) {
     return fd;
 }
 
+// ---------------------------------------------------------------------------
+// Following the cursor across monitors
+// ---------------------------------------------------------------------------
+//
+// WHY THIS IS HERE AND NOT A HYPRLAND OPTION
+//
+// cursor:no_warps = true (looknfeel.lua) stops Hyprland dragging the pointer
+// into the middle of whatever window it just focused. That is what we want
+// for the dock -- click an app, the pointer stays on the dock. But workspace
+// 10 lives on eDP-1, so clicking or scrolling to it on the bar left the
+// pointer behind on HDMI-A-1 while the other screen became active: the
+// workspace switched on a monitor the pointer could not reach, and the
+// gesture could not be continued because the following scroll ticks landed
+// on the wrong bar.
+//
+// Hyprland has no option for "follow to the new monitor but do not dive into
+// the window" -- warp_on_change_workspace only offers the window centre. So
+// the bar's own path does it: when a workspace switch moves focus to a
+// different monitor, put the pointer at the SAME OFFSET on the new monitor
+// that it had on the old one.
+//
+// That offset is the point. Both monitors run the same bar with the same
+// modules in the same order from the left, so the same x offset is the same
+// widget -- land on the workspace numbers on HDMI-A-1 and you land on the
+// workspace numbers on eDP-1, with the gesture still live under the pointer.
+// Keeping y unchanged keeps it at the same height in the bar.
+//
+// Only this path does it. SUPER + scroll (bindings.lua) still leaves the
+// pointer alone, because there the pointer is wherever you are working rather
+// than on a widget you are aiming at.
+
+#define MAX_MONITORS 8
+
+struct mon {
+    double x, y, w, h, scale;
+    int focused;
+};
+
+// Enough of a JSON reader for `j/monitors`, and no more.
+//
+// Depth tracking is the whole trick: a monitor object sits at depth 2 (inside
+// the top-level array), and its nested activeWorkspace and specialWorkspace
+// objects sit at depth 3. A naive scan for "name" or "id" would read those
+// instead -- every monitor carries three of each. Taking keys only at depth 2
+// makes the nested objects invisible without having to understand them.
+static int parse_monitors(const char *j, struct mon *out, int max) {
+    int depth = 0, count = -1;
+    char key[32];
+
+    for (const char *p = j; *p; p++) {
+        if (*p == '"') {
+            // Read a string token. If it is a key at depth 2, remember it and
+            // let the value branch below pick up what follows.
+            const char *start = ++p;
+            while (*p && *p != '"') p += (*p == '\\' && p[1]) ? 1 : 0, p++;
+            size_t len = (size_t)(p - start);
+            const char *after = p + 1;
+            while (*after == ' ' || *after == '\n' || *after == '\t') after++;
+            if (*after == ':' && depth == 2 && len < sizeof key) {
+                memcpy(key, start, len);
+                key[len] = '\0';
+            } else if (*after != ':') {
+                key[0] = '\0';  // a string VALUE, not a key
+            }
+            continue;
+        }
+        if (*p == '{' || *p == '[') {
+            depth++;
+            if (depth == 2 && *p == '{') {
+                if (++count >= max) return max;
+                out[count] = (struct mon){.scale = 1.0};
+            }
+            continue;
+        }
+        if (*p == '}' || *p == ']') { depth--; continue; }
+
+        if (depth != 2 || count < 0 || !key[0]) continue;
+
+        if (*p == '-' || (*p >= '0' && *p <= '9')) {
+            double v = strtod(p, (char **)&p);
+            p--;  // the for-loop will advance past the last consumed character
+            if      (!strcmp(key, "x"))      out[count].x = v;
+            else if (!strcmp(key, "y"))      out[count].y = v;
+            else if (!strcmp(key, "width"))  out[count].w = v;
+            else if (!strcmp(key, "height")) out[count].h = v;
+            else if (!strcmp(key, "scale"))  out[count].scale = v;
+            key[0] = '\0';
+        } else if (!strncmp(p, "true", 4) || !strncmp(p, "false", 5)) {
+            if (!strcmp(key, "focused")) out[count].focused = (*p == 't');
+            p += (*p == 't') ? 3 : 4;
+            key[0] = '\0';
+        }
+    }
+    return count + 1;
+}
+
+// Send a request to the real Hyprland socket and return its reply length.
+static ssize_t ask_hyprland(const char *req, char *buf, size_t cap) {
+    int fd = connect_upstream();
+    if (fd < 0) return -1;
+    if (write(fd, req, strlen(req)) < 0) { close(fd); return -1; }
+    shutdown(fd, SHUT_WR);
+
+    size_t len = 0;
+    for (;;) {
+        ssize_t r = read(fd, buf + len, cap - 1 - len);
+        if (r < 0 && errno == EINTR) continue;
+        if (r <= 0) break;
+        len += (size_t)r;
+        if (len >= cap - 1) break;
+    }
+    buf[len] = '\0';
+    close(fd);
+    return (ssize_t)len;
+}
+
+static int focused_monitor(struct mon *mons, int n) {
+    for (int i = 0; i < n; i++)
+        if (mons[i].focused) return i;
+    return -1;
+}
+
+// Which monitor contains this point, in LOGICAL coordinates. A monitor's
+// reported width/height are its mode in physical pixels, so eDP-1 at scale
+// 1.5 is 2880x1800 of hardware but 1920x1200 of desk space -- and cursorpos
+// speaks the latter. Dividing by scale is what makes the two agree.
+static int monitor_at(struct mon *mons, int n, double x, double y) {
+    for (int i = 0; i < n; i++) {
+        double w = mons[i].w / mons[i].scale, h = mons[i].h / mons[i].scale;
+        if (x >= mons[i].x && x < mons[i].x + w &&
+            y >= mons[i].y && y < mons[i].y + h)
+            return i;
+    }
+    return -1;
+}
+
+// Called after a workspace dispatch has been forwarded. `before` is the index
+// of the monitor that had focus beforehand, and `nbefore` how many there were.
+//
+// Geometry is taken from the fresh listing rather than the snapshot: indices
+// are positional and stay put, but a monitor's scale or position can have
+// changed, and the count check below is what catches a hotplug between the
+// two reads.
+static void follow_cursor_to_focus(int nbefore, int before) {
+    char buf[REPLY_MAX];
+
+    if (before < 0) return;
+    if (ask_hyprland("j/monitors", buf, sizeof buf) <= 0) return;
+
+    struct mon after_mons[MAX_MONITORS];
+    int nafter = parse_monitors(buf, after_mons, MAX_MONITORS);
+    int after = focused_monitor(after_mons, nafter);
+    if (after < 0 || after == before || nafter != nbefore) return;
+
+    // cursorpos answers "x, y" as plain text.
+    if (ask_hyprland("cursorpos", buf, sizeof buf) <= 0) return;
+    double cx = 0, cy = 0;
+    if (sscanf(buf, "%lf, %lf", &cx, &cy) != 2) return;
+
+    // If the pointer is already on the newly focused monitor there is nothing
+    // to do -- the user got there by hand, or something else moved it.
+    int at = monitor_at(after_mons, nafter, cx, cy);
+    if (at == after) return;
+    if (at < 0) at = before;
+
+    const struct mon *from = &after_mons[at], *to = &after_mons[after];
+    double tw = to->w / to->scale, th = to->h / to->scale;
+
+    double nx = to->x + (cx - from->x);
+    double ny = to->y + (cy - from->y);
+
+    // Clamp into the destination. The monitors are different logical sizes
+    // (2560x1440 against 1920x1200 here), so an offset that was comfortably
+    // inside the wide screen can fall off the narrow one -- and a cursor
+    // placed outside a monitor is a cursor Hyprland puts somewhere else.
+    if (nx > to->x + tw - 2) nx = to->x + tw - 2;
+    if (nx < to->x) nx = to->x;
+    if (ny > to->y + th - 2) ny = to->y + th - 2;
+    if (ny < to->y) ny = to->y;
+
+    char req[160];
+    snprintf(req, sizeof req,
+             "dispatch hl.dsp.cursor.move({ x = %d, y = %d })", (int)nx, (int)ny);
+    ask_hyprland(req, buf, sizeof buf);
+}
+
 // One client exchange, start to finish.
 //
 // Handled inline rather than with a state machine: a Hyprland IPC request is
@@ -262,10 +454,23 @@ static void serve(int client) {
     char translated[REQ_MAX];
     const char *send_buf = req;
     size_t send_len = (size_t)n;
+    int changes_workspace = 0;
 
-    if (translate(req, (size_t)n, translated, sizeof translated)) {
+    if (translate(req, (size_t)n, translated, sizeof translated, &changes_workspace)) {
         send_buf = translated;
         send_len = strlen(translated);
+    }
+
+    // Snapshot which monitor has focus BEFORE the switch. It has to be read
+    // first -- afterwards there is no way to tell which monitor we came from.
+    int nbefore = 0, before = -1;
+    if (changes_workspace) {
+        char snap[REPLY_MAX];
+        struct mon snap_mons[MAX_MONITORS];
+        if (ask_hyprland("j/monitors", snap, sizeof snap) > 0) {
+            nbefore = parse_monitors(snap, snap_mons, MAX_MONITORS);
+            before = focused_monitor(snap_mons, nbefore);
+        }
     }
 
     int up = connect_upstream();
@@ -296,6 +501,11 @@ static void serve(int client) {
 done:
     close(up);
     close(client);
+
+    // After the reply has gone back to waybar, so the bar is never kept
+    // waiting on the extra round trips this costs.
+    if (changes_workspace && before >= 0)
+        follow_cursor_to_focus(nbefore, before);
 }
 
 // ---------------------------------------------------------------------------
