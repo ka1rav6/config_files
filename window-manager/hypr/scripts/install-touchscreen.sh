@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# install-touchscreen.sh — one-time root install for the touchscreen toggle.
+# install-touchscreen.sh — one-time root install for the digitizer daemon.
 # =============================================================================
 # Run it once, by hand:
 #
@@ -8,125 +8,144 @@
 #
 # and once more with --uninstall to take it all back out again.
 #
-# This is the second privileged thing in this config, after the lid camera
-# guard, and for the same kind of reason: binding and unbinding a driver means
-# writing to /sys, and /sys is root's. There is no unprivileged mechanism for
-# detaching a driver from a device. See the header of touchscreen.sh for the
-# measurements that justify wanting to, and for the gentler options that were
-# tried first and do not work.
+# WHAT CHANGED, AND WHY
+#   This used to install a root-owned copy of touchscreen.sh plus a sudoers
+#   drop-in with five NOPASSWD entries, and the session drove it through
+#   `sudo -n` on every fold. That chain was four processes per fold with no
+#   lock anywhere in it, so two quick folds could race each other, and it could
+#   not work on the FIRST fold of a session at all -- intel_hid registers the
+#   tablet-mode switch lazily, so the device Hyprland needed to bind did not
+#   exist when Hyprland parsed its config.
 #
-# WHAT IT INSTALLS -- exactly two files, both listed here so uninstalling is not
-# an act of faith:
+#   It now installs one root service, hypr-digitizerd, which reads the switch
+#   itself and writes the sysfs bind/unbind itself. The full reasoning is at
+#   the top of ~/.config/hypr/daemons/hypr-digitizerd.c; the measurements that
+#   justify turning the digitizer off at all are still in scripts/touchscreen.sh,
+#   which is kept for its documentation and its `detect` helper.
 #
-#   /usr/local/lib/hypr/touchscreen        root:root 0755, a copy of
-#                                          ~/.config/hypr/scripts/touchscreen.sh
-#   /etc/sudoers.d/61-hypr-touchscreen     0440, five NOPASSWD entries
+#   The sudoers drop-in is REMOVED by this installer, including when upgrading
+#   from the old layout. The session's access is now a unix socket owned by the
+#   desktop user that accepts four verbs -- narrower than a NOPASSWD entry on a
+#   root-owned binary.
 #
-# The number is 61 because 60 is the camera guard's. They are independent; both
-# can be installed, and uninstalling one leaves the other alone.
+# WHAT IT INSTALLS -- exactly two files, both listed here so uninstalling is
+# not an act of faith:
 #
-# WHY A SUDOERS DROP-IN AND NOT A SYSTEMD SERVICE
-#   Same answer as the camera guard: a system service would need polkit rules to
-#   let a user start it, which is more moving parts and a broader grant than
-#   this needs. The drop-in below permits five fixed command lines and nothing
-#   else -- no wildcards, no arguments the caller chooses, no shell.
+#   /usr/local/lib/hypr/hypr-digitizerd         root:root 0755
+#   /etc/systemd/system/hypr-digitizerd.service root:root 0644
 #
-# WHY THE SCRIPT IS COPIED RATHER THAN POINTED AT IN $HOME
-#   A sudoers NOPASSWD entry pointing at a file the invoking user can WRITE is a
-#   root shell with extra steps: edit the script, run it, own the machine. The
-#   copy lives somewhere only root can write, which is what makes the grant
-#   meaningful. The corollary is that editing touchscreen.sh in ~/.config does
-#   NOT take effect until this installer is run again -- which the installer says
-#   out loud when it finishes.
+# and into the invoking user's ~/.local/bin, the client the keybind calls:
+#
+#   hypr-digitizer-ctl
 # =============================================================================
 
 set -euo pipefail
 
-SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/touchscreen.sh"
-TARGET_DIR="/usr/local/lib/hypr"
-TARGET="$TARGET_DIR/touchscreen"
-SUDOERS="/etc/sudoers.d/61-hypr-touchscreen"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC_DIR="$(cd "$HERE/../daemons" && pwd)"
+# The Makefile builds into build/ so the nightly config backup skips the
+# binaries -- see the comment on OBJDIR in that Makefile.
+BUILD_DIR="$SRC_DIR/build"
 
+TARGET_DIR="/usr/local/lib/hypr"
+TARGET="$TARGET_DIR/hypr-digitizerd"
+UNIT="/etc/systemd/system/hypr-digitizerd.service"
+
+# The old layout, removed on install as well as on uninstall.
+OLD_SUDOERS="/etc/sudoers.d/61-hypr-touchscreen"
+OLD_HELPER="$TARGET_DIR/touchscreen"
+
+[[ "$(id -u)" -eq 0 ]] || {
+    echo "This installs a root service, so it needs sudo:" >&2
+    echo "  sudo $0 ${1:-}" >&2
+    exit 1
+}
+
+TARGET_USER="${SUDO_USER:-}"
+[[ -n "$TARGET_USER" ]] || { echo "Could not determine the invoking user (SUDO_USER unset)." >&2; exit 1; }
+TARGET_UID="$(id -u "$TARGET_USER")"
+TARGET_GID="$(id -g "$TARGET_USER")"
+TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
+
+# -----------------------------------------------------------------------------
+# Uninstall
+# -----------------------------------------------------------------------------
 if [[ "${1:-}" == "--uninstall" ]]; then
-    [[ "$(id -u)" -eq 0 ]] || { echo "Run with sudo." >&2; exit 1; }
-    # Leave the touchscreen BOUND on the way out. Removing the helper while the
-    # device is unbound would strand it off with nothing left on the machine
-    # able to turn it back on short of a reboot.
-    if [[ -x "$TARGET" ]]; then
-        "$TARGET" on >/dev/null 2>&1 || true
+    systemctl disable --now hypr-digitizerd.service 2>/dev/null || true
+    rm -f "$UNIT"
+    systemctl daemon-reload 2>/dev/null || true
+
+    # Leave the digitizer BOUND on the way out. Removing the daemon while the
+    # device is unbound would strand touch off with nothing left on the machine
+    # able to turn it back on short of a reboot. The daemon does this itself on
+    # SIGTERM; this is the belt to that braces, for the case where it was
+    # already dead.
+    if [[ -d /sys/bus/i2c/devices/i2c-ELAN2514:00 ]] &&
+       [[ ! -e /sys/bus/i2c/devices/i2c-ELAN2514:00/driver ]]; then
+        echo "i2c-ELAN2514:00" > /sys/bus/i2c/drivers/i2c_hid_acpi/bind 2>/dev/null || true
         echo "Re-bound the touchscreen so it is not left off with no way back."
     fi
-    rm -f "$SUDOERS" "$TARGET"
-    # Shared with the camera guard, so only remove it if it is now empty.
+
+    rm -f "$TARGET" "$OLD_HELPER" "$OLD_SUDOERS"
+    rm -f "$TARGET_HOME/.local/bin/hypr-digitizer-ctl"
     rmdir "$TARGET_DIR" 2>/dev/null || true
-    echo "Removed $TARGET and $SUDOERS."
+
+    echo "Removed $TARGET, $UNIT and the client."
     echo "Also remove the dofile line for touchscreen.lua from hyprland.lua."
     exit 0
 fi
 
-[[ "$(id -u)" -eq 0 ]] || {
-    echo "This installs a root-owned helper and a sudoers drop-in, so it needs sudo:" >&2
-    echo "  sudo $0" >&2
-    exit 1
-}
+# -----------------------------------------------------------------------------
+# Install
+# -----------------------------------------------------------------------------
 
-[[ -r "$SOURCE" ]] || { echo "Cannot read $SOURCE" >&2; exit 1; }
+# Build as the invoking user, not as root: the object files and binaries then
+# belong to them, and a later `make` in that directory does not hit a
+# root-owned artefact it cannot overwrite.
+echo "Building..."
+sudo -u "$TARGET_USER" make -C "$SRC_DIR" --no-print-directory
 
-# Who the NOPASSWD grant is for: the user who invoked sudo, not root.
-TARGET_USER="${SUDO_USER:-}"
-[[ -n "$TARGET_USER" ]] || { echo "Could not determine the invoking user (SUDO_USER unset)." >&2; exit 1; }
+[[ -x "$BUILD_DIR/hypr-digitizerd" ]] || { echo "Build produced no hypr-digitizerd." >&2; exit 1; }
 
 install -d -o root -g root -m 0755 "$TARGET_DIR"
-install -o root -g root -m 0755 "$SOURCE" "$TARGET"
+install -o root -g root -m 0755 "$BUILD_DIR/hypr-digitizerd" "$TARGET"
 echo "Installed $TARGET"
 
-# Write the drop-in to a temp file and VALIDATE IT before putting it in place.
-#
-# This is the load-bearing line of the whole script. A syntactically invalid
-# file in /etc/sudoers.d breaks sudo ENTIRELY -- not just this entry -- and the
-# way out of that is a root shell you no longer have. `visudo -c` on the
-# candidate file is what makes this safe to run.
-tmp=$(mktemp)
-trap 'rm -f "$tmp"' EXIT
+# The client the SUPER + SHIFT + D bind calls. Owned by the user, in the
+# ~/.local/bin that autostart.lua already puts on Hyprland's PATH.
+install -d -o "$TARGET_UID" -g "$TARGET_GID" -m 0755 "$TARGET_HOME/.local/bin"
+install -o "$TARGET_UID" -g "$TARGET_GID" -m 0755 \
+    "$BUILD_DIR/hypr-digitizer-ctl" "$TARGET_HOME/.local/bin/hypr-digitizer-ctl"
+echo "Installed $TARGET_HOME/.local/bin/hypr-digitizer-ctl"
 
-cat >"$tmp" <<EOF
-# Installed by ~/.config/hypr/scripts/install-touchscreen.sh
-#
-# Lets the desktop session attach and detach the touchscreen digitizer, which
-# costs ~41,600 interrupts/sec while attached and holds one CPU core out of deep
-# idle. Called from ~/.config/hypr/touchscreen.lua via:
-#   sudo -n $TARGET on|off|toggle|status
-#
-# Five exact command lines, no wildcards and no caller-supplied arguments. The
-# target is root-owned and not writable by $TARGET_USER, which is what stops this
-# being an arbitrary-root-command grant.
-$TARGET_USER ALL=(root) NOPASSWD: $TARGET on
-$TARGET_USER ALL=(root) NOPASSWD: $TARGET off
-$TARGET_USER ALL=(root) NOPASSWD: $TARGET toggle
-$TARGET_USER ALL=(root) NOPASSWD: $TARGET status
-$TARGET_USER ALL=(root) NOPASSWD: $TARGET detect
-EOF
+sed -e "s/@UID@/$TARGET_UID/g" -e "s/@GID@/$TARGET_GID/g" \
+    "$SRC_DIR/hypr-digitizerd.service" > "$UNIT"
+chown root:root "$UNIT"
+chmod 0644 "$UNIT"
+echo "Installed $UNIT (socket owner: $TARGET_USER, uid $TARGET_UID)"
 
-if ! visudo -cqf "$tmp"; then
-    echo "The generated sudoers file did not validate. NOTHING was installed into /etc/sudoers.d." >&2
-    echo "Left the helper at $TARGET; remove it with: sudo $0 --uninstall" >&2
-    exit 1
+# Retire the old layout. Done AFTER the new one is in place, so there is never
+# a window with neither installed.
+if [[ -e "$OLD_SUDOERS" || -e "$OLD_HELPER" ]]; then
+    rm -f "$OLD_SUDOERS" "$OLD_HELPER"
+    echo "Removed the old sudoers drop-in and root helper -- the daemon replaces both."
 fi
 
-install -o root -g root -m 0440 "$tmp" "$SUDOERS"
-echo "Installed $SUDOERS (validated with visudo -c)"
+systemctl daemon-reload
+systemctl enable --now hypr-digitizerd.service
+echo
+
+systemctl --no-pager --lines=0 status hypr-digitizerd.service || true
+echo
+echo "What it found:"
+journalctl -u hypr-digitizerd --no-pager --lines=20 -o cat || true
 
 echo
-echo "Devices it can see:"
-"$TARGET" detect || true
-echo "Current state:"
-"$TARGET" status || true
-
+echo "Check it any time with:"
+echo "  systemctl status hypr-digitizerd"
+echo "  journalctl -u hypr-digitizerd -f"
+echo "  hypr-digitizer-ctl status"
 echo
-echo "Next, add this line to ~/.config/hypr/hyprland.lua (before bindings.lua):"
-echo '  dofile(os.getenv("HOME") .. "/.config/hypr/touchscreen.lua")'
-echo "then: hyprctl reload"
-echo
-echo "NOTE: $TARGET is a COPY. If you edit"
-echo "      $SOURCE"
+echo "NOTE: $TARGET is a COPY. If you edit the sources in"
+echo "      $SRC_DIR"
 echo "      re-run this installer for the change to take effect."

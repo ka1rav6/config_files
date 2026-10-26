@@ -430,3 +430,8 @@ phone-send +FILES:
 
 bt-mouse:
     bluetoothctl connect F0:3D:41:21:05:2D
+
+touchscreen-status:
+    systemctl status hypr-digitizerd
+    journalctl -u hypr-digitizerd -f
+    hypr-digitizer-ctl status

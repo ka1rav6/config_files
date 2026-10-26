@@ -225,6 +225,15 @@ window#waybar {
     color: @muted;
 }
 
+/* The daemon itself is not on the bus, as opposed to "no phone in range".
+   Both are `away` and share its colour; this only takes the edge off further,
+   because it is a state to notice rather than one to act on -- the tooltip
+   says which it is. The module could not tell the two apart until it started
+   watching NameOwnerChanged; see the note in config.jsonc. */
+#custom-kdeconnect.away.offline {
+    opacity: 0.55;
+}
+
 #custom-kdeconnect:hover {
     background-color: @panel-hover;
     color: @text;

@@ -1,0 +1,176 @@
+#:schema https://yazi-rs.github.io/schemas/yazi.json
+# vim:fileencoding=utf-8
+
+# =============================================================================
+# yazi — terminal file manager
+# =============================================================================
+# Reached two ways, both defined in ~/.config/hypr:
+#   SUPER + E        a scratchpad yazi on its own special workspace
+#   SUPER + ALT + E  an ordinary tiled Ghostty window running yazi
+# and from the shell as `y` (the wrapper in ~/.zshrc that leaves your shell in
+# whatever directory you browsed to).
+#
+# Companion files in this directory:
+#   keymap.toml   key bindings
+#   openers.toml  which app `o` hands a file to, by extension. NOT a yazi file
+#                 -- yazi never reads it; open-file.py does. See [opener] below
+#                 for the separate table that SHIFT+O uses.
+#   theme.toml    colours
+#   init.lua      plugin setup (full-border, git)
+#   package.toml  plugin versions, managed by `ya pkg`
+#
+# Reference: https://yazi-rs.github.io/docs/configuration/yazi
+# =============================================================================
+
+[mgr]
+# Column widths for the three panes: parent | current | preview.
+# Relative, not absolute — 1:4:3 gives the current directory the most room
+# while keeping a usable preview.
+ratio          = [ 1, 4, 3 ]
+
+# "natural" sorts file10 after file9, rather than the ASCII order that puts
+# file10 first. The right choice for anything with numbered names.
+sort_by        = "natural"
+sort_sensitive = false   # case-insensitive: Readme and readme sort together
+sort_reverse   = false
+sort_dir_first = true    # directories above files
+
+# Text shown on the right of each row. "size" is the default; the alternatives
+# are "none", "mtime", "permissions" and "owner". The git plugin appends its
+# status sign here too — see init.lua, where order = 1500 puts it after this.
+linemode       = "size"
+
+show_hidden    = false   # toggle at runtime with `.` — no need to edit this
+show_symlink   = true    # show "-> target" next to symlinks
+
+# Keep 5 rows visible above and below the cursor, so you always have context.
+scrolloff      = 5
+
+mouse_events   = [ "click", "scroll", "drag" ]
+
+[preview]
+wrap          = "no"
+tab_size      = 2
+# Generous bounds: Ghostty speaks the Kitty graphics protocol, so previews are
+# real pixels rather than a character-cell approximation, and undersized caches
+# show up as visibly soft images on a HiDPI panel.
+max_width     = 1200
+max_height    = 1800
+# Milliseconds to wait before rendering an image preview. Acts as a debounce:
+# holding a cursor key scrolls through a directory of photos without decoding
+# every one you pass over.
+image_delay   = 50
+
+# Downscaling filter. lanczos3 is the highest-quality option and the most
+# expensive; "triangle" or "nearest" are cheaper if previews ever feel slow.
+image_filter  = "lanczos3"
+image_quality = 90
+
+# =============================================================================
+# Openers — the commands available for a file, chosen by the [open] rules below
+# =============================================================================
+# Flags:
+#   block  = true   take over the terminal; for TUI programs (nvim, less)
+#   orphan = true   detach and keep running after yazi exits; for GUI apps.
+#                   Without it, closing yazi would kill the window it opened.
+#   %s   all selected paths      %s1  just the first
+#   %d1  the first path's parent directory
+#
+# The FIRST entry in a list is the default; the rest appear in the open menu.
+#
+# NOTE: these lists are reached by SHIFT+O (first entry) and SHIFT+Enter (the
+# menu) -- not by `o`, which keymap.toml rebinds to open-file.py and whose
+# extension -> app table lives in openers.toml instead. Changing a PDF here
+# does not change what `o` does, and vice versa; the two are independent.
+[opener]
+edit = [
+	{ run = 'nvim %s', desc = "nvim",     block = true,  for = "unix" },
+	{ run = 'code %s', desc = "VS Code",  orphan = true, for = "unix" },
+]
+open = [
+	{ run = 'xdg-open %s1', desc = "Default app", for = "linux" },
+]
+image = [
+	{ run = 'eog %s',  desc = "Image viewer", orphan = true, for = "linux" },
+	{ run = 'nvim %s', desc = "nvim",         block = true,  for = "unix" },
+]
+play = [
+	{ run = 'vlc %s',                                                  desc = "VLC",        orphan = true, for = "linux" },
+	{ run = 'ffprobe -hide_banner %s1 2>&1 | less -R',                 desc = "Media info", block = true,  for = "unix" },
+	# Last, so it never becomes the default: a media file is occasionally worth
+	# looking at as bytes (a truncated download, a container with a mangled
+	# header), and reaching it from SHIFT+Enter beats quitting yazi to run nvim
+	# by hand. Anything but last here would make Enter open an editor.
+	{ run = 'nvim %s',                                                 desc = "nvim",       block = true,  for = "unix" },
+]
+pdf = [
+	# zathura takes any number of files and opens a window per document, so %s
+	# (all selected) rather than %s1 does the right thing on a multi-select.
+	{ run = 'zathura %s',   desc = "zathura",     orphan = true, for = "linux" },
+	{ run = 'sioyek %s',    desc = "sioyek",      orphan = true, for = "linux" },
+	{ run = 'xdg-open %s1', desc = "Default app", for = "linux" },
+]
+browser = [
+	{ run = 'brave-browser %s', desc = "Brave", orphan = true, for = "linux" },
+]
+reveal = [
+	{ run = 'nautilus %d1', desc = "Reveal in Nautilus", orphan = true, for = "linux" },
+	{ run = 'exiftool %s1; echo "Press enter to exit"; read _', desc = "Show EXIF", block = true, for = "unix" },
+]
+extract = [
+	# ya pub sends a message to yazi's own extract plugin, so archives are
+	# unpacked in the background with a progress indicator rather than blocking
+	# the UI on an external tar/unzip.
+	{ run = 'ya pub extract --list %s', desc = "Extract here" },
+]
+
+# =============================================================================
+# Open rules — which opener list applies to which file type
+# =============================================================================
+# Matched TOP TO BOTTOM, first match wins. That ordering is why the specific
+# `text/html` rule must sit above the general `text/*`, and why the catch-all
+# `url = "*"` is last. Reordering these silently changes which app opens what.
+[open]
+# As with [filetype].rules, defining `rules` replaces the preset array, so the
+# vfs / trash entries are carried over verbatim.
+rules = [
+	{ mime = "folder/*",  use = [ "edit", "open", "reveal" ] },
+	{ mime = "text/html", use = [ "browser", "edit", "reveal" ] },
+	{ mime = "text/*",    use = [ "edit", "reveal" ] },
+	{ mime = "image/*",   use = [ "image", "open", "reveal" ] },
+	{ mime = "{audio,video}/*", use = [ "play", "reveal" ] },
+	{ mime = "application/pdf", use = [ "pdf", "reveal" ] },
+	{ mime = "application/{json,ndjson,javascript,x-shellscript,toml,xml,yaml,wine-extension-ini}", use = [ "edit", "reveal" ] },
+	# Safety net for containers `file` cannot name. Yazi types a file by content,
+	# not by extension, and a raw MPEG transport stream (.ts, .m2ts, .mts) has no
+	# magic bytes at offset 0 — `file --mime-type` answers application/octet-stream,
+	# so it used to fall all the way through to the `url = "*"` catch-all and get
+	# handed to xdg-open. Matching on the name recovers those.
+	#
+	# The position matters, and not for the reason you would guess. .ts is also
+	# TypeScript, and `file` calls TypeScript source application/javascript — NOT
+	# text/*, so the text rule above never claims it. Only the code rule directly
+	# above does, which is why this line has to sit below that one. Put it any
+	# higher and every .ts file in a project opens in VLC.
+	#
+	# Extensions are listed in both cases because yazi's url globs are matched
+	# case-sensitively; a camera's .MOV would otherwise miss.
+	{ url = "*.{mp4,MP4,mkv,MKV,webm,WEBM,avi,AVI,mov,MOV,m4v,M4V,flv,FLV,wmv,WMV,mpeg,MPEG,mpg,MPG,ts,TS,m2ts,M2TS,mts,MTS}", use = [ "play", "reveal" ] },
+	{ mime = "application/{zip,rar,7z*,tar,gzip,xz,zstd,bzip*,lzma,compress,archive,cpio,arj,xar,ms-cab*}", use = [ "extract", "reveal" ] },
+	{ mime = "inode/empty", use = [ "edit", "reveal" ] },
+	{ mime = "vfs/{absent,stale}", use = "download" },
+	{ mime = "trash/**", use = [ "open", "trash" ] },
+	{ url = "*", use = [ "open", "edit", "reveal" ] },
+]
+
+# git.yazi: computes the git status of every entry in view, rendered by the
+# linemode. `prepend_` keeps the built-in mime fetchers ahead of it.
+[[plugin.prepend_fetchers]]
+group = "git"
+url   = "*"
+run   = "git"
+
+[[plugin.prepend_fetchers]]
+group = "git"
+url   = "*/"
+run   = "git"

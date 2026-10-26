@@ -153,5 +153,15 @@
     "path": "/home/kairav/.config/kdeconnect",
     "category": "kdeconnect",
     "description": "Custom backup: kdeconnect"
+  },
+  {
+    "path": "/home/kairav/.config/yazi",
+    "category": "yazi",
+    "description": "Custom backup: yazi"
+  },
+  {
+    "path": "/home/kairav/.config/systemd",
+    "category": "systemd",
+    "description": "Custom backup: systemd"
   }
 ]

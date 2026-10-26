@@ -299,7 +299,13 @@ hl.on("hyprland.start", function()
     scratchpads.ensure_prespawned()
     prewarm_ghostty()
     spawn("hyprpaper")
-    spawn_once("waybar", "waybar")
+    -- Via waybar-ensure.sh rather than `waybar` directly, so there is ONE
+    -- place that knows how the bar is launched. That matters now that it must
+    -- be started under hypr-ipc-shim -- see start_waybar() in that script for
+    -- why, and for the fallback when the shim is not installed. The script is
+    -- idempotent and starts a bar when it finds none, which is exactly this
+    -- case; the pgrep guard here is then belt and braces.
+    spawn_once("waybar", home .. "/.config/hypr/scripts/waybar-ensure.sh")
     spawn("mako")
     -- Both of these hold their own single-instance lock (a mkdir lockdir in
     -- $XDG_RUNTIME_DIR), so they need no guard here -- which is just as well,

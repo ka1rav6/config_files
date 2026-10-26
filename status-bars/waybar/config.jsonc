@@ -115,14 +115,28 @@
     //   no tray host it now runs invisibly -- harmless, but it can be dropped
     //   from autostart if you never want its menu back.
     //
-    // interval 30 / signal 9 is the same shape as custom/hyprtodo above: a
-    // cheap fallback poll plus `pkill -SIGRTMIN+9 waybar` for an immediate
-    // refresh after pairing or connecting something.
+    // Continuous mode, the same shape as custom/hyprtodo above and for the
+    // same reasons -- see the longer note there for what "no interval, no
+    // signal" means.
+    //
+    // The old `interval 30` forked a shell and one or two kdeconnect-cli
+    // processes every 30 s, and each kdeconnect-cli is a Qt/KDE binary that
+    // builds a QCoreApplication and opens its own D-Bus connection to ask one
+    // question. waybar-kdeconnect holds a single bus connection open and
+    // blocks on its fd, waking on deviceVisibilityChanged, deviceListChanged,
+    // the devices' PropertiesChanged, and NameOwnerChanged for kdeconnectd
+    // itself.
+    //
+    // THAT LAST MATCH IS A BEHAVIOUR CHANGE, not just a cheaper one: the
+    // polling version could show a stale state for up to 30 s after the phone
+    // connected, and if kdeconnectd was not running when the bar started,
+    // nothing ever told the bar when it came up. It now also distinguishes
+    // "no device reachable" from "the daemon is not running", which are very
+    // different problems to go looking for.
     "custom/kdeconnect": {
-        "exec": "~/.config/waybar/scripts/waybar-kdeconnect.sh",
+        "exec": "barfeed-kdeconnect",
         "return-type": "json",
-        "interval": 30,
-        "signal": 9,
+        "restart-interval": 5,
         // The Command Center is the Commands page of the Settings window now,
         // not a panel of its own. The target name is unchanged on purpose --
         // see the note on SUPER+SHIFT+K in ~/.config/hypr/bindings.lua.
@@ -203,22 +217,87 @@
         // showing only its own output's.
         "all-outputs": true,
         "sort-by-number": true,
-        // Click a workspace number to switch to it.
-        "on-click": "activate"
+
+        // Click a workspace number to switch to it -- plain click or with any
+        // modifier held, including CTRL, since waybar's workspace buttons do
+        // not inspect modifier state.
+        //
+        // THIS DID NOT WORK UNTIL hypr-ipc-shim EXISTED, and it is worth
+        // knowing why before touching it. "activate" makes waybar send the
+        // legacy IPC string, which is hardcoded in the binary:
+        //
+        //     $ strings /usr/bin/waybar | grep 'dispatch workspace'
+        //     dispatch workspace
+        //
+        // Under a Lua config, Hyprland 0.56 evaluates whatever follows
+        // `dispatch` as Lua, and `workspace 2` is not valid Lua -- `f 2` is
+        // not call syntax -- so it fails at PARSE time:
+        //
+        //     error: [string "return hl.dispatch(workspace 2)"]:1:
+        //            ')' expected near '2'
+        //
+        // Nothing in config.jsonc can fix that; waybar has no on-click form
+        // that passes the clicked workspace to a command. So waybar now runs
+        // as a child of hypr-ipc-shim, which translates those few legacy
+        // strings into hl.dsp calls on the way through. See
+        // ~/.config/hypr/daemons/hypr-ipc-shim.c and scripts/waybar-ensure.sh.
+        "on-click": "activate",
+
+        // Scroll anywhere over the workspace numbers to walk through them,
+        // matching SUPER + scroll (bindings.lua:134) -- same dispatcher, same
+        // direction, so the two gestures cannot disagree.
+        //
+        // `e+1` / `e-1` rather than `+1` / `-1`: the `e` prefix skips empty
+        // workspaces, which is what makes scrolling land somewhere useful
+        // instead of walking into an empty workspace 7.
+        //
+        // These are commands rather than a built-in, so each tick costs a
+        // shell. smooth-scrolling-threshold is what keeps that bounded: the
+        // touchpad emits a continuous stream of small deltas, and without a
+        // threshold one flick would fire dozens of dispatches.
+        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+        "smooth-scrolling-threshold": 1.5
     },
 
     // Todo counter, backed by hyprtodo (~/.config/hyprtodo).
-    //   interval 30 — re-runs the script every 30 s as a fallback poll.
-    //   signal 8    — the cheap path: `pkill -SIGRTMIN+8 waybar` forces an
-    //                 immediate refresh, so adding a todo updates the bar at
-    //                 once instead of waiting up to 30 s.
-    // return-type json lets the script supply text, tooltip and a CSS class
+    //
+    // NO `interval` AND NO `signal`, AND THAT IS THE CONFIGURATION. waybar-
+    // custom(5): "If no interval or signal is defined, it is assumed that the
+    // out script loops itself." That puts the module in continuous mode --
+    // waybar starts the program once and reads a line from it whenever it has
+    // something to say.
+    //
+    // It used to be `interval 30`, which re-ran a shell, a `command -v`, a
+    // hyprtodo-cli and four seds 2,880 times a day to discover almost every
+    // time that nothing had changed. waybar-hyprtodo blocks on epoll over an
+    // inotify watch of the hyprtodo database instead, so the bar updates the
+    // moment a task changes and costs nothing in between. It also holds a
+    // timer for midnight, because "due today" and "overdue" change at 00:00
+    // with no database write at all -- something the poll never noticed
+    // either.
+    //
+    // `pkill -SIGRTMIN+8 waybar` is no longer needed and no longer does
+    // anything: there is nothing to poke, because nothing is waiting.
+    //
+    // restart-interval is the supervision -- if the program dies, waybar
+    // starts it again after 5 s. It can only be used with continuous scripts.
+    //
+    // return-type json lets the program supply text, tooltip and a CSS class
     // together, so styling can react to whether anything is pending.
+    //
+    // THE PROGRAM NAME MUST NOT CONTAIN "waybar". This is not style, it is a
+    // bug that already bit once. hyprtodo-cli nudges the bar after every write
+    // by running `pkill -SIGRTMIN+8 waybar` (its config.lua calls the setting
+    // `waybar_signal`), and pkill matches a SUBSTRING of the process name
+    // unless given -x. A module called waybar-hyprtodo was therefore killed --
+    // SIGRTMIN+8 terminates by default -- every time a task changed, which is
+    // precisely when the nudge fires. The module simply vanished from the bar.
+    // The old .sh modules were immune by accident: they ran as `bash`.
     "custom/hyprtodo": {
-        "exec": "~/.config/waybar/scripts/waybar-hyprtodo.sh",
+        "exec": "barfeed-hyprtodo",
         "return-type": "json",
-        "interval": 30,
-        "signal": 8,
+        "restart-interval": 5,
         // Both dispatches use Lua call syntax. Under Hyprland's Lua config
         // `hyprctl dispatch` evaluates its argument as Lua, so the older
         // `togglespecialworkspace todo` string form no longer parses.

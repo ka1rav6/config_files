@@ -1,0 +1,197 @@
+#:schema https://yazi-rs.github.io/schemas/theme.json
+# vim:fileencoding=utf-8
+
+# ── Palette ────────────────────────────────────────────────────────────────
+# Pulled from the two things yazi sits between: Ghostty's "Adventure" palette
+# and waybar's style.css. Keeping them in sync means yazi reads as part of the
+# desktop rather than as a program running inside it.
+#
+#   ink      #14211f   waybar's on-mint foreground (@mint pill text)
+#   base     #040404   Ghostty background (rendered at 0.65 opacity)
+#   surface  #1b1f26   one step up from waybar's @bar-bg, for inset blocks
+#   line     #2a2f36   borders, rules, separators
+#   faint    #4a515b   disabled / ignored
+#   muted    #6d7581   waybar @muted
+#   text     #e6e3dd   Adventure cream blended toward waybar @text
+#   mint     #8ee3c1   waybar @mint      - primary accent
+#   amber    #f4c47b   waybar @amber     - selection, marks
+#   coral    #ff9b85   waybar @coral     - danger, cut, video
+#   olive    #a8c95a   Adventure green   - executables
+#   sky      #97d7ef   Adventure blue    - symlinks
+#   cream    #e5c499   Adventure cream   - audio
+#   rose     #d76b42   Adventure orange  - archives
+#   lav      #bdcfe5   Adventure cyan    - documents
+
+# ── Manager ────────────────────────────────────────────────────────────────
+[mgr]
+cwd = { fg = "#8ee3c1", bold = true }
+
+find_keyword  = { fg = "#f4c47b", bold = true, italic = true, underline = true }
+find_position = { fg = "#ff9b85", bg = "reset", bold = true, italic = true }
+
+symlink_target = { fg = "#6d7581", italic = true }
+
+# A solid left bar rather than a thin rule -- reads better against a
+# transparent background than the default "│".
+marker_copied   = { fg = "#a8c95a", bg = "#a8c95a" }
+marker_cut      = { fg = "#ff9b85", bg = "#ff9b85" }
+marker_marked   = { fg = "#8ee3c1", bg = "#8ee3c1" }
+marker_selected = { fg = "#f4c47b", bg = "#f4c47b" }
+marker_symbol   = "▌"
+
+count_copied   = { fg = "#14211f", bg = "#a8c95a", bold = true }
+count_cut      = { fg = "#14211f", bg = "#ff9b85", bold = true }
+count_selected = { fg = "#14211f", bg = "#f4c47b", bold = true }
+
+border_symbol = "│"
+border_style  = { fg = "#2a2f36" }
+
+syntect_theme = ""
+
+# ── Tabs ───────────────────────────────────────────────────────────────────
+# Deliberately identical to waybar's #workspaces buttons: the active one is a
+# filled mint pill with dark text, the rest sit on a low-contrast slab.
+[tabs]
+active   = { fg = "#14211f", bg = "#8ee3c1", bold = true }
+inactive = { fg = "#8ee3c1", bg = "#1b1f26" }
+
+sep_inner = { open = "", close = "" }
+sep_outer = { open = "", close = "" }
+
+# ── Mode indicator ─────────────────────────────────────────────────────────
+[mode]
+normal_main = { fg = "#14211f", bg = "#8ee3c1", bold = true }
+normal_alt  = { fg = "#8ee3c1", bg = "#1b1f26" }
+
+select_main = { fg = "#14211f", bg = "#f4c47b", bold = true }
+select_alt  = { fg = "#f4c47b", bg = "#1b1f26" }
+
+unset_main = { fg = "#14211f", bg = "#ff9b85", bold = true }
+unset_alt  = { fg = "#ff9b85", bg = "#1b1f26" }
+
+# ── Hovered-file indicator ─────────────────────────────────────────────────
+# The cursor row is the mint pill again. It costs the filetype colour on that
+# one row, which is the trade for having the accent land in the same place the
+# eye already expects it from the bar.
+[indicator]
+parent  = { fg = "#e6e3dd", bg = "#20252c" }
+current = { fg = "#14211f", bg = "#8ee3c1", bold = true }
+preview = { fg = "#8ee3c1", underline = true }
+padding = { open = "", close = "" }
+
+# ── Status bar ─────────────────────────────────────────────────────────────
+[status]
+overall   = { bg = "reset" }
+sep_left  = { open = "", close = "" }
+sep_right = { open = "", close = "" }
+
+perm_sep   = { fg = "#4a515b" }
+perm_type  = { fg = "#8ee3c1" }
+perm_read  = { fg = "#f4c47b" }
+perm_write = { fg = "#ff9b85" }
+perm_exec  = { fg = "#a8c95a" }
+
+progress_label  = { fg = "#e6e3dd", bold = true }
+progress_normal = { fg = "#8ee3c1", bg = "#1b1f26" }
+progress_error  = { fg = "#ff9b85", bg = "#1b1f26" }
+
+# ── Which-key popup ────────────────────────────────────────────────────────
+[which]
+border          = { fg = "#8ee3c1" }
+cols            = 3
+mask            = { bg = "#0b0d10" }
+cand            = { fg = "#8ee3c1", bold = true }
+rest            = { fg = "#6d7581" }
+desc            = { fg = "#e5c499" }
+separator       = "  ─  "
+separator_style = { fg = "#2a2f36" }
+
+# ── Confirmation ───────────────────────────────────────────────────────────
+[confirm]
+border     = { fg = "#8ee3c1" }
+title      = { fg = "#8ee3c1", bold = true }
+body       = { fg = "#e6e3dd" }
+list       = { fg = "#f4c47b" }
+btn_yes    = { fg = "#14211f", bg = "#8ee3c1", bold = true }
+btn_no     = { fg = "#e6e3dd" }
+btn_labels = [ "  [Y]es  ", "  (N)o  " ]
+
+# ── Spotter ────────────────────────────────────────────────────────────────
+[spot]
+border   = { fg = "#8ee3c1" }
+title    = { fg = "#8ee3c1", bold = true }
+tbl_col  = { fg = "#8ee3c1", bold = true }
+tbl_cell = { fg = "#14211f", bg = "#f4c47b" }
+
+# ── Notifications ──────────────────────────────────────────────────────────
+[notify]
+title_info  = { fg = "#8ee3c1", bold = true }
+title_warn  = { fg = "#f4c47b", bold = true }
+title_error = { fg = "#ff9b85", bold = true }
+
+# ── Picker / input / completion / tasks / help ─────────────────────────────
+[pick]
+border   = { fg = "#8ee3c1" }
+active   = { fg = "#f4c47b", bold = true }
+inactive = { fg = "#e6e3dd" }
+
+[input]
+border   = { fg = "#8ee3c1" }
+title    = { fg = "#8ee3c1" }
+value    = { fg = "#e6e3dd" }
+selected = { fg = "#14211f", bg = "#8ee3c1" }
+
+[cmp]
+border   = { fg = "#8ee3c1" }
+active   = { fg = "#14211f", bg = "#8ee3c1", bold = true }
+inactive = { fg = "#e6e3dd" }
+
+[tasks]
+border  = { fg = "#8ee3c1" }
+title   = { fg = "#8ee3c1", bold = true }
+hovered = { fg = "#f4c47b", bold = true, underline = true }
+
+[help]
+border  = { fg = "#8ee3c1" }
+chord   = { fg = "#8ee3c1", bold = true }
+action  = { fg = "#e6e3dd" }
+hovered = { fg = "#14211f", bg = "#8ee3c1", bold = true }
+
+# ── Git signs (git.yazi plugin) ────────────────────────────────────────────
+[git]
+unknown   = { fg = "#4a515b" }
+ignored   = { fg = "#4a515b" }
+untracked = { fg = "#6d7581" }
+unstaged  = { fg = "#f4c47b" }
+staged    = { fg = "#8ee3c1" }
+added     = { fg = "#a8c95a" }
+deleted   = { fg = "#ff9b85" }
+updated   = { fg = "#e5c499" }
+clean     = { fg = "#4a515b" }
+
+# ── File types ─────────────────────────────────────────────────────────────
+# Defining `rules` replaces the preset array wholesale, so the special-case
+# entries (orphan / dummy / vfs) are repeated here on purpose -- dropping them
+# would silently lose the broken-symlink highlighting.
+[filetype]
+rules = [
+	# Image
+	{ mime = "**/image/*", fg = "#f4c47b" },
+	# Video
+	{ mime = "**/video/*", fg = "#ff9b85" },
+	# Audio
+	{ mime = "**/audio/*", fg = "#e5c499" },
+	# Archive
+	{ mime = "**/application/{zip,rar,7z*,tar,gzip,xz,zstd,bzip*,lzma,compress,archive,cpio,arj,xar,ms-cab*}", fg = "#d76b42" },
+	# Document
+	{ mime = "**/application/{pdf,doc,docx,rtf,epub*,vnd.oasis*,vnd.openxmlformats*}", fg = "#bdcfe5" },
+	# Virtual file system
+	{ mime = "vfs/{absent,stale}", fg = "#4a515b" },
+	# Special files
+	{ url = "*", is = "orphan", fg = "#14211f", bg = "#ff9b85" },
+	{ url = "*", is = "exec",   fg = "#a8c95a", bold = true },
+	{ url = "*", is = "dummy",  fg = "#14211f", bg = "#ff9b85" },
+	{ url = "*/", is = "dummy", fg = "#14211f", bg = "#ff9b85" },
+	# Fallback: directories
+	{ url = "*/", fg = "#8ee3c1", bold = true },
+]

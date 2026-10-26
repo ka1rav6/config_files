@@ -1,5 +1,22 @@
 // =============================================================================
-// waybar-hyprtodo — the custom/hyprtodo module, driven by the database.
+// barfeed-hyprtodo — the custom/hyprtodo module, driven by the database.
+// =============================================================================
+// THE NAME IS LOAD-BEARING. It must not contain "waybar", and that was found
+// the hard way: the first version was called waybar-hyprtodo and died every
+// time a task changed.
+//
+// hyprtodo-cli nudges the bar after every write by running
+//     pkill -SIGRTMIN+8 waybar
+// (its config.lua calls the setting `waybar_signal`). pkill matches a
+// SUBSTRING of the process name unless given -x, so "waybar" matched
+// waybar-hyprtodo and waybar-kdeconnect as well as waybar itself -- and the
+// default disposition of SIGRTMIN+8 is to TERMINATE. The old shell modules
+// were immune by accident: they ran as `bash`, which does not contain
+// "waybar".
+//
+// The rename is the real fix. The signalfd below is the belt to its braces:
+// if some other caller's pattern ever does match, the signal now means
+// "refresh", which is what every sender intends, instead of death.
 // =============================================================================
 // Replaces scripts/waybar-hyprtodo.sh, which waybar re-ran every 30 s. That
 // script forked a shell, a `command -v`, a hyprtodo-cli and four `sed`s --
@@ -51,6 +68,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/inotify.h>
+#include <sys/signalfd.h>
 #include <sys/timerfd.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -180,6 +198,44 @@ static void arm_midnight(int fd) {
     timerfd_settime(fd, TFD_TIMER_ABSTIME | TFD_TIMER_CANCEL_ON_SET, &its, NULL);
 }
 
+
+// A signalfd for the "refresh now" real-time signals, so they are handled in
+// the epoll loop like every other source rather than in an async handler.
+//
+// SIGRTMIN+8 and +9 are what this config's `pkill -SIGRTMIN+N waybar` callers
+// send. Blocking them first is what stops the DEFAULT disposition -- terminate
+// -- from running; see the note at the top of this file for the bug that
+// taught us to do this.
+static int make_signalfd(void) {
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGRTMIN + 8);
+    sigaddset(&mask, SIGRTMIN + 9);
+    if (sigprocmask(SIG_BLOCK, &mask, NULL) < 0) return -1;
+    return signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+}
+
+
+// Watch our own stdout for the read end closing.
+//
+// SIGPIPE is not enough on its own. These programs write only when something
+// changes, so a module that has settled can sit in epoll_wait() for hours
+// with nothing to say -- and if waybar dies in that window there is no write
+// to raise SIGPIPE on. The process is reparented to init and lives forever.
+// That is not hypothetical: waybar-ensure.sh restarts the bar on every
+// monitor hotplug and theme change, and each restart stranded one of these
+// per bar.
+//
+// Registering stdout with an EMPTY event mask is the trick: epoll always
+// reports EPOLLERR and EPOLLHUP whether or not they were asked for, so this
+// costs no wakeups while the pipe is healthy and fires the moment waybar lets
+// go. Asking for EPOLLOUT instead would spin, because a writable pipe is
+// always ready.
+static void watch_stdout(int ep) {
+    struct epoll_event ev = {.events = 0, .data.fd = STDOUT_FILENO};
+    epoll_ctl(ep, EPOLL_CTL_ADD, STDOUT_FILENO, &ev);
+}
+
 static void arm_debounce(int fd) {
     struct itimerspec its = {0};
     its.it_value.tv_nsec = DEBOUNCE_MS * 1000000L;
@@ -202,7 +258,8 @@ int main(void) {
     int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
     int debounce = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
     int midnight = timerfd_create(CLOCK_REALTIME, TFD_NONBLOCK | TFD_CLOEXEC);
-    if (ep < 0 || ino < 0 || debounce < 0 || midnight < 0) {
+    int sigfd = make_signalfd();
+    if (ep < 0 || ino < 0 || debounce < 0 || midnight < 0 || sigfd < 0) {
         emit(FALLBACK);
         return 1;
     }
@@ -231,6 +288,8 @@ int main(void) {
     ev.data.fd = ino;       epoll_ctl(ep, EPOLL_CTL_ADD, ino, &ev);
     ev.data.fd = debounce;  epoll_ctl(ep, EPOLL_CTL_ADD, debounce, &ev);
     ev.data.fd = midnight;  epoll_ctl(ep, EPOLL_CTL_ADD, midnight, &ev);
+    ev.data.fd = sigfd;     epoll_ctl(ep, EPOLL_CTL_ADD, sigfd, &ev);
+    watch_stdout(ep);
 
     arm_midnight(midnight);
     refresh();  // the bar must be right before anything has changed
@@ -246,7 +305,11 @@ int main(void) {
         for (int i = 0; i < n; i++) {
             int fd = events[i].data.fd;
 
-            if (fd == ino) {
+            if (fd == STDOUT_FILENO) {
+                // waybar is gone. Nothing left to report to.
+                return 0;
+
+            } else if (fd == ino) {
                 // inotify delivers a packed, variable-length stream; it must be
                 // walked record by record rather than read as a struct.
                 char buf[4096]
@@ -264,6 +327,15 @@ int main(void) {
                     }
                 }
                 if (interesting) arm_debounce(debounce);
+
+            } else if (fd == sigfd) {
+                // Someone asked for an immediate refresh. Redundant now that
+                // the inotify watch sees the write that prompted it, but
+                // harmless and cheap, and refresh() suppresses the update if
+                // nothing actually changed.
+                struct signalfd_siginfo si;
+                while (read(sigfd, &si, sizeof si) == sizeof si) {}
+                arm_debounce(debounce);
 
             } else if (fd == debounce) {
                 uint64_t ticks;

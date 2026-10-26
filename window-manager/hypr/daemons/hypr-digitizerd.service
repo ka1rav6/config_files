@@ -1,0 +1,65 @@
+# =============================================================================
+# hypr-digitizerd — touchscreen digitizer power policy.
+# =============================================================================
+# Installed to /etc/systemd/system/ by ~/.config/hypr/scripts/install-touchscreen.sh,
+# which substitutes @UID@ and @GID@ for the desktop user it was run by. Do not
+# edit the installed copy -- edit this one and re-run the installer.
+#
+# WHY A SYSTEM SERVICE AND NOT A USER ONE
+#   It needs to read /dev/input/event* (root:input 0660, and the desktop user
+#   is not in `input`) and to write /sys/bus/i2c/drivers/i2c_hid_acpi/{bind,
+#   unbind} (root-owned, and there is no unprivileged mechanism for detaching a
+#   driver). Running as root is what lets it do both WITHOUT a sudo hop, which
+#   is how it replaces the /etc/sudoers.d/61-hypr-touchscreen drop-in rather
+#   than adding to it.
+#
+#   The grant is narrower than the one it replaces: the session can no longer
+#   run a root-owned binary, only send one of four verbs to a unix socket owned
+#   by that user.
+#
+# WHY NOT TIED TO THE SESSION
+#   The digitizer's interrupt storm costs the same at the login screen as it
+#   does in a session, and the machine can be folded shut before anyone logs
+#   in. The policy is a property of the hardware, not of who is logged in.
+# =============================================================================
+
+[Unit]
+Description=Touchscreen digitizer power policy (tablet-mode switch to i2c bind/unbind)
+Documentation=file:///home/kairav/.config/hypr/daemons/hypr-digitizerd.c
+# No dependency on a display manager or a session, on purpose -- see above.
+After=systemd-udev-settle.service
+DefaultDependencies=yes
+
+[Service]
+Type=simple
+# --owner/--owner-gid: who may talk to the control socket, i.e. who gets
+# SUPER + SHIFT + D. Filled in by the installer from the invoking user.
+ExecStart=/usr/local/lib/hypr/hypr-digitizerd --owner @UID@ --owner-gid @GID@
+
+# The daemon re-attaches the digitizer on SIGTERM so a stop can never strand
+# touch off with no way back; give it time to do that.
+TimeoutStopSec=10
+Restart=on-failure
+RestartSec=2
+
+# Logs go to the journal:  journalctl -u hypr-digitizerd -f
+StandardOutput=journal
+StandardError=journal
+
+# --- Hardening -------------------------------------------------------------
+# Deliberately NOT ProtectKernelTunables=yes: that remounts /sys read-only,
+# which is the one thing this service exists to write to.
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

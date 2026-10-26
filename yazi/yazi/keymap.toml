@@ -1,0 +1,180 @@
+#:schema https://yazi-rs.github.io/schemas/keymap.json
+# vim:fileencoding=utf-8
+#
+# Only additions and overrides live here. Everything not listed keeps its
+# default binding -- press `~` inside yazi for the full, live list.
+
+# ── smart-enter: one key for "descend into" and "open" ─────────────────────
+[[mgr.prepend_keymap]]
+on   = "l"
+run  = "plugin smart-enter"
+desc = "Enter the directory, or open the file"
+
+[[mgr.prepend_keymap]]
+on   = "<Right>"
+run  = "plugin smart-enter"
+desc = "Enter the directory, or open the file"
+
+[[mgr.prepend_keymap]]
+on   = "<Enter>"
+run  = "plugin smart-enter"
+desc = "Enter the directory, or open the file"
+
+# ── Motion ─────────────────────────────────────────────────────────────────
+# `F` rather than `f`, so `f` stays on filter.
+[[mgr.prepend_keymap]]
+on   = "F"
+run  = "plugin jump-to-char"
+desc = "Jump to a char in the current directory"
+
+# ── Joins the existing `c` copy-cluster (cc / cd / cf / cn) ───────────────
+[[mgr.prepend_keymap]]
+on   = [ "c", "m" ]
+run  = "plugin chmod"
+desc = "Chmod the selected files"
+
+# `c z` opens the convert menu; `c Z <x>` converts with no menu. Both sit under
+# `c` so the copy-cluster stays a single prefix, and `z` on its own stays fzf.
+[[mgr.prepend_keymap]]
+on   = [ "c", "z" ]
+run  = "plugin omniconvert"
+desc = "Convert to... (menu)"
+
+[[mgr.prepend_keymap]]
+on   = [ "c", "Z", "m" ]
+run  = "plugin omniconvert -- md"
+desc = "Convert -> Markdown (no menu)"
+
+[[mgr.prepend_keymap]]
+on   = "M"
+run  = "plugin mount"
+desc = "Mount / unmount drives"
+
+# `=` because <C-d> is already half-page-down.
+[[mgr.prepend_keymap]]
+on   = "="
+run  = "plugin diff"
+desc = "Diff the yanked file against the hovered one"
+
+# ── Help ──────────────────────────────────────────────────────────────────
+# yazi's own live keymap, which `~` and <F1> also open. `<C-h>` because that is
+# the help key muscle memory reaches for, and because `~` is awkward mid-browse.
+[[mgr.prepend_keymap]]
+on   = "<C-h>"
+run  = "help"
+desc = "Show the keybindings"
+
+# ── Escape hatches to the rest of the desktop ─────────────────────────────
+[[mgr.prepend_keymap]]
+on   = "!"
+run  = 'shell "$SHELL" --block'
+desc = "Drop to a shell here"
+
+[[mgr.prepend_keymap]]
+on   = "<C-n>"
+run  = 'shell "nautilus ." --orphan'
+desc = "Open this directory in Nautilus"
+
+# ── Bookmarks, extending the default `g` chords (gh / gc / gd / gt) ───────
+[[mgr.prepend_keymap]]
+on   = [ "g", "v" ]
+run  = "cd ~/dev"
+desc = "Go to ~/dev"
+
+[[mgr.prepend_keymap]]
+on   = [ "g", "o" ]
+run  = "cd ~/dotfiles"
+desc = "Go to ~/dotfiles"
+
+[[mgr.prepend_keymap]]
+on   = [ "g", "p" ]
+run  = "cd ~/cp"
+desc = "Go to ~/cp"
+
+[[mgr.prepend_keymap]]
+on   = [ "g", "l" ]
+run  = "cd ~/college"
+desc = "Go to ~/college"
+
+[[mgr.prepend_keymap]]
+on   = [ "g", "u" ]
+run  = "cd ~/docs"
+desc = "Go to ~/docs"
+
+[[mgr.prepend_keymap]]
+on   = [ "g", "m" ]
+run  = "cd ~/media"
+desc = "Go to ~/media"
+
+[[mgr.prepend_keymap]]
+on   = [ "g", "b" ]
+run  = "cd ~/docs/books"
+desc = "Go to ~/docs/books"
+
+[[mgr.prepend_keymap]]
+on   = [ "g", "y" ]
+run  = "cd ~/.config/yazi"
+desc = "Go to ~/.config/yazi"
+
+# ── Open the current directory in a new Ghostty window ────────────────────
+# `!` above stays put: that one blocks yazi and hands you a shell in place.
+# This one is non-blocking -- yazi keeps running while the window spawns.
+[[mgr.prepend_keymap]]
+on   = "<C-Enter>"
+run  = 'shell "ghostty --working-directory=." --orphan'
+desc = "Open this directory in a new terminal"
+
+# ── Opening files: `o` spawns, `O` opens in place ─────────────────────────
+#
+# The default pair is `o` = open with the first matching rule, `O` = open
+# interactively. Both are shifted one slot to the right here:
+#
+#   o  ->  open the hovered FILE in its own new Ghostty window
+#   O  ->  the old `o` -- open with the first matching rule, in place
+#
+# Nothing is actually lost: interactive open (the old `O`) is still on
+# `Shift+Enter`, which is a yazi default.
+#
+# Why bother: the `edit` opener is `block = true`, so the old `o` on a text
+# file hands nvim yazi's own window and you cannot browse again until you quit
+# it. `--orphan` detaches the child, so this `o` returns immediately and yazi
+# stays usable while the file opens beside it.
+#
+# WHICH APP IT PICKS IS NOT CONFIGURED HERE. open-file.py reads the extension
+# -> app table in ~/.config/yazi/openers.toml, which is the one file to edit to
+# change or add an app. It is read on every press, so a save takes effect on the
+# next `o` -- no reload, no restart. The list is deliberately not repeated here;
+# a second copy only goes stale.
+#
+# Images deliberately fall through to the editor, so `o` stays the "work on
+# this" key and SHIFT+O stays the "look at this" key -- that one runs yazi's own
+# opener table below in yazi.toml, which routes them to eog. Video does NOT
+# fall through: a 4GB .mkv in nvim is a frozen terminal, so openers.toml sends
+# it to VLC, matching what Enter already does.
+#
+# It goes through a script rather than calling the apps directly because of
+# where the new window lands: yazi usually runs inside the SUPER+E scratchpad,
+# and Hyprland maps new windows onto the *active* workspace -- which, while a
+# special workspace is showing, is that special workspace. The app therefore
+# opened hidden, tiled beside yazi. The script dismisses the scratchpad first
+# (so yazi tucks itself away, exactly as if you had pressed SUPER+E) and only
+# then launches, so the window lands on the workspace you are looking at. It is
+# a no-op outside a scratchpad, so the tiled yazi behaves too.
+#
+# `%s` is yazi's own placeholder -- it is replaced with the selected files, or
+# the hovered one when nothing is selected, already shell-quoted (so names with
+# spaces arrive as a single argument). Use `%s1` instead if you ever want it
+# pinned to strictly the hovered file.
+#
+# Do NOT reach for "$0" / "$@" here: yazi does not populate the shell's
+# positional parameters, so "$0" silently expands to the string `sh` and you
+# get a terminal editing a file called "sh". Only `%s` works.
+[[mgr.prepend_keymap]]
+on   = "o"
+run  = 'shell "$HOME/.config/hypr/scripts/open-file.py %s" --orphan'
+desc = "Open with the right app for its type (see yazi/openers.toml)"
+
+[[mgr.prepend_keymap]]
+on   = "O"
+run  = "open"
+desc = "Open with the first matching rule (in place)"

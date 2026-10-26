@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 # =============================================================================
-# touchscreen.sh — bind and unbind the touchscreen digitizer on demand.
+# touchscreen.sh — what the digitizer costs, and how to see it.
 # =============================================================================
-# Installed to /usr/local/lib/hypr/touchscreen by install-touchscreen.sh and
-# called from ~/.config/hypr/touchscreen.lua via `sudo -n`. See that installer's
-# header for why this is a root-owned copy rather than the file in $HOME.
+# THIS IS NOW A DIAGNOSTICS AND DOCUMENTATION FILE. It used to be installed to
+# /usr/local/lib/hypr/touchscreen and called via `sudo -n` to do the privileged
+# bind/unbind; hypr-digitizerd does that itself now, so the actions here
+# delegate to it and only the unprivileged ones (`status`, `detect`, and the
+# live interrupt rate) still do any work.
+#
+# It is kept, rather than deleted with the rest of the old chain, because the
+# measurements below are the entire justification for the feature and are not
+# written down anywhere else.
+#
+#     ~/.config/hypr/scripts/touchscreen.sh status   state + live IRQ rate
+#     ~/.config/hypr/scripts/touchscreen.sh detect    every HID-over-i2c device
+#
+# The mechanism now lives in ~/.config/hypr/daemons/hypr-digitizerd.c.
 #
 # ---------------------------------------------------------------------------
 # WHY A LAPTOP WOULD EVER WANT ITS TOUCHSCREEN TURNED OFF
@@ -153,31 +164,21 @@ irq_rate() {
 
 # --- Actions -----------------------------------------------------------------
 
-do_on() {
-    is_present || { echo "touchscreen: no i2c device i2c-${DEVICE}" >&2; exit 1; }
-    if is_bound; then
-        echo "touchscreen: already on"
-        return 0
+# on / off / toggle are the daemon's job now.
+#
+# Writing to `bind` makes the driver probe the device, which recreates the HID
+# device and its input nodes; libinput picks them up through udev on its own,
+# so Hyprland needs no reload. That write is root's, and hypr-digitizerd is
+# the root service that owns it -- doing it from here would mean a second
+# writer racing the daemon's own state, which is exactly the race the daemon
+# was written to remove.
+delegate() {
+    if ! command -v hypr-digitizer-ctl >/dev/null 2>&1; then
+        echo "touchscreen: hypr-digitizer-ctl is not installed." >&2
+        echo "  sudo ~/.config/hypr/scripts/install-touchscreen.sh" >&2
+        exit 1
     fi
-    # Writing to `bind` makes the driver probe the device, which recreates the
-    # HID device and its input nodes. libinput picks them up through udev on its
-    # own -- Hyprland needs no reload.
-    printf '%s\n' "i2c-${DEVICE}" > "$DRIVER_DIR/bind"
-    echo "touchscreen: on"
-}
-
-do_off() {
-    is_present || { echo "touchscreen: no i2c device i2c-${DEVICE}" >&2; exit 1; }
-    if ! is_bound; then
-        echo "touchscreen: already off"
-        return 0
-    fi
-    printf '%s\n' "i2c-${DEVICE}" > "$DRIVER_DIR/unbind"
-    echo "touchscreen: off"
-}
-
-do_toggle() {
-    if is_bound; then do_off; else do_on; fi
+    exec hypr-digitizer-ctl "$1"
 }
 
 do_status() {
@@ -215,9 +216,7 @@ do_detect() {
 }
 
 case "${1:-}" in
-    on)     do_on ;;
-    off)    do_off ;;
-    toggle) do_toggle ;;
+    on|off|toggle) delegate "$1" ;;
     status) do_status ;;
     detect) do_detect ;;
     *)

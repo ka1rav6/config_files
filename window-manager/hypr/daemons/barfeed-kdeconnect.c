@@ -1,5 +1,11 @@
 // =============================================================================
-// waybar-kdeconnect — the custom/kdeconnect module, driven by D-Bus signals.
+// barfeed-kdeconnect — the custom/kdeconnect module, driven by D-Bus signals.
+// =============================================================================
+// THE NAME IS LOAD-BEARING and must not contain "waybar". The full story is at
+// the top of barfeed-hyprtodo.c: hyprtodo-cli runs `pkill -SIGRTMIN+8 waybar`
+// after every write, pkill matches substrings, and SIGRTMIN+8 terminates by
+// default -- so a module called waybar-kdeconnect was collateral damage every
+// time an unrelated todo changed.
 // =============================================================================
 // Replaces scripts/waybar-kdeconnect.sh, which waybar re-ran every 30 s. That
 // script forked a shell and one or two `kdeconnect-cli` processes each time;
@@ -45,6 +51,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/signalfd.h>
 #include <sys/timerfd.h>
 #include <systemd/sd-bus.h>
 #include <time.h>
@@ -201,6 +208,44 @@ static void refresh(sd_bus *bus) {
     emit(out);
 }
 
+
+// A signalfd for the "refresh now" real-time signals, so they are handled in
+// the epoll loop like every other source rather than in an async handler.
+//
+// SIGRTMIN+8 and +9 are what this config's `pkill -SIGRTMIN+N waybar` callers
+// send. Blocking them first is what stops the DEFAULT disposition -- terminate
+// -- from running; see the note at the top of this file for the bug that
+// taught us to do this.
+static int make_signalfd(void) {
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGRTMIN + 8);
+    sigaddset(&mask, SIGRTMIN + 9);
+    if (sigprocmask(SIG_BLOCK, &mask, NULL) < 0) return -1;
+    return signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+}
+
+
+// Watch our own stdout for the read end closing.
+//
+// SIGPIPE is not enough on its own. These programs write only when something
+// changes, so a module that has settled can sit in epoll_wait() for hours
+// with nothing to say -- and if waybar dies in that window there is no write
+// to raise SIGPIPE on. The process is reparented to init and lives forever.
+// That is not hypothetical: waybar-ensure.sh restarts the bar on every
+// monitor hotplug and theme change, and each restart stranded one of these
+// per bar.
+//
+// Registering stdout with an EMPTY event mask is the trick: epoll always
+// reports EPOLLERR and EPOLLHUP whether or not they were asked for, so this
+// costs no wakeups while the pipe is healthy and fires the moment waybar lets
+// go. Asking for EPOLLOUT instead would spin, because a writable pipe is
+// always ready.
+static void watch_stdout(int ep) {
+    struct epoll_event ev = {.events = 0, .data.fd = STDOUT_FILENO};
+    epoll_ctl(ep, EPOLL_CTL_ADD, STDOUT_FILENO, &ev);
+}
+
 static int debounce_fd = -1;
 
 static void arm_debounce(void) {
@@ -259,13 +304,19 @@ int main(void) {
     int ep = epoll_create1(EPOLL_CLOEXEC);
     debounce_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
     int busfd = sd_bus_get_fd(bus);
-    if (ep < 0 || debounce_fd < 0 || busfd < 0) return 1;
+    int sigfd = make_signalfd();
+    if (ep < 0 || debounce_fd < 0 || busfd < 0 || sigfd < 0) return 1;
+
+    struct epoll_event sev = {.events = EPOLLIN, .data.fd = sigfd};
+    epoll_ctl(ep, EPOLL_CTL_ADD, sigfd, &sev);
 
     struct epoll_event tev = {.events = EPOLLIN, .data.fd = debounce_fd};
     epoll_ctl(ep, EPOLL_CTL_ADD, debounce_fd, &tev);
 
     struct epoll_event bev = {.events = EPOLLIN, .data.fd = busfd};
     epoll_ctl(ep, EPOLL_CTL_ADD, busfd, &bev);
+
+    watch_stdout(ep);
 
     refresh(bus);
 
@@ -306,18 +357,29 @@ int main(void) {
             timeout = (usec > now) ? (int)((usec - now) / 1000) : 0;
         }
 
-        struct epoll_event events[4];
-        int n = epoll_wait(ep, events, 4, timeout);
+        struct epoll_event events[8];
+        int n = epoll_wait(ep, events, 8, timeout);
         if (n < 0) {
             if (errno == EINTR) continue;
             return 1;
         }
 
         for (int i = 0; i < n; i++) {
-            if (events[i].data.fd == debounce_fd) {
+            if (events[i].data.fd == STDOUT_FILENO) {
+                // waybar is gone. Nothing left to report to.
+                return 0;
+
+            } else if (events[i].data.fd == debounce_fd) {
                 uint64_t ticks;
                 if (read(debounce_fd, &ticks, sizeof ticks) == sizeof ticks)
                     refresh(bus);
+            } else if (events[i].data.fd == sigfd) {
+                // An explicit "refresh now" nudge. Redundant now that the bus
+                // matches catch every change, but harmless -- and refresh()
+                // prints nothing if the state is unchanged.
+                struct signalfd_siginfo si;
+                while (read(sigfd, &si, sizeof si) == sizeof si) {}
+                arm_debounce();
             }
         }
     }

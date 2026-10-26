@@ -32,19 +32,54 @@ start_waybar() {
     # 9>&- closes the relayer.sh lock fd if we were invoked from there, so a
     # long-lived waybar can never inherit and hold that lock. This exact bug
     # deadlocked every later relayer run once before.
-    setsid --fork waybar -c "$CONFIG" -s "$STYLE" \
-        >/tmp/waybar.log 2>&1 </dev/null 9>&-
+    #
+    # WHY waybar IS STARTED UNDER hypr-ipc-shim
+    #   waybar's workspace buttons send Hyprland's LEGACY IPC strings, which
+    #   are hardcoded in the binary and which a Lua config rejects at parse
+    #   time -- so clicking a workspace number did nothing at all. The shim
+    #   sits on a second instance socket, rewrites those few strings into
+    #   hl.dsp calls, and forwards everything else untouched. The long version
+    #   is in ~/.config/hypr/daemons/hypr-ipc-shim.c and on the
+    #   "hyprland/workspaces" block in config.jsonc.
+    #
+    #   It runs waybar as its CHILD rather than alongside it, which is what
+    #   removes the startup race: the sockets exist before waybar is executed.
+    #   `pgrep -x waybar` still finds the child, so every count and every
+    #   `pkill -x waybar` in this script works exactly as before, and the shim
+    #   exits when waybar does.
+    #
+    #   If the shim is missing, fall back to launching waybar directly. The
+    #   bar then comes up with clicking broken, which is strictly better than
+    #   no bar -- and is the state this machine was in before the shim existed.
+    if command -v hypr-ipc-shim >/dev/null 2>&1; then
+        setsid --fork hypr-ipc-shim -- waybar -c "$CONFIG" -s "$STYLE" \
+            >/tmp/waybar.log 2>&1 </dev/null 9>&-
+    else
+        log "hypr-ipc-shim not installed — workspace clicks will not work"
+        setsid --fork waybar -c "$CONFIG" -s "$STYLE" \
+            >/tmp/waybar.log 2>&1 </dev/null 9>&-
+    fi
 }
 
 # --- 1. Exactly one process ------------------------------------------------
-procs=$(pgrep -cx waybar 2>/dev/null || echo 0)
+# NO `|| echo 0` HERE. `pgrep -c` PRINTS "0" AND EXITS 1 when nothing matches,
+# so the fallback ran as well and $procs became the two-line string "0\n0" --
+# which [[ -ne ]] then rejected with
+#     waybar-ensure.sh: line 66: [[: 0
+#     0: syntax error in expression (error token is "0")
+# and the count was never compared at all. The bug only shows when there are
+# ZERO waybar processes, which is why it went unnoticed: every caller until now
+# ran against a bar that was already up. Starting the bar at login through this
+# script is exactly the zero case.
+procs=$(pgrep -cx waybar 2>/dev/null)
+procs=${procs:-0}
 if [[ "$procs" -ne 1 ]]; then
     log "found $procs waybar processes, want 1 — restarting"
     pkill -x waybar 2>/dev/null
     sleep 0.4
     start_waybar
     sleep 1.5
-    log "now $(pgrep -cx waybar 2>/dev/null || echo 0) process(es)"
+    log "now $(pgrep -cx waybar 2>/dev/null) process(es)"
     exit 0
 fi
 

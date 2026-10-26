@@ -1,0 +1,13 @@
+[Unit]
+Description=Mirror Hyprland's tmpfs log to persistent storage for resume debugging
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/hypr-log-persist.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
