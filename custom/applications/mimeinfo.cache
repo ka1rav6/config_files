@@ -2,6 +2,8 @@
 application/javascript=nvim-ghostty.desktop;
 application/json=nvim-ghostty.desktop;
 application/toml=nvim-ghostty.desktop;
+application/vnd.anthropic.mcpb=com.anthropic.Claude.desktop;
+application/vnd.anthropic.skill=com.anthropic.Claude.desktop;
 application/vnd.ms-excel=chatgpt.desktop;
 application/vnd.ms-excel.sheet.macroEnabled.12=chatgpt.desktop;
 application/vnd.openxmlformats-officedocument.presentationml.presentation=chatgpt.desktop;

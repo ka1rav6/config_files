@@ -10,6 +10,10 @@ vim.g.maplocalleader = " "
 -- from inside an activated venv that lacks pynvim.
 vim.g.python3_host_prog = "/usr/bin/python3"
 
+-- Project-local config: source `.nvim.lua` from the project root (searched
+-- upward from cwd). Each file has to be trusted once -- `:trust` at the prompt.
+vim.o.exrc = true
+
 -- UI
 vim.opt.number = true
 vim.opt.relativenumber = true
@@ -31,6 +35,12 @@ vim.opt.softtabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 vim.opt.smartindent = true
+
+-- cindent tuning for the C-family buffers (treesitter indent is off for c/cpp,
+-- see lua/plugins/treesitter.lua). Defaults are wrong for how this code is
+-- written: `g0` keeps access specifiers at class level, `N-s` stops namespaces
+-- from adding a level, `j1`/`J1` indent lambda and object-literal bodies.
+vim.opt.cinoptions = "g0,N-s,j1,J1,(0,ws,Ws,m1"
 
 -- Show whitespace that actually matters (trailing / tabs / nbsp).
 vim.opt.list = true

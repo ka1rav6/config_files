@@ -426,3 +426,7 @@ phone-send +FILES:
     for f in "$@"; do
         kdeconnect-cli -d {{PHONE}} --share "$f"
     done
+
+
+bt-mouse:
+    bluetoothctl connect F0:3D:41:21:05:2D

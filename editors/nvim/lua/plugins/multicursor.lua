@@ -10,15 +10,18 @@
 --     <C-S-d> both do VS Code's Ctrl+D job instead.
 --   * <C-A-Down>/<C-A-Up> (VS Code's add-cursor-below/above) is swallowed by
 --     Ghostty's goto_split, so <C-Down>/<C-Up> are used.
---   * The <C-S-*> and <C-CR> bindings need the kitty keyboard protocol, which
---     Ghostty + Neovim 0.12 negotiate automatically. Over plain SSH or in a
---     terminal without it they collapse onto their unshifted twin -- if
---     <C-S-d> ever page-scrolls, that is why; drop that line and use <C-n>.
+--   * The <C-S-*> bindings need the kitty keyboard protocol, which Ghostty +
+--     Neovim 0.12 negotiate automatically. Over plain SSH or in a terminal
+--     without it they collapse onto their unshifted twin -- if <C-S-d> ever
+--     page-scrolls, that is why; drop that line and use <C-n>.
+--   * <C-Space> (not <C-CR>, which never arrived) is the Alt+Click stand-in.
+--     Neovim keeps <C-Space> distinct from the NUL byte a pre-CSI-u terminal
+--     actually sends, so <C-@> is bound to the same command as a fallback.
 return {
     {
         "brenton-leighton/multiple-cursors.nvim",
         -- main, not a tag: MultipleCursorsAddDelete (the keyboard stand-in for
-        -- VS Code's Alt+Click, bound to <C-CR> below) was merged after v0.15.
+        -- VS Code's Alt+Click, bound to <C-Space> below) was merged after v0.15.
         branch = "main",
         opts = {
             -- VS Code's "select all occurrences" searches the whole file, not
@@ -102,7 +105,17 @@ return {
             -- where you are, move anywhere with ordinary motions, drop another.
             -- Pressing it on an existing cursor removes that one.
             {
-                "<C-CR>",
+                "<C-Space>",
+                "<Cmd>MultipleCursorsAddDelete<CR>",
+                mode = "n",
+                desc = "Multicursor: pin/unpin cursor here",
+            },
+            -- Terminals without the kitty keyboard protocol send NUL for
+            -- Ctrl+Space, which reaches Neovim as <C-@> -- a separate keycode
+            -- from <C-Space>, so both have to be bound. Normal mode only, so
+            -- insert-mode i_CTRL-@ and blink.cmp's <C-Space> are untouched.
+            {
+                "<C-@>",
                 "<Cmd>MultipleCursorsAddDelete<CR>",
                 mode = "n",
                 desc = "Multicursor: pin/unpin cursor here",
