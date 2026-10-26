@@ -3,8 +3,10 @@
 Complete keymap for yazi 26.9.1 as configured on this machine.
 Keys marked **★** are custom (from `~/.config/yazi/keymap.toml`); everything else is a yazi default.
 
-Press `~` inside yazi for the live version of this list. Pausing after a prefix key
-(`g`, `c`, `m`, `t`, `,`) pops up a menu of what follows it.
+Press `Ctrl`+`h` **★** (or `~`, or `F1`) inside yazi for the live version of this
+list — it is generated from the running config, so it is never out of date, and it
+has a filter box. Pausing after a prefix key (`g`, `c`, `m`, `t`, `,`) pops up a
+menu of what follows it.
 
 ---
 
@@ -19,6 +21,14 @@ Press `~` inside yazi for the live version of this list. Pausing after a prefix 
   - [Copy / move / delete](#copy--move--delete)
   - [Create & rename](#create--rename)
   - [Clipboard & permissions (`c`)](#clipboard--permissions-c)
+  - [Convert files (`c z`)](#convert-files-c-z)
+  - [Menu keys](#menu-keys)
+  - [What converts to what](#what-converts-to-what)
+  - [Converting without yazi](#converting-without-yazi)
+  - [Conversion requirements](#conversion-requirements)
+  - [ImageMagick 6 and the `magick` shim](#imagemagick-6-and-the-magick-shim)
+  - [Markdown out of Word files](#markdown-out-of-word-files)
+  - [Verified on this machine](#verified-on-this-machine)
   - [Find, filter, search](#find-filter-search)
   - [Opening files](#opening-files)
   - [Tabs](#tabs)
@@ -41,6 +51,7 @@ Press `~` inside yazi for the live version of this list. Pausing after a prefix 
 | `y` | Open yazi; on quit the shell `cd`s to where you ended up |
 | `y <path>` | Same, starting at `<path>` |
 | `yazi` | Plain yazi — shell stays put |
+| `ya pkg add <owner>/<repo>` | Install a plugin from GitHub |
 | `ya pkg upgrade` | Update all plugins |
 | `ya pkg list` | List installed plugins |
 
@@ -158,6 +169,200 @@ Selection persists across directories.
 | `cf` | Copy filename |
 | `cn` | Copy filename without extension |
 | `cm` **★** | chmod the selection |
+| `cz` **★** | Convert to… — see below |
+| `cZm` **★** | Convert straight to Markdown |
+
+### Convert files (`c z`)
+
+**★** omniconvert. Hover a file or select several, press `c z`, and a menu lists
+only the formats those files can actually become — one keypress each.
+
+| Key | Action |
+| --- | --- |
+| `cz` **★** | Convert to… — the menu |
+| `cZm` **★** | Straight to Markdown, no menu |
+
+```
+ ╭ Convert ─────────────────────────────╮
+ │ m   .md    Markdown — portable text  │
+ │ j   .jpg   JPEG — photos             │
+ │ w   .webp  WebP — small, web         │
+ │ a   .avif  AVIF — smallest           │
+ │ d   .pdf   PDF — document            │
+ │ M   .pdf   Merge all selected …      │
+ ╰──────────────────────────────────────╯
+```
+
+The menu is not a fixed list. The plugin asks the `omniconvert` script what the
+hovered file can reach and builds the menu from the answer, so it can never
+offer a conversion that would fail. Select several files and you get the
+**intersection** — only formats every one of them can reach, and a warning
+instead of a menu when they share none. Select images only and an extra `M`
+appears: merge all of them into one PDF.
+
+Nothing is ever overwritten. `photo.png` becomes `photo.webp`, or `photo-2.webp`
+if that name is taken, and the original is left alone.
+
+### Menu keys
+
+Mnemonics only have to be unique inside one menu, so `o` is Opus for audio and
+ODT for documents — no input reaches both. Markdown leads every menu it appears
+in and always takes `m`.
+
+| Group | Keys |
+| --- | --- |
+| Markdown | `m` |
+| Images | `p` png · `j` jpg · `w` webp · `a` avif · `h` heic · `x` jxl · `g` gif · `b` bmp · `t` tiff · `T` tga · `i` ico · `d` pdf |
+| Audio | `3` mp3 · `o` opus · `c` aac · `m` m4a · `f` flac · `s` wav · `O` ogg · `W` wma |
+| Video | `4` mp4 · `e` webm · `k` mkv · `v` mov · `A` avi · `F` flv · `V` wmv |
+| Documents | `D` docx · `o` odt · `r` rtf · `t` txt · `h` html · `x` xlsx · `s` ods · `C` csv · `p` pptx · `P` odp |
+| Images only | `M` merge the selection into one PDF |
+
+`Esc` closes the menu without converting. A format the backend gains but these
+tables don't know about still shows up, on a leftover key.
+
+### What converts to what
+
+| From | To |
+| --- | --- |
+| Images (png jpg webp avif heic jxl gif bmp tiff tga ico svg psd + camera RAW) | png jpg webp avif heic jxl gif bmp tiff tga ico pdf **md** |
+| PDF | png jpg webp avif tiff — one image per page — **md** |
+| Audio | mp3 opus aac m4a flac wav ogg wma |
+| Video | mp4 webm mkv mov avi flv wmv gif, **or** any audio format, which pulls out the soundtrack |
+| doc docx odt rtf txt md | pdf docx odt rtf txt html **md** |
+| html htm | pdf odt txt **md** |
+| xls xlsx ods csv tsv | pdf xlsx ods csv **md** |
+| ppt pptx odp | pdf pptx odp **md** |
+
+`omniconvert list` prints the current list; `omniconvert targets <file>` answers
+for one file, which is exactly what the menu asks.
+
+Markdown takes a different route for each source — LibreOffice for Writer files,
+markitdown for spreadsheets, decks and HTML, `pdftotext -layout` for a PDF with
+a text layer, and tesseract OCR for one without and for images. OCR runs only
+when it has to, so an ordinary PDF converts in under a tenth of a second. Expect
+text, not structure: OCR recovers the words on a scan, not its tables.
+
+### Converting without yazi
+
+The backend is an ordinary script and is useful on its own:
+
+```sh
+omniconvert webp photo.png            # one file
+omniconvert mp3 *.flac                # batch
+omniconvert m4a podcast.mp4           # extract audio from video
+omniconvert pdf report.docx           # document → pdf
+omniconvert md report.xlsx            # spreadsheet → markdown table
+omniconvert md scan.pdf               # scanned pdf → OCR'd markdown
+omniconvert jpg scan.pdf              # pdf pages → jpgs
+omniconvert pdf --merge *.jpg         # many images → ONE pdf
+```
+
+Quality is set by environment variables, with these defaults:
+
+```sh
+JPG_QUALITY=90  WEBP_QUALITY=85  AVIF_QUALITY=55  HEIC_QUALITY=80
+PDF_DPI=200     GIF_FPS=12       GIF_WIDTH=720
+MP3_VBR=2       VIDEO_CRF=23
+OCR_DPI=300     PDF_TEXT_MIN=64
+```
+
+Per run — `WEBP_QUALITY=95 omniconvert webp *.png` — or in the shell profile to
+change the default. `PDF_TEXT_MIN` is how many characters of text layer a PDF
+needs before it counts as born-digital rather than a scan.
+`OMNICONVERT_OCR_LANG` overrides the OCR language, otherwise `eng`; tesseract
+has no autodetect, so a language it was not given is a language it cannot read.
+
+### Conversion requirements
+
+| Tool | Needed for | Here |
+| --- | --- | --- |
+| `omniconvert` (the script) | everything — the plugin is only a menu | `~/.local/bin/omniconvert` |
+| imagemagick | images, image→pdf | v6 + a `magick` shim — see below |
+| ffmpeg | audio and video | yes |
+| libreoffice | documents | 24.2 — see below |
+| poppler (`pdftoppm`, `pdfinfo`, `pdftotext`) | pdf→images, pdf→md | yes |
+| ghostscript | pdf→webp/avif | yes |
+| markitdown | spreadsheets, decks, html and docx → md | `uv tool install 'markitdown[docx,pptx,xlsx,xls]'` |
+| tesseract | OCR — scanned pdfs and images → md | **not installed** |
+
+Only the tools for formats you actually use matter; the menu offers whatever is
+installed and leaves out what it cannot do. Until tesseract is there, `.md` is
+simply absent from an image's menu, and a scanned PDF reports a missing tool:
+
+```sh
+sudo apt install tesseract-ocr
+```
+
+> **`ya pkg add` does not finish the install.** `ya pkg` deploys a plugin's Lua,
+> README and LICENSE and nothing else, so the `omniconvert` script never comes
+> across with it — and without the script `c z` is a menu with nothing behind
+> it. It has to be fetched separately into `~/.local/bin`, which is already on
+> `PATH`:
+>
+> ```sh
+> curl -fsSL https://raw.githubusercontent.com/skylightlim/omniconvert.yazi/main/omniconvert \
+>   -o ~/.local/bin/omniconvert && chmod +x ~/.local/bin/omniconvert
+> ```
+>
+> `omniconvert list` confirms it landed. The alternative is to clone the repo
+> into `~/.config/yazi/plugins/` and symlink the script out of it, which keeps
+> both halves on one `git pull` but gives up `ya pkg upgrade` for this plugin.
+
+### ImageMagick 6 and the `magick` shim
+
+omniconvert calls `magick`, the ImageMagick **7** binary. Ubuntu 24.04 only
+packages ImageMagick 6, which provides `convert` and no `magick` at all — and
+because the menu is filtered by what is installed, the effect was not an error
+but an *empty* menu: `omniconvert targets photo.png` printed nothing and `c z`
+on an image offered no formats.
+
+`~/.local/bin/magick` is a shim forwarding to the IM6 tools. Every call the
+script makes is the plain `magick [options] input output` form, which `convert`
+accepts unchanged; the shim also passes IM7's subcommand form through, so
+`magick identify x.png` reaches `identify` and interactive use works too.
+
+Two formats are refused by the shim rather than forwarded. IM6 cannot *write*
+HEIC or JPEG XL, and instead of saying so it writes a PNG under the name it was
+given — a `photo.heic` that is really a PNG, exit status 0. The shim exits 1 for
+those two extensions so the failure is visible. They still appear in the menu,
+because the script only checks that `magick` exists, so `h` and `x` report a
+failed conversion instead of quietly producing a mislabelled file.
+
+Installing a real ImageMagick 7 — an AppImage from imagemagick.org, or a build
+from source; there is no apt package on 24.04 — makes the shim removable and
+HEIC and JXL work for real.
+
+### Markdown out of Word files
+
+`docx odt rtf txt → md` is the one documented route that does not work here.
+The script sends Writer files through LibreOffice, which has exported Markdown
+only since **26.8**; this machine has 24.2, so the filter does not exist and the
+conversion exits 1.
+
+Everything else reaching `.md` is unaffected, because nothing else goes that
+way — spreadsheets, decks and HTML use markitdown, and PDFs use `pdftotext`.
+
+For a Word file in the meantime, markitdown reads `.docx` directly once the
+`[docx]` extra is installed, which it now is:
+
+```sh
+markitdown report.docx > report.md
+```
+
+`.odt` and `.rtf` have no such shortcut — `omniconvert docx` first, then the
+line above. Upgrading LibreOffice past 26.8 removes the whole detour.
+
+### Verified on this machine
+
+Working: all 9 writable image formats (png jpg webp avif gif bmp tiff tga ico)
+and image→pdf; every audio target from wav; every video target from mp4 plus
+soundtrack extraction; `md → pdf docx odt rtf txt html`; `csv → md xlsx ods
+pdf`; `pptx → md odp pdf`; `pdf → png jpg tiff webp md`. The no-overwrite rule
+holds — a second conversion lands on `-2`.
+
+Not working: `heic` and `jxl` out (ImageMagick 6), `docx → md` (LibreOffice
+24.2), and anything needing OCR (no tesseract).
 
 ### Find, filter, search
 
@@ -277,7 +482,8 @@ Sorting — capitalise the second key to reverse:
 | Key | Action |
 | --- | --- |
 | `.` | Toggle hidden files |
-| `~` or `F1` | Help — the live keymap |
+| `Ctrl`+`h` **★** | Help — the live keymap |
+| `~` or `F1` | Same |
 
 ### Shell & tasks
 
@@ -314,6 +520,7 @@ e.g. `mv %s ~/archive` · `ffmpeg -i %s1 out.mp4`
 | `l` `Enter` `→` **★** | smart-enter | Enter a directory or open a file |
 | `F` **★** | jump-to-char | Jump to an entry by first character |
 | `cm` **★** | chmod | Change permissions on the selection |
+| `cz` `cZm` **★** | omniconvert | Convert the selection — menu of valid targets |
 | `M` **★** | mount | List, mount and unmount drives |
 | `=` **★** | diff | Yank one file, hover another, diff them |
 | `z` | fzf | Fuzzy jump |

@@ -1,0 +1,32 @@
+#!/bin/sh
+# ImageMagick 7 compatibility shim.
+#
+# Ubuntu 24.04 packages ImageMagick 6, which has no `magick` binary — only the
+# individual IM6 tools (convert, identify, mogrify, ...). omniconvert calls
+# `magick` and nothing else, so this forwards for it, and for interactive use
+# as well:
+#
+#   magick identify x.png   ->  identify x.png      (IM7 subcommand form)
+#   magick a.png b.webp     ->  convert a.png b.webp
+#
+# Two formats are refused rather than forwarded. IM6 cannot *write* HEIC or
+# JPEG XL, and instead of saying so it writes a PNG under the name it was given
+# — a photo.heic that is really a PNG, with exit status 0. Fail loudly instead.
+#
+# Delete this shim once a real ImageMagick 7 is installed.
+
+case "${1:-}" in
+  identify|mogrify|montage|composite|compare|display|animate|import|stream|conjure|convert)
+    tool=$1; shift; exec "$tool" "$@" ;;
+esac
+
+last=
+for a in "$@"; do last=$a; done
+case "$(printf '%s' "${last##*.}" | tr '[:upper:]' '[:lower:]')" in
+  heic|heif|jxl)
+    printf 'magick: ImageMagick 6 cannot write %s — it would silently write a PNG instead.\n' \
+      "${last##*.}" >&2
+    exit 1 ;;
+esac
+
+exec convert "$@"
