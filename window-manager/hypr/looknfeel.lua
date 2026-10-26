@@ -97,7 +97,36 @@ hl.config({
     --
     -- Costs one frame of pointer latency, which at 120Hz is not perceptible.
     -- Revisit together with the AQ_NO_ATOMIC removal in defaults.lua.
-    cursor = { no_hardware_cursors = true, default_monitor = "HDMI-A-1" },
+    --
+    -- no_warps: never drag the pointer to follow focus.
+    --
+    -- WHAT IT ACTUALLY FIXES HERE, which is NOT what the name suggests.
+    -- Switching between workspaces on the SAME monitor never moved the
+    -- pointer -- measured: ws1 -> ws2 left it at 762,709. Crossing monitors
+    -- did, every time:
+    --
+    --     ws2 (HDMI-A-1) -> ws10 (eDP-1):  cursor 762,709 -> 3520,623
+    --
+    -- With "all-outputs": true the bar shows 1, 2 and 10 side by side, so a
+    -- single scroll or click walks from HDMI-A-1 onto eDP-1 and the pointer
+    -- was yanked off the bar onto the other screen -- which also ENDS the
+    -- gesture, because the following scroll ticks no longer land on the
+    -- workspaces widget. The same warp fired when the dock raised a window on
+    -- the other monitor, taking the pointer off the dock mid-click.
+    --
+    -- Note that cursor.warp_on_change_workspace was already 0 and did not
+    -- prevent this; the monitor change is a separate warp, and this is the
+    -- option that governs it.
+    --
+    -- The trade: focus can now be on a monitor the pointer is not over. With
+    -- follow_mouse = 1 (input.lua) the next deliberate pointer movement over
+    -- a window takes focus back, which is the behaviour you want anyway --
+    -- focus follows what you touch, not what the compositor guessed.
+    cursor = {
+        no_hardware_cursors = true,
+        default_monitor = "HDMI-A-1",
+        no_warps = true,
+    },
 
     misc = {
         disable_hyprland_logo = false,

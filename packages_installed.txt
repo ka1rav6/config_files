@@ -1,6 +1,7 @@
 acpica-tools
 arduino
 bat
+bear
 blender
 blueman
 bluez
@@ -11,10 +12,15 @@ btop
 build-essential
 ca-certificates
 cava
+chatgpt
 clang
+clang-20
 clang-format
+clang-format-20
 clang-tidy
+clang-tidy-20
 clangd
+clangd-20
 claude-desktop
 cliphist
 cmake
@@ -35,6 +41,7 @@ doxygen
 efibootmgr
 evtest
 eza
+fastfetch
 fd-find
 ffmpeg
 file
@@ -45,9 +52,13 @@ forticlient
 fpart
 fzf
 g++
+g++-14
+g++-15
 gcc
+gcc-15
 gcc-multilib
 gcc-riscv64-unknown-elf
+ghostty
 ghostwriter
 git
 gnome-shell-extension-prefs
@@ -84,6 +95,7 @@ imagemagick
 init
 inotify-tools
 intel-media-va-driver
+kdeconnect
 language-pack-en
 language-pack-en-base
 language-pack-gnome-en
@@ -94,6 +106,8 @@ libasio-dev
 libassimp-dev
 libayatana-appindicator3-dev
 libbluetooth-dev
+libc++-20-dev
+libc++abi-20-dev
 libc6-dev-i386
 libcereal-dev
 libchewing3
@@ -110,6 +124,7 @@ libgirepository1.0-dev
 libgl1-mesa-dri
 libglew-dev
 libglfw3-dev
+libgtest-dev
 libgtk-3-dev
 libgtk-4-dev
 libgtk-layer-shell-dev
@@ -146,7 +161,7 @@ libsdl2-mixer-dev
 libsdl2-ttf-dev
 libssl-dev
 libstdc++-13-doc
-libunwind-dev
+libstdc++-15-dev
 libva-drm2
 libva-x11-2
 libvulkan-dev
@@ -162,6 +177,7 @@ libxdo-dev
 linux-generic
 linux-generic-hwe-24.04
 linux-image-generic
+lld-20
 login
 lua5.4
 m17n-db
@@ -275,12 +291,15 @@ wlogout
 wlsunset
 wofi
 wpasupplicant
+wtype
 xclip
 xdg-desktop-portal
 xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland
 xdg-utils
 xwayland
+zathura
+zathura-pdf-poppler
 zip
 zram-config
 zsh
