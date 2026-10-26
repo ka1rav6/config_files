@@ -77,12 +77,17 @@ sys.exit(1 if bad else 0)
 PY
 }
 
+# Delegated to waybar-ensure.sh rather than inlined, because waybar has to
+# come up as a child of hypr-ipc-shim or the bar loses workspace clicking and
+# scrolling. This function used to have its own `setsid --fork waybar` line,
+# so every monitor hotplug that reached here quietly replaced a working bar
+# with a half-dead one. One launcher, one place to get it right.
+#
+# --restart is unconditional, which is what this caller means: the outputs
+# have just been remapped and waybar does not re-lay-out its own surfaces.
+# (waybar-ensure.sh closes the lock fd for us -- see start_waybar there.)
 restart_waybar() {
-    pkill -x waybar 2>/dev/null
-    sleep 0.4
-    setsid --fork waybar -c "$HOME/.config/waybar/config.jsonc" \
-        -s "$HOME/.config/waybar/style.css" >/tmp/waybar.log 2>&1 </dev/null 9>&-
-    sleep 1.2
+    "$HOME/.config/hypr/scripts/waybar-ensure.sh" --restart
 }
 
 restart_hyprpaper() {

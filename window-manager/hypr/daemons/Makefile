@@ -51,6 +51,12 @@ $(OBJDIR):
 
 # sd-bus lives in libsystemd. pkg-config rather than a bare -lsystemd so this
 # still builds if the library ever moves.
+# hypr-ipc-shim and hypr-ipc-send share the legacy-IPC rewrite through a
+# header, so a change to it has to rebuild both -- otherwise the two halves
+# of one translation table go out of sync silently, which is exactly what
+# putting it in a header was meant to prevent.
+$(OBJDIR)/hypr-ipc-shim $(OBJDIR)/hypr-ipc-send: hypr-ipc-translate.h
+
 $(OBJDIR)/barfeed-kdeconnect: barfeed-kdeconnect.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -o $@ $< $(shell pkg-config --cflags --libs libsystemd) $(LDFLAGS)
 

@@ -435,3 +435,5 @@ touchscreen-status:
     systemctl status hypr-digitizerd
     journalctl -u hypr-digitizerd -f
     hypr-digitizer-ctl status
+ram-check:
+    ps -eo pid,user,%mem,rss,comm --sort=-%mem | head -n 11

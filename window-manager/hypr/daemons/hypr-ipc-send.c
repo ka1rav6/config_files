@@ -20,8 +20,31 @@
 //
 //     hypr-ipc-send 'dispatch workspace e+1'
 //
-// The request is passed through verbatim; the shim decides what, if anything,
-// needs translating. Prints the reply, exits non-zero if it cannot connect.
+// WHEN THERE IS NO SHIM
+//   An earlier version passed the request through verbatim and trusted $HIS
+//   to be the shim's. That turned one bug into two. relayer.sh launched
+//   waybar directly on a monitor hotplug, so $HIS was Hyprland's own
+//   signature, `dispatch workspace e+1` went to the compositor untranslated,
+//   and the Lua config rejected it at parse time:
+//
+//       error: [string "return hl.dispatch(workspace e+1)"]:1: ')' expected
+//
+//   Clicking was already broken in that state -- that is the shim's job and
+//   nothing can stand in for it -- but scrolling had worked before this
+//   program existed, because the config called `hyprctl dispatch` with a Lua
+//   string. Routing scroll through here made the shim-less state strictly
+//   worse than the one it replaced.
+//
+//   So: when the socket we are about to reach is NOT a shim, do the rewrite
+//   here, with the same code the shim uses (hypr-ipc-translate.h -- one text,
+//   so the two can't drift). Scroll then degrades to "works, but the pointer
+//   stays behind on a cross-monitor switch" instead of to "does nothing".
+//
+//   Two ways to end up there, both handled: $HIS never had the .shim suffix,
+//   or it has one but the shim has since died and left a stale environment
+//   behind -- in which case we strip the suffix and talk to Hyprland direct.
+//
+// The reply is printed; exits non-zero if no socket can be reached.
 //
 // Build: make -C ~/.config/hypr/daemons
 // =============================================================================
@@ -33,6 +56,29 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+
+#include "hypr-ipc-translate.h"
+
+#define SHIM_SUFFIX ".shim"
+
+// Fill addr for instance signature `his`. Returns -1 if the path would not
+// fit in sun_path, which is a hard error rather than a shortened name that
+// would connect to nothing (or, worse, to something else).
+static int sock_addr(struct sockaddr_un *addr, const char *xrd, const char *his) {
+    int n = snprintf(addr->sun_path, sizeof addr->sun_path,
+                     "%s/hypr/%s/.socket.sock", xrd, his);
+    return (n < 0 || (size_t)n >= sizeof addr->sun_path) ? -1 : 0;
+}
+
+static int try_connect(const struct sockaddr_un *addr) {
+    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) return -1;
+    if (connect(fd, (const struct sockaddr *)addr, sizeof *addr) < 0) {
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -47,21 +93,46 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    size_t hlen = strlen(his), slen = strlen(SHIM_SUFFIX);
+    int via_shim = hlen > slen && strcmp(his + hlen - slen, SHIM_SUFFIX) == 0;
+
     struct sockaddr_un addr = {.sun_family = AF_UNIX};
-    int n = snprintf(addr.sun_path, sizeof addr.sun_path,
-                     "%s/hypr/%s/.socket.sock", xrd, his);
-    if (n < 0 || (size_t)n >= sizeof addr.sun_path) {
+    if (sock_addr(&addr, xrd, his) < 0) {
         fprintf(stderr, "%s: socket path too long\n", argv[0]);
         return 1;
     }
 
-    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (fd < 0 || connect(fd, (struct sockaddr *)&addr, sizeof addr) < 0) {
+    int fd = try_connect(&addr);
+
+    // A .shim signature that will not connect means the shim died but waybar
+    // outlived it. Hyprland itself is still there under the base signature.
+    if (fd < 0 && via_shim) {
+        char base[256];
+        if (hlen - slen < sizeof base) {
+            memcpy(base, his, hlen - slen);
+            base[hlen - slen] = '\0';
+            struct sockaddr_un real = {.sun_family = AF_UNIX};
+            if (sock_addr(&real, xrd, base) == 0 && (fd = try_connect(&real)) >= 0) {
+                addr = real;
+                via_shim = 0;
+            }
+        }
+    }
+
+    if (fd < 0) {
         fprintf(stderr, "%s: cannot reach %s\n", argv[0], addr.sun_path);
         return 1;
     }
 
-    if (write(fd, argv[1], strlen(argv[1])) < 0) return 1;
+    // Only rewrite when nothing downstream will. translate() leaves anything
+    // it does not recognise alone and returns 0, so the fallback is still a
+    // pass-through for every request that is not one of the four legacy forms.
+    const char *req = argv[1];
+    char rewritten[REQ_MAX];
+    if (!via_shim && translate(req, strlen(req), rewritten, sizeof rewritten, NULL))
+        req = rewritten;
+
+    if (write(fd, req, strlen(req)) < 0) return 1;
     shutdown(fd, SHUT_WR);
 
     char reply[4096];

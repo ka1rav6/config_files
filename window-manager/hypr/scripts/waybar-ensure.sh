@@ -17,12 +17,33 @@
 # nothing at all, so calling it after every display change costs one hyprctl
 # query and no visible flicker.
 #
-# Usage:  waybar-ensure.sh [--verbose]
+# IT IS ALSO THE ONLY PLACE THAT LAUNCHES WAYBAR.
+# That is not tidiness, it is the fix for a real bug. waybar has to be started
+# as a child of hypr-ipc-shim (see start_waybar below) or clicking a workspace
+# number does nothing. relayer.sh and toggle-waybar.sh each had their own
+# `setsid waybar ...` line, so a monitor hotplug -- which is routine on a
+# machine that is docked and undocked -- replaced the shimmed bar with an
+# unshimmed one, and the bar silently lost click and scroll until the next
+# login. Both now call this script instead, so there is one launch line to
+# keep correct.
+#
+# Usage:  waybar-ensure.sh [--verbose] [--restart | --start]
+#
+#   (no mode)   assert the healthy state; do nothing if it already holds
+#   --restart   kill and relaunch unconditionally (relayer.sh, after a remap)
+#   --start     launch only if nothing is running (toggle-waybar.sh)
 
 set -uo pipefail
 
 VERBOSE=0
-[[ "${1:-}" == "--verbose" ]] && VERBOSE=1
+MODE=assert
+for arg in "$@"; do
+    case "$arg" in
+        --verbose) VERBOSE=1 ;;
+        --restart) MODE=restart ;;
+        --start)   MODE=start ;;
+    esac
+done
 log() { [[ $VERBOSE -eq 1 ]] && printf '%s waybar-ensure: %s\n' "$(date +'%H:%M:%S')" "$*" || true; }
 
 CONFIG="$HOME/.config/waybar/config.jsonc"
@@ -60,6 +81,28 @@ start_waybar() {
             >/tmp/waybar.log 2>&1 </dev/null 9>&-
     fi
 }
+
+case "$MODE" in
+    restart)
+        # Unconditional: the caller knows the bar needs rebuilding (waybar
+        # does not re-lay-out its surfaces when an output is remapped).
+        log "--restart"
+        pkill -x waybar 2>/dev/null
+        sleep 0.4
+        start_waybar
+        sleep 1.2
+        exit 0
+        ;;
+    start)
+        if pgrep -x waybar >/dev/null 2>&1; then
+            log "--start: already running"
+        else
+            log "--start: launching"
+            start_waybar
+        fi
+        exit 0
+        ;;
+esac
 
 # --- 1. Exactly one process ------------------------------------------------
 # NO `|| echo 0` HERE. `pgrep -c` PRINTS "0" AND EXITS 1 when nothing matches,
