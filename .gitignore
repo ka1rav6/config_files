@@ -14,3 +14,7 @@ custom-binaries/**/*.bin
 *.tmp
 *~
 .DS_Store
+shell/.zshrc
+opencode/opencode.json
+**/privateKey.pem
+**/certificate.pem

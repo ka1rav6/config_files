@@ -58,7 +58,7 @@ HYPHEN_INSENSITIVE="true"
 #
 # Both are cloned into $ZSH/custom/plugins/ (update with `git -C <dir> pull`).
 # Combined cost is roughly 15 ms of startup.
-plugins=(git)
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 
 # The two interactive plugins are appended only when a real terminal is
 # attached. Both drive zle (the zsh line editor), which does not exist in a
@@ -663,4 +663,5 @@ phone-unmount() {
         --object-path /modules/kdeconnect/devices/$dev/sftp \
         --method org.kde.kdeconnect.device.sftp.unmount
 }
-export TINYFISH_API_KEY='sk-tinyfish-k_6HGasJxwFAwHiRKyV_nO9q6rQbdVtH'
+# API keys live in ~/.config/secrets.env: this file is mirrored to a PUBLIC repo.
+[[ -f ~/.config/secrets.env ]] && source ~/.config/secrets.env

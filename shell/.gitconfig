@@ -63,3 +63,11 @@
 # 	# Per-directory identity: any repo under ~/work/ picks up a different
 # 	# user.email from this extra file, so personal and work commits never mix.
 # 	path = ~/.gitconfig-work
+[rerere]
+	enabled = true
+[rebase]
+	autostash = true
+[merge]
+	conflictstyle = zdiff3
+[core]
+	excludesfile = /home/kairav/.config/git/ignore

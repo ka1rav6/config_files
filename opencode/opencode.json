@@ -1,6 +1,5 @@
 {
   "$schema": "https://opencode.ai/config.json",
-
   "provider": {
     "openrouter": {
       "options": {
@@ -20,13 +19,11 @@
       }
     }
   },
-
   "compaction": {
     "auto": true,
     "prune": true,
     "reserved": 15000
   },
-
   "agent": {
     "build": {
       "maxTokens": 4096
@@ -46,7 +43,7 @@
       "type": "remote",
       "url": "https://agent.tinyfish.ai/mcp?source=tinyfish_cli&client=opencode&connect_attempt_id=43b0bf4f-8060-40cf-84f1-76fa1a197975",
       "headers": {
-        "X-API-Key": "sk-tinyfish-k_6HGasJxwFAwHiRKyV_nO9q6rQbdVtH"
+        "X-API-Key": "{env:TINYFISH_API_KEY}"
       }
     }
   }

@@ -105,10 +105,10 @@
       "desc": "matugen tonal-spot from wallhaven-m388vm.png",
       "bg": "#1a1111",
       "surface": "#271d1d",
-      "text": "#d4c3c3",
-      "a1": "#dd898a",
-      "a2": "#bc9b6a",
-      "a3": "#ff68a3"
+      "text": "#d1c0bf",
+      "a1": "#d98688",
+      "a2": "#b99867",
+      "a3": "#ff63a1"
     }
   ]
 }

@@ -17,11 +17,11 @@
 @define-color surface #271d1d;
 @define-color surface2 #322827;
 @define-color border #453736;
-@define-color text #d4c3c3;
-@define-color text-bright #eae1e1;
-@define-color muted #af9b9b;
-@define-color a1 #dd898a;
-@define-color a1-dim #724747;
+@define-color text #d1c0bf;
+@define-color text-bright #e8e0df;
+@define-color muted #ac9998;
+@define-color a1 #d98688;
+@define-color a1-dim #704647;
 /* THEME:END */
 
 window {
