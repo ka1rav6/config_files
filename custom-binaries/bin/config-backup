@@ -134,6 +134,9 @@ EXCLUDE_NAMES = {
     "zig-cache",
     "zig-out",
     ".cache",
+    # device identity / private keys: this repo is public
+    "privateKey.pem",
+    "certificate.pem",
 }
 
 # Anything bigger than this is an artifact, not a config file.

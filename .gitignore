@@ -18,3 +18,6 @@ shell/.zshrc
 opencode/opencode.json
 **/privateKey.pem
 **/certificate.pem
+# device identity keys: this repo is public
+**/privateKey.pem
+**/certificate.pem

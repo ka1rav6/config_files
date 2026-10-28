@@ -428,11 +428,37 @@ done:
 // Setup and lifetime
 // ---------------------------------------------------------------------------
 
+// What this process created, so it can tell its own sockets from a successor's.
+struct made { int owned; dev_t dev; ino_t ino; };
+static struct made made_sock, made_ev;
+
+static void remember(const char *path, struct made *who) {
+    struct stat st;
+    if (lstat(path, &st) == 0) { who->owned = 1; who->dev = st.st_dev; who->ino = st.st_ino; }
+}
+
+// Remove `path` only if it is still the node WE made.
+//
+// Two shim generations share one directory across a restart. waybar-ensure.sh
+// kills waybar and starts a new shim 0.4s later, and that is not always long
+// enough for the old shim to notice its child died -- at boot, under load, it
+// routinely is not. The old shim's cleanup then deleted the NEW shim's
+// .socket.sock. waybar survived that looking healthy, because it already held
+// an open fd on the event socket, so the clock and the window title kept
+// updating; but every workspace query went to a path that no longer existed,
+// so the workspaces froze and only relaunching waybar brought them back.
+static void unlink_if_ours(const char *path, const struct made *who) {
+    struct stat st;
+    if (!who->owned || lstat(path, &st) < 0) return;
+    if (st.st_dev != who->dev || st.st_ino != who->ino) return;
+    unlink(path);
+}
+
 static void cleanup(void) {
     char p[PATH_MAX];
-    snprintf(p, sizeof p, "%s/.socket.sock", shim_dir);  unlink(p);
-    snprintf(p, sizeof p, "%s/.socket2.sock", shim_dir); unlink(p);
-    rmdir(shim_dir);
+    snprintf(p, sizeof p, "%s/.socket.sock", shim_dir);  unlink_if_ours(p, &made_sock);
+    snprintf(p, sizeof p, "%s/.socket2.sock", shim_dir); unlink_if_ours(p, &made_ev);
+    rmdir(shim_dir);  // refuses while a successor's sockets are still in it
 }
 
 static void on_term(int sig) {
@@ -496,6 +522,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "hypr-ipc-shim: symlink %s: %s\n", ev_path, strerror(errno));
         return 1;
     }
+    remember(ev_path, &made_ev);
 
     int lfd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     struct sockaddr_un addr = {.sun_family = AF_UNIX};
@@ -506,6 +533,7 @@ int main(int argc, char **argv) {
                 strerror(errno));
         return 1;
     }
+    remember(listen_path, &made_sock);
 
     signal(SIGINT, on_term);
     signal(SIGTERM, on_term);

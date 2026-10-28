@@ -71,12 +71,39 @@ hl.bind(mod .. " + SHIFT + C", hl.dsp.window.center())
 
 -- Focus windows. hjkl covers all four directions; the arrows only cover up and
 -- down, because LEFT and RIGHT now slide between workspaces (see below).
-hl.bind(mod .. " + DOWN", hl.dsp.focus({ direction = "d" }))
-hl.bind(mod .. " + UP", hl.dsp.focus({ direction = "u" }))
-hl.bind(mod .. " + H", hl.dsp.focus({ direction = "l" }))
-hl.bind(mod .. " + J", hl.dsp.focus({ direction = "d" }))
-hl.bind(mod .. " + K", hl.dsp.focus({ direction = "u" }))
-hl.bind(mod .. " + L", hl.dsp.focus({ direction = "r" }))
+--
+-- These carry the pointer onto the window they focus, instead of letting
+-- Hyprland do it. cursor:no_warps is on (the long version is in
+-- looknfeel.lua) because the dock and the bar both need a focus change NOT to
+-- drag the pointer off what you are clicking -- but that setting is global,
+-- so it also killed the warp here, where moving the pointer to the window you
+-- just focused IS the point. Hyprland has no per-source switch, so the binds
+-- that want the warp ask for it themselves.
+local function focus_warp(direction)
+    return function()
+        local before = hl.get_active_window()
+        hl.dispatch(hl.dsp.focus({ direction = direction }))
+
+        local w = hl.get_active_window()
+        -- Nothing in that direction: focus did not move, so neither should
+        -- the pointer. Without this, L at the rightmost window would yank the
+        -- cursor to the middle of the window you are already on.
+        if not w or (before and before.address == w.address) then return end
+        if not (w.at and w.size) then return end
+
+        hl.dispatch(hl.dsp.cursor.move({
+            x = math.floor(w.at.x + w.size.x / 2),
+            y = math.floor(w.at.y + w.size.y / 2),
+        }))
+    end
+end
+
+hl.bind(mod .. " + DOWN", focus_warp("d"))
+hl.bind(mod .. " + UP", focus_warp("u"))
+hl.bind(mod .. " + H", focus_warp("l"))
+hl.bind(mod .. " + J", focus_warp("d"))
+hl.bind(mod .. " + K", focus_warp("u"))
+hl.bind(mod .. " + L", focus_warp("r"))
 
 -- Move windows on ALT so the cluster stops colliding with the lock bind and
 -- the named-workspace toggles; left now has a bind at all.
