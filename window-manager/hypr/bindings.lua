@@ -146,16 +146,47 @@ end)
 hl.bind(mod .. " + R", hl.dsp.submap("resize"))
 
 -- Workspace count, switching, and moving.
+
+-- Switching workspaces carries the pointer too, for the same reason the focus
+-- binds above do: no_warps is global and killed the warp here as well.
+--
+-- Only when the switch actually changed monitor. Within one monitor the
+-- pointer is already on the screen you are looking at, and moving it there
+-- would be a yank nobody asked for -- the complaint was specifically about
+-- the pointer being left behind on the OTHER screen.
+local function workspace_warp(target)
+    return function()
+        local from = hl.get_active_monitor()
+        hl.dispatch(hl.dsp.focus({ workspace = target }))
+
+        local to = hl.get_active_monitor()
+        if not to or (from and from.id == to.id) then return end
+
+        -- The window check includes its monitor: focusing an empty workspace
+        -- can leave the previous window as the active one, and its centre is
+        -- back where we just came from.
+        local w = hl.get_active_window()
+        local x, y
+        if w and w.monitor and w.monitor.id == to.id and w.at and w.size then
+            x, y = w.at.x + w.size.x / 2, w.at.y + w.size.y / 2
+        else
+            x, y = to.x + to.width / to.scale / 2, to.y + to.height / to.scale / 2
+        end
+
+        hl.dispatch(hl.dsp.cursor.move({ x = math.floor(x), y = math.floor(y) }))
+    end
+end
+
 for workspace = 1, 10 do
     local key = workspace % 10
-    hl.bind(mod .. " + " .. key, hl.dsp.focus({ workspace = workspace }))
+    hl.bind(mod .. " + " .. key, workspace_warp(workspace))
     hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace }))
 end
 
 hl.bind("SUPER + TAB", function()
     local previous = hl.get_last_workspace()
     if previous then
-        hl.dispatch(hl.dsp.focus({ workspace = previous }))
+        workspace_warp(previous)()
     end
 end)
 -- Scroll UP goes to the NEXT workspace: on workspace 1, wheel up lands on 2.
@@ -165,14 +196,14 @@ end)
 -- suggest. Keep these two the same way round as the waybar workspaces module
 -- ("on-scroll-up" in config.jsonc) -- the two gestures do the same thing and
 -- disagreeing about direction is worse than either choice.
-hl.bind(mod .. " + mouse_up", hl.dsp.focus({ workspace = "e+1" }))
-hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mod .. " + mouse_up", workspace_warp("e+1"))
+hl.bind(mod .. " + mouse_down", workspace_warp("e-1"))
 
 -- Keyboard equivalent of the 3-finger swipe: same workspaces, same slide.
 -- Not marked repeating, so holding the arrow down cannot stack up a queue of
 -- switches that outruns the animation.
-hl.bind(mod .. " + LEFT", hl.dsp.focus({ workspace = "e-1" }))
-hl.bind(mod .. " + RIGHT", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mod .. " + LEFT", workspace_warp("e-1"))
+hl.bind(mod .. " + RIGHT", workspace_warp("e+1"))
 -- And carry the focused window along with the slide.
 hl.bind(mod .. " + SHIFT + LEFT", hl.dsp.window.move({ workspace = "e-1" }))
 hl.bind(mod .. " + SHIFT + RIGHT", hl.dsp.window.move({ workspace = "e+1" }))
