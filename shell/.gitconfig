@@ -71,8 +71,3 @@
 	conflictstyle = zdiff3
 [core]
 	excludesfile = /home/kairav/.config/git/ignore
-	pager = delta
-[interactive]
-	diffFilter = delta --color-only
-[delta]
-	navigate = true

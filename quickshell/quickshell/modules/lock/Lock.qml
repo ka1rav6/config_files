@@ -44,9 +44,9 @@ import qs
 //   clean-unlock marker. A crash now surfaces hyprlock rather than a TTY.
 //
 // AUTHENTICATION
-//   PamContext against /etc/pam.d/hyprlock, a one-line `auth include login`.
-//   Reusing it means one policy to audit rather than two, and this accepts
-//   exactly what hyprlock accepts.
+//   PamContext against /etc/pam.d/quickshell-lock. See LockWidget.qml: it
+//   mirrors common-auth's primary block, so the credentials it accepts are
+//   login's, without the three-second failure delay login layers on top.
 // =============================================================================
 
 Scope {

@@ -13,9 +13,11 @@ import qs
 // for the same half-second of attention.
 //
 // AUTHENTICATION
-//   PamContext against /etc/pam.d/hyprlock (`auth include login`), so this
-//   accepts exactly what hyprlock accepts -- same policy, same fingerprint
-//   reader rules if one is ever configured, nothing new to audit.
+//   PamContext against /etc/pam.d/quickshell-lock, which is common-auth's
+//   primary block line for line -- so this accepts exactly what login and
+//   hyprlock accept -- minus the delay. hyprlock's own policy opens with
+//   `pam_faildelay.so delay=3000000`, which made a wrong password take about
+//   three seconds to report. The ring is instant now because PAM is.
 //
 //   PAM is asynchronous and conversational: start() begins a transaction, PAM
 //   asks a question through onPamMessage, and the answer goes back through
@@ -66,8 +68,8 @@ Item {
     PamContext {
         id: pam
 
-        // Reuse hyprlock's policy rather than installing a second one.
-        config: "hyprlock"
+        // Our own policy, not hyprlock's: same auth, no 3 s failure delay.
+        config: "quickshell-lock"
 
         onPamMessage: {
             if (pam.responseRequired) pam.respond(root.pending);
