@@ -212,6 +212,7 @@ bindkey "^[[B" history-search-forward
 # --- Modern coreutils replacements -------------------------------------------
 # eza: Rust `ls` with git integration, tree mode and better default colours.
 alias ls='eza'
+alias lgs='ls && gs'
 alias ll='eza -alF'  # long listing, dotfiles included, type indicators
 alias la='eza -A'    # all entries except . and ..
 alias l='eza -CF'    # brief multi-column listing
