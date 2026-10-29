@@ -132,7 +132,8 @@ ShellRoot {
     //
     // THE COMMAND CENTER IS A PAGE OF THIS NOW, NOT A SECOND PANEL. It used to
     // be its own Loader here, gated on Settings.features.commandCenter, built
-    // from modules/commandcenter/CommandCenter.qml (kept as .bak). Two windows
+    // from modules/commandcenter/CommandCenter.qml, whose last version is in the
+    // ~/dotfiles history rather than beside this file. Two windows
     // of identical size and placement, each with a button linking to the other,
     // is one window that had been split in half. The flag still exists and
     // still unloads the whole thing -- it now gates the sidebar entry and the

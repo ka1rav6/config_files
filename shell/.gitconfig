@@ -27,6 +27,17 @@
 	# setting it to main both silences that and matches GitHub/GitLab defaults.
 	defaultBranch = main
 
+[push]
+	# `git push` on a new branch sets up the matching upstream automatically,
+	# instead of failing with "no upstream branch" and a command to copy.
+	#
+	# THIS LIVED IN THE "suggested additions" BLOCK BELOW AND DID NOTHING.
+	# Its `# [push]` header was commented out, so the last live section header
+	# above it was [init] -- git parsed the key as `init.autoSetupRemote`,
+	# which no version of git reads. `git config --get push.autoSetupRemote`
+	# returned nothing and every new branch still failed on the first push.
+	autoSetupRemote = true
+
 # =============================================================================
 # Suggested additions — none of these are active. Uncomment what you want.
 # =============================================================================
@@ -36,22 +47,6 @@
 # 	# rebase=true replays your local commits on top of the fetched ones instead
 # 	# of creating a merge commit, keeping history linear.
 # 	rebase = true
-#
-# [push]
-# 	# `git push` on a new branch sets up the matching upstream automatically,
-# 	# instead of failing with "no upstream branch" and a command to copy.
-    autoSetupRemote = true
-#
-# [core]
-# 	# Send diff and log output through a pager with syntax highlighting.
-# 	# Requires delta (`cargo install git-delta`), which is not installed here.
-# 	pager = delta
-#
-# [rerere]
-# 	# "Reuse recorded resolution": remembers how you resolved a given conflict
-# 	# and replays it automatically next time the same one appears. Pays for
-# 	# itself the first time you rebase a long-lived branch twice.
-# 	enabled = true
 #
 # [alias]
 # 	# Compact graph log:  git lg

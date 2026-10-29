@@ -62,7 +62,7 @@ Column {
     SettingsGroup {
         width: parent.width
         title: "THEME"
-        subtitle: "Applies to the terminal, bar, notifications, window borders and this shell"
+        subtitle: "Applies to the terminal, editor, bar, notifications, window borders and this shell"
 
         Grid {
             width: parent.width
@@ -98,6 +98,26 @@ Column {
             color: Theme.accent
             font.family: Appearance.font
             font.pixelSize: Appearance.fontSmall
+        }
+
+        // The one application whose theming is optional, and the one the
+        // switch exists for: tokyonight's syntax colours are hand-tuned and a
+        // derived palette can read worse than the original. Off restores stock
+        // tokyonight exactly, nothing half-applied.
+        //
+        // Not written by this shell: nvim reads the key out of settings.json
+        // itself and watches the file, so a running editor repaints on the
+        // flip. See ~/.config/nvim/lua/config/theme.lua.
+        SettingRow {
+            width: parent.width
+            label: "Theme nvim too"
+            description: Settings.appearance.nvimTheme
+                ? "nvim follows the theme: backgrounds, borders and the three accents."
+                : "nvim keeps stock tokyonight, whatever the desktop theme is."
+            Toggle {
+                checked: Settings.appearance.nvimTheme
+                onToggled: (v) => Settings.appearance.nvimTheme = v
+            }
         }
     }
 

@@ -27,11 +27,23 @@
 # login. Both now call this script instead, so there is one launch line to
 # keep correct.
 #
+# IT IS SERIALISED BY A LOCK OF ITS OWN.
+# "Exactly one process, one bar per monitor" is a read-then-repair, and six
+# independent callers can reach it: autostart.lua, relayer.sh (twice),
+# display-layout.sh, lid.sh and toggle-waybar.sh. relayer.sh holds
+# hypr-relayer.lock and display-layout.sh holds hypr-display-settle.lock --
+# two locks that do NOT exclude each other, so a monitor hotplug arriving
+# during a mirror toggle ran two copies of this script at once. Both saw
+# `procs != 1`, both pkill'd, both started a bar, and the result was the pile
+# this script exists to remove. Private mktemp files (below) fixed the
+# half-written-JSON half of that race; the lock here fixes the other half.
+#
 # Usage:  waybar-ensure.sh [--verbose] [--restart | --start]
 #
 #   (no mode)   assert the healthy state; do nothing if it already holds
 #   --restart   kill and relaunch unconditionally (relayer.sh, after a remap)
 #   --start     launch only if nothing is running (toggle-waybar.sh)
+#   --verbose   also echo the trace to stderr; it goes to the log either way
 
 set -uo pipefail
 
@@ -44,15 +56,82 @@ for arg in "$@"; do
         --start)   MODE=start ;;
     esac
 done
-log() { [[ $VERBOSE -eq 1 ]] && printf '%s waybar-ensure: %s\n' "$(date +'%H:%M:%S')" "$*" || true; }
+
+# --- log -------------------------------------------------------------------
+# THE TRACE IS WRITTEN UNCONDITIONALLY, AND IT SURVIVES THE RESTART.
+# This used to be `>/tmp/waybar.log` plus a log() gated on --verbose that no
+# caller passed. Both halves defeated the same debugging session: every launch
+# truncated the previous launch's output -- including the launch that failed --
+# and the one trace that says WHICH of the six callers did the restart was
+# discarded by every one of them (`>/dev/null 2>&1`). An intermittent bar
+# cannot be diagnosed from a log that only ever holds the healthy run.
+#
+# Same shape as ~/.local/bin/hypr-log-persist.sh: append, under
+# ~/.local/state, pruned by size before writing so it cannot grow unbounded.
+# waybar emits ~11 lines per start, so one previous generation is plenty.
+LOG_DIR="$HOME/.local/state/waybar"
+LOG="$LOG_DIR/waybar.log"
+mkdir -p "$LOG_DIR" 2>/dev/null
+if [[ $(stat -c %s "$LOG" 2>/dev/null || echo 0) -gt 262144 ]]; then
+    mv -f "$LOG" "$LOG.1" 2>/dev/null
+fi
+log() {
+    printf '%s waybar-ensure[%d]: %s\n' "$(date +'%H:%M:%S')" "$$" "$*" >>"$LOG"
+    [[ $VERBOSE -eq 1 ]] && printf '%s waybar-ensure: %s\n' "$(date +'%H:%M:%S')" "$*" >&2
+    return 0
+}
+
+# --- lock ------------------------------------------------------------------
+# fd 8, NOT fd 9: relayer.sh holds its own lock on fd 9, and start_waybar below
+# closes fd 9 for exactly that reason. Using 9 here would have made that
+# comment a lie and reintroduced the inherited-lock deadlock it describes.
+#
+# Blocking with a bound, not `-n`: a second caller must WAIT for the repair
+# rather than skip it (skipping is how a real hotplug event gets dropped), but
+# a holder that has wedged must not block the desktop forever. A run that
+# takes longer than this is itself mid-restart, so whatever this run wanted
+# has just been done by the holder.
+#
+# The lock is best-effort by design. If the fd cannot be opened at all we run
+# unserialised rather than bail: `flock` on a closed fd fails, and treating
+# that as "someone else is repairing" would mean no bar at all. A race is
+# recoverable; a missing bar during login is not.
+# NO `2>/dev/null` ON THIS exec. `exec` with redirections and no command
+# rewires the SHELL, permanently -- so a `2>/dev/null` tacked on here to hide a
+# failure message silently discarded every later stderr write in the script,
+# --verbose included. The one line a failed open would print is worth keeping.
+if exec 8>"${XDG_RUNTIME_DIR:-/tmp}/waybar-ensure.lock"; then
+    if ! flock -w 15 8; then
+        log "another run has held the lock for 15s -- skipping (mode=$MODE)"
+        exit 0
+    fi
+else
+    log "could not open the lock file -- proceeding unserialised"
+fi
 
 CONFIG="$HOME/.config/waybar/config.jsonc"
 STYLE="$HOME/.config/waybar/style.css"
 
+# Wait for SIGTERM teardown to finish instead of assuming it fits in 400 ms.
+# A bar blocked on a redraw or a stalled module pipe still owns its layer
+# surfaces after the old `sleep 0.4`, so the new process mapped its own on top
+# and this script created the very pile it exists to remove.
+wait_gone() {
+    local _unused
+    for _unused in $(seq 1 60); do
+        pgrep -x waybar >/dev/null 2>&1 || return 0
+        sleep 0.05
+    done
+    log "waybar still alive 3s after SIGTERM -- starting anyway"
+    return 1
+}
+
 start_waybar() {
-    # 9>&- closes the relayer.sh lock fd if we were invoked from there, so a
-    # long-lived waybar can never inherit and hold that lock. This exact bug
-    # deadlocked every later relayer run once before.
+    # 9>&- closes the relayer.sh lock fd if we were invoked from there, and
+    # 8>&- closes this script's own lock, so a long-lived waybar can never
+    # inherit and hold either. This exact bug deadlocked every later relayer
+    # run once before, and fd 8 would have reproduced it permanently: an flock
+    # is only released when the last holder of the fd closes it.
     #
     # WHY waybar IS STARTED UNDER hypr-ipc-shim
     #   waybar's workspace buttons send Hyprland's LEGACY IPC strings, which
@@ -74,11 +153,11 @@ start_waybar() {
     #   no bar -- and is the state this machine was in before the shim existed.
     if command -v hypr-ipc-shim >/dev/null 2>&1; then
         setsid --fork hypr-ipc-shim -- waybar -c "$CONFIG" -s "$STYLE" \
-            >/tmp/waybar.log 2>&1 </dev/null 9>&-
+            >>"$LOG" 2>&1 </dev/null 8>&- 9>&-
     else
         log "hypr-ipc-shim not installed — workspace clicks will not work"
         setsid --fork waybar -c "$CONFIG" -s "$STYLE" \
-            >/tmp/waybar.log 2>&1 </dev/null 9>&-
+            >>"$LOG" 2>&1 </dev/null 8>&- 9>&-
     fi
 }
 
@@ -88,7 +167,7 @@ case "$MODE" in
         # does not re-lay-out its surfaces when an output is remapped).
         log "--restart"
         pkill -x waybar 2>/dev/null
-        sleep 0.4
+        wait_gone
         start_waybar
         sleep 1.2
         exit 0
@@ -119,7 +198,7 @@ procs=${procs:-0}
 if [[ "$procs" -ne 1 ]]; then
     log "found $procs waybar processes, want 1 — restarting"
     pkill -x waybar 2>/dev/null
-    sleep 0.4
+    wait_gone
     start_waybar
     sleep 1.5
     log "now $(pgrep -cx waybar 2>/dev/null) process(es)"
@@ -177,7 +256,7 @@ PY
 if [[ "${mismatch:-0}" -eq 1 ]]; then
     log "$monitors monitor(s) but $surfaces waybar surface(s) — restarting"
     pkill -x waybar 2>/dev/null
-    sleep 0.4
+    wait_gone
     start_waybar
     sleep 1.5
 else

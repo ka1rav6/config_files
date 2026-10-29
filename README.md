@@ -310,6 +310,30 @@ skips, at any depth: `Cache`, `CachedData`, `Code Cache`, `GPUCache`,
 `zig-cache`, `zig-out`, `.cache` — plus **any file over 2 MB**, which is what
 keeps every compiled binary in `~/.local/bin` out of here.
 
+### Retired, but still installed
+
+Each of these was replaced by something in the Quickshell layer or by a
+keybind, and the binary was left on the machine. None is started at login and
+none is referenced by any tracked config — so a `grep` for any of them turns up
+nothing and looks like a missing dependency. This is the list that says
+otherwise.
+
+| Still installed | Where | Replaced by | Keep? |
+| --- | --- | --- | --- |
+| `nwg-drawer` | `/usr/bin` | wofi on `SUPER + S` | no — also `nwg-drawer/` here |
+| `nwg-dock-hyprland` | `~/.local/bin` | the Quickshell dock | no — also `nwg-dock-hyprland/` here |
+| `waycal` | `~/.cargo/bin` | the shell's clock popout | no |
+| `kdeconnect-indicator` | `/usr/bin` | `custom/kdeconnect` in waybar → the Command Center | only if the waybar tray ever comes back |
+| `nm-applet` | `/usr/bin` | Control Center → Wi-Fi | no |
+| `blueman-applet` | `/usr/bin` | Control Center → Bluetooth | **yes** — `bt-pair` starts it on demand for its pairing agent |
+| `wlsunset` | `/usr/bin` | nothing | **no, and it cannot work here**: `AQ_NO_ATOMIC=1` leaves aquamarine on the legacy DRM interface, which has no gamma. See `window-manager/hypr/autostart.lua`. |
+| `delta` | `/usr/bin` | git's own pager | no — the config was removed on purpose |
+
+The two `nwg-*` directories in this repo are the configs for tools in that
+list, and go when they do.
+
+---
+
 ---
 
 ## Day to day

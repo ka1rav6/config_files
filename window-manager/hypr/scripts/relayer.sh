@@ -95,7 +95,14 @@ restart_hyprpaper() {
     [[ -f "$HOME/.config/hypr/wallpaper.conf" ]] && \
         wp=$(awk -F' = ' '/^\$wallpaper = / { print $2 }' "$HOME/.config/hypr/wallpaper.conf")
     pkill -x hyprpaper 2>/dev/null
-    sleep 0.4
+    # Wait for the old process to go rather than assume SIGTERM teardown fits
+    # in 400 ms: if it does not, the new hyprpaper maps its background layer
+    # while the old one still holds its own, which is the duplicate-surface
+    # state this script exists to clear. Same change as waybar-ensure.sh.
+    for _ in $(seq 1 60); do
+        pgrep -x hyprpaper >/dev/null 2>&1 || break
+        sleep 0.05
+    done
     setsid --fork hyprpaper >/dev/null 2>&1 </dev/null 9>&-
     sleep 1.2
     if [[ -n "$wp" && -f "$wp" ]]; then

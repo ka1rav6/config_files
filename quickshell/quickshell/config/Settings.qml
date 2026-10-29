@@ -220,6 +220,19 @@ Singleton {
                 // "comfortable" | "compact". Compact tightens padding without
                 // changing type size, for the external monitor.
                 property string density: "comfortable"
+
+                // Whether nvim follows a theme switch.
+                //
+                // THE ONLY SETTING IN THIS FILE THAT THE SHELL DOES NOT READ.
+                // ~/.config/nvim/lua/config/theme.lua reads this key directly
+                // and watches the file, so flipping it repaints every running
+                // editor. The shell just owns the switch, because the settings
+                // panel is where the rest of the theming lives.
+                //
+                // Off means stock tokyonight, which is what nvim looked like
+                // before theme-switch gained an nvim target -- the undo, not a
+                // second style.
+                property bool nvimTheme: true
             }
 
             // =============================================================

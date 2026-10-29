@@ -224,6 +224,89 @@ theme-install-matugen:
     ~/.local/bin/matugen --version
     echo "Now run:  just theme auto"
 
+# --- Waybar ------------------------------------------------------------------
+# The bar is launched, and repaired, by ~/.config/hypr/scripts/waybar-ensure.sh
+# and nothing else -- see the header there. Its trace is
+# ~/.local/state/waybar/waybar.log, which survives a restart.
+
+# Assert waybar's config is self-consistent: no module listed without a config
+# block, no config block left behind without being listed.
+#
+# WHY THIS EXISTS
+#   config.jsonc is 450 lines and most of it is reasoning. A module renders
+#   only if it appears in BOTH a modules-* array and its own config block, and
+#   neither half complains when the other is missing: waybar draws nothing and
+#   says nothing. The failure that actually happened was the reverse -- a
+#   "tray" block left in the file after "tray" came out of modules-right, with
+#   three comment blocks still describing it as live. Same shape as
+#   `theme-switch --check`: a cheap assertion that fails loudly when the file
+#   and the prose drift apart.
+waybar-check:
+    #!/usr/bin/env python3
+    import json, re, sys, pathlib
+
+    # Blocks that are meant to sit in the file unused. Each one needs its
+    # reason written on it in config.jsonc.
+    INERT = {"tray"}
+
+    src = pathlib.Path.home() / ".config/waybar/config.jsonc"
+    raw = src.read_text()
+
+    # Strip // comments without touching the ones inside strings.
+    out, i, instr = [], 0, False
+    while i < len(raw):
+        c = raw[i]
+        if instr:
+            out.append(c)
+            if c == "\\":
+                out.append(raw[i + 1]); i += 2; continue
+            if c == '"':
+                instr = False
+            i += 1; continue
+        if c == '"':
+            instr = True; out.append(c); i += 1; continue
+        if raw.startswith("//", i):
+            while i < len(raw) and raw[i] != "\n":
+                i += 1
+            continue
+        out.append(c); i += 1
+    cfg = json.loads("".join(out))
+
+    listed = set()
+    for key, val in cfg.items():
+        if key.startswith("modules-") and isinstance(val, list):
+            listed.update(val)
+    # A group renders its own children, which are not in any modules-* array.
+    for key, val in cfg.items():
+        if key.startswith("group/") and isinstance(val, dict):
+            listed.update(val.get("modules", []))
+
+    # Every module block is a JSON object and every bar-level property is a
+    # scalar or a modules-* list, so "is it a dict" is the whole test. Keying
+    # on "/" instead would have missed `tray`, `clock` and `battery` -- i.e.
+    # exactly the stale block this check was written for.
+    configured = {k for k, v in cfg.items()
+                  if isinstance(v, dict) and not k.startswith("modules-")}
+
+    problems = []
+    # A custom module with no block runs no command: it is an empty label.
+    for m in sorted(listed):
+        if ("/" in m) and m not in cfg:
+            problems.append(f"listed in a modules-* array but has no config block: {m}")
+    for m in sorted(configured - listed - INERT):
+        problems.append(f"configured but in no modules-* array (renders nothing): {m}")
+    for m in sorted(INERT & listed):
+        problems.append(f"listed in a modules-* array but marked inert in this check: {m}")
+
+    print(f"{len(listed)} modules listed, {len(configured)} configured, "
+          f"{len(INERT)} deliberately inert ({', '.join(sorted(INERT))})")
+    if problems:
+        print()
+        for p in problems:
+            print("  " + p)
+        sys.exit(1)
+    print("waybar-check OK")
+
 # --- Desktop portals ---------------------------------------------------------
 # xdg-desktop-portal is how sandboxed and toolkit-agnostic applications ask this
 # desktop for a file picker, a screen share, or the current colour scheme. Which

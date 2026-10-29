@@ -6,6 +6,7 @@
         "fontMono": "JetBrainsMono Nerd Font",
         "fontScale": 1,
         "motion": 1,
+        "nvimTheme": true,
         "opacity": 0.7594999999999998,
         "radius": 4,
         "shadows": true,
