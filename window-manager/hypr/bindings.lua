@@ -154,12 +154,38 @@ hl.bind(mod .. " + R", hl.dsp.submap("resize"))
 -- pointer is already on the screen you are looking at, and moving it there
 -- would be a yank nobody asked for -- the complaint was specifically about
 -- the pointer being left behind on the OTHER screen.
+local function monitor_centre(m)
+    return m.x + m.width / m.scale / 2, m.y + m.height / m.scale / 2
+end
+
 local function workspace_warp(target)
     return function()
         local from = hl.get_active_monitor()
         hl.dispatch(hl.dsp.focus({ workspace = target }))
 
         local to = hl.get_active_monitor()
+
+        -- Focus bounced straight back. Switching to an EMPTY workspace on the
+        -- other monitor leaves nothing to focus, so Hyprland falls back to the
+        -- last focused window -- which is on the monitor we just left, and that
+        -- drags the monitor focus back with it. SUPER + 0 from the external
+        -- screen onto an empty workspace 10 on the laptop panel looked like a
+        -- dead key: the switch happened and was undone in the same press.
+        --
+        -- Putting the pointer there first gives the fallback nothing to pull
+        -- back to. The workspace's monitor is only readable after the dispatch,
+        -- but that is enough -- the first press is also what creates it.
+        if from and to and from.id == to.id then
+            local ws = hl.get_workspace(target)
+            local onto = ws and ws.monitor
+            if onto and onto.id ~= from.id then
+                local cx, cy = monitor_centre(onto)
+                hl.dispatch(hl.dsp.cursor.move({ x = math.floor(cx), y = math.floor(cy) }))
+                hl.dispatch(hl.dsp.focus({ workspace = target }))
+                to = hl.get_active_monitor()
+            end
+        end
+
         if not to or (from and from.id == to.id) then return end
 
         -- The window check includes its monitor: focusing an empty workspace
@@ -170,7 +196,7 @@ local function workspace_warp(target)
         if w and w.monitor and w.monitor.id == to.id and w.at and w.size then
             x, y = w.at.x + w.size.x / 2, w.at.y + w.size.y / 2
         else
-            x, y = to.x + to.width / to.scale / 2, to.y + to.height / to.scale / 2
+            x, y = monitor_centre(to)
         end
 
         hl.dispatch(hl.dsp.cursor.move({ x = math.floor(x), y = math.floor(y) }))
