@@ -163,5 +163,10 @@
     "path": "/home/kairav/.config/systemd",
     "category": "systemd",
     "description": "Custom backup: systemd"
+  },
+  {
+    "path": "/home/kairav/dev/dev_help",
+    "category": "custom",
+    "description": "Custom backup: dev_help"
   }
 ]

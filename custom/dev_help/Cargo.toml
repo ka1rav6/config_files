@@ -1,0 +1,12 @@
+[package]
+name = "dev_help"
+version = "0.1.0"
+edition = "2021"
+
+# Installed as `dev` so the CLI reads `dev java init .`
+[[bin]]
+name = "dev"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
