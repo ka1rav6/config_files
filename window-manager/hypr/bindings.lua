@@ -265,9 +265,14 @@ hl.bind(mod .. " + SHIFT + RIGHT", hl.dsp.window.move({ workspace = "e+1" }))
 --
 -- It is paired with windows.drag and nothing else, because that is the only one
 -- of these gestures that suspends the cluster in the first place.
+--
+-- It carries no `mouse = true`, unlike the three around it: Hyprland rejects
+-- that combination outright ("hl.bind: mouse is exclusive"). It does not need
+-- it either -- `mouse` is for dispatchers that hold the pointer for the length
+-- of the drag, and this one only fires once, on the button coming back up.
 hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mod .. " + SHIFT + mouse:272", windows.drag, { mouse = true })
-hl.bind(mod .. " + SHIFT + mouse:272", windows.drag_release, { mouse = true, release = true })
+hl.bind(mod .. " + SHIFT + mouse:272", windows.drag_release, { release = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
 -- Cycle windows without leaving the keyboard.

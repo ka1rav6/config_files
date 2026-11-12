@@ -1,0 +1,47 @@
+{
+  "sout": {
+    "prefix": "sout",
+    "body": [
+      "System.out.println($1);$0"
+    ],
+    "description": "System.out.println()"
+  },
+  "psvm": {
+    "prefix": "psvm",
+    "body": [
+      "public static void main(String[] args) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "main method"
+  },
+  "cpmain": {
+    "prefix": "cpmain",
+    "body": [
+      "import java.io.*;",
+      "import java.util.*;",
+      "",
+      "public class ${1:Main} {",
+      "\tpublic static void main(String[] args) throws IOException {",
+      "\t\tBufferedReader br = new BufferedReader(new InputStreamReader(System.in));",
+      "\t\tStringBuilder sb = new StringBuilder();",
+      "\t\tint t = Integer.parseInt(br.readLine().trim());",
+      "\t\twhile (t-- > 0) {",
+      "\t\t\t$0",
+      "\t\t}",
+      "\t\tSystem.out.print(sb);",
+      "\t}",
+      "}"
+    ],
+    "description": "Competitive programming scaffold: buffered IO, testcase loop"
+  },
+  "_class": {
+    "prefix": "_class",
+    "body": [
+      "public class $TM_FILENAME_BASE {",
+      "\t$0",
+      "}"
+    ],
+    "description": "public class named after the current file"
+  }
+}

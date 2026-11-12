@@ -666,3 +666,6 @@ phone-unmount() {
 }
 # API keys live in ~/.config/secrets.env: this file is mirrored to a PUBLIC repo.
 [[ -f ~/.config/secrets.env ]] && source ~/.config/secrets.env
+
+# bun completions
+[ -s "/home/kairav/.bun/_bun" ] && source "/home/kairav/.bun/_bun"

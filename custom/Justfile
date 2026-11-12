@@ -520,3 +520,6 @@ touchscreen-status:
     hypr-digitizer-ctl status
 ram-check:
     ps -eo pid,user,%mem,rss,comm --sort=-%mem | head -n 11
+
+re-wireplumber:
+    systemctl --user restart wireplumber
