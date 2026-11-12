@@ -158,12 +158,23 @@ Scope {
             // that space with its origin at the monitor's origin, so placing the
             // cluster is a subtraction and not a scale conversion. Do not
             // "correct" this by dividing by monitor.scale.
+            //
+            // The origin comes from the QT SCREEN (modelData.x/y), not from
+            // Hyprland's monitor record. Hyprland emits no event when a
+            // SURVIVING monitor moves, so after the external is unplugged the
+            // cached record still reports the docked origin (x=2560) while the
+            // window has moved to x=12 on an output now at x=0. `right` then
+            // comes out negative and the clamp below parks the cluster on the
+            // far-left screen edge. Qt notifies on geometryChanged, so reading
+            // the screen instead re-evaluates this on hotplug. Exactly the
+            // failure the relayer() note in ~/.config/hypr/monitors.lua
+            // describes for waybar and hyprpaper.
             readonly property int inset: Settings.windows.controlsInset
 
             readonly property int targetX: {
                 if (!surface.shown) return 0;
                 const win = WindowPolicy.active;
-                const right = win.x - surface.monitor.x + win.width;
+                const right = win.x - surface.modelData.x + win.width;
                 // Clamp inside the output. A window can legitimately extend past
                 // the edge (a floating window dragged half off), and a cluster
                 // outside the surface is a cluster that is silently clipped away.
@@ -174,7 +185,7 @@ Scope {
             readonly property int targetY: {
                 if (!surface.shown) return 0;
                 const win = WindowPolicy.active;
-                const top = win.y - surface.monitor.y;
+                const top = win.y - surface.modelData.y;
                 const maxY = surface.height - cluster.height - 2;
                 return Math.max(2, Math.min(maxY, top + surface.inset));
             }
