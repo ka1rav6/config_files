@@ -19,10 +19,16 @@ import Quickshell.Io
 //   the widgets -- and talks to the compositor through services/Hypr.qml.
 //
 // WHAT HAPPENS IF THIS CRASHES
-//   Nothing important. Hyprland keeps running, every keybind still works, the
-//   scratchpads still toggle, waybar and mako are separate processes. The shell
-//   comes back with `just qs-restart`. The compositor must never depend on this
-//   process, and nothing here is allowed to make it.
+//   Nothing important to the compositor. Hyprland keeps running, every keybind
+//   still works, the scratchpads still toggle, waybar is a separate process.
+//   The shell comes back with `just qs-restart`. The compositor must never
+//   depend on this process, and nothing here is allowed to make it.
+//
+//   NOTIFICATIONS ARE THE ONE THING THAT DOES GO WITH IT. This process is the
+//   notification daemon now -- mako is no longer started -- so while it is
+//   down, notify-send succeeds and nothing is shown. That was the price of
+//   having notifications in the shell's own visual language; see
+//   services/Notifications.qml.
 //
 // FEATURE TOGGLES
 //   Every component below is wrapped in a LazyLoader keyed off
@@ -191,6 +197,29 @@ ShellRoot {
         sourceComponent: Overview {}
     }
 
+    // Notifications. THIS PROCESS IS THE DAEMON when the flag is on -- mako is
+    // no longer started in ~/.config/hypr/autostart.lua, because
+    // org.freedesktop.Notifications is a single D-Bus name and two claimants
+    // means one of them silently gets nothing. See services/Notifications.qml.
+    //
+    // Turning the flag off is therefore not free the way the other flags are:
+    // it leaves the machine with NO notification daemon until mako is put back
+    // in autostart. That is the one feature toggle here with a dependency
+    // outside this process, and it is called out in Settings.qml too.
+    //
+    // Toasts is the popup layer, NotificationCenter is the history panel on
+    // SUPER + N. Both are gated together: a daemon that collects notifications
+    // and never shows them is worse than none.
+    Loader {
+        active: Settings.features.notifications
+        sourceComponent: Toasts {}
+    }
+
+    Loader {
+        active: Settings.features.notifications
+        sourceComponent: NotificationCenter {}
+    }
+
     Loader {
         active: Settings.features.emoji
         sourceComponent: EmojiPicker {}
@@ -313,6 +342,30 @@ ShellRoot {
         function toggle(): string { return Shell.toggle("overview") ? "ok" : "overview is disabled"; }
         function open(): string { return Shell.open("overview") ? "ok" : "overview is disabled"; }
         function close(): void { Shell.close("overview"); }
+    }
+
+    IpcHandler {
+        target: "notifications"
+
+        function toggle(): string { return Shell.toggle("notifications") ? "ok" : "notifications are disabled"; }
+        function open(): string { return Shell.open("notifications") ? "ok" : "notifications are disabled"; }
+        function close(): void { Shell.close("notifications"); }
+
+        // Replaces `makoctl mode -a/-r do-not-disturb`, which is what the
+        // Control Center tile used to shell out to.
+        function dnd(state: string): string {
+            if (state === "on") Notifications.setDnd(true);
+            else if (state === "off") Notifications.setDnd(false);
+            else Notifications.toggle();
+            return Notifications.dnd ? "on" : "off";
+        }
+
+        // Replaces `makoctl restore`, which SUPER + CTRL + N was bound to:
+        // mako discarded notifications it had suppressed and that command
+        // brought the last one back. Nothing is discarded now -- everything is
+        // in the history -- so the useful version of that key is "show me what
+        // I missed", which is what this does.
+        function clear(): string { Notifications.clear(); return "ok"; }
     }
 
     IpcHandler {

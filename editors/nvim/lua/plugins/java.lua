@@ -3,9 +3,10 @@
 -- This file only adds what it leaves out: the codegen actions, <leader>j* keys
 -- and the IntelliJ-style `_get`/`_tos`/... insert-mode triggers.
 
--- jdtls ships codegen as code actions. Getters and setters share one kind
--- (source.generate.accessors), so the title is the only discriminator; match on
--- titles throughout and let `apply` fire straight away when exactly one hits.
+-- jdtls ships codegen as code actions. Filter on kind, not title: jdtls offers
+-- most of these twice, once as a `quickassist` and once as the class-wide
+-- `source.generate.*`, and matching both leaves `apply` with two candidates and
+-- a picker. Only getters and setters share a kind, so they need the title too.
 local function action(filter)
     return function()
         vim.lsp.buf.code_action({ apply = true, filter = filter })
@@ -14,23 +15,23 @@ end
 
 local gen = {
     getters = action(function(a)
-        return a.title:find("^Generate Getters") and not a.title:find("Setters")
+        return a.kind == "source.generate.accessors" and a.title:find("^Generate Getters") and not a.title:find("Setters")
     end),
     setters = action(function(a)
-        return a.title:find("^Generate Setters") ~= nil
+        return a.kind == "source.generate.accessors" and a.title:find("^Generate Setters") ~= nil
     end),
     tostring = action(function(a)
-        return a.title:find("^Generate toString") ~= nil
+        return a.kind == "source.generate.toString"
     end),
     constructors = action(function(a)
-        return a.title:find("^Generate Constructors") ~= nil
+        return a.kind == "source.generate.constructors"
     end),
     -- "Add unimplemented methods" stubs every missing method in one go, but it
     -- is the quickfix on the "must implement the inherited abstract method"
     -- diagnostic, so it only exists while the cursor is on the class line.
     -- Elsewhere this lands on the pick-what-to-override prompt instead.
     implement = action(function(a)
-        return a.title:find("^Add unimplemented methods") or a.title:find("^Override/Implement Methods")
+        return a.title:find("^Add unimplemented methods") ~= nil or a.kind == "source.overrideMethods"
     end),
 }
 
@@ -173,6 +174,32 @@ return {
             opts.on_attach = function(args)
                 local buf = args.buf
                 local jdtls = require("jdtls")
+
+                -- jdtls only offers constructor generation as a prompt command
+                -- (dropping generateConstructorsPromptSupport removes the action
+                -- rather than making it unattended), and nvim-jdtls' handler asks
+                -- which fields to take. Answer it unattended: every super
+                -- constructor, every field the server reports.
+                vim.lsp.commands["java.action.generateConstructorsPrompt"] = function(_, ctx)
+                    local client = vim.lsp.get_client_by_id(ctx.client_id)
+                    if not client then
+                        return
+                    end
+                    client:request("java/checkConstructorsStatus", ctx.params, function(err, status)
+                        if err or not status or not status.constructors or #status.constructors == 0 then
+                            return
+                        end
+                        client:request("java/generateConstructors", {
+                            context = ctx.params,
+                            constructors = status.constructors,
+                            fields = status.fields,
+                        }, function(err2, edit)
+                            if not err2 and edit then
+                                vim.lsp.util.apply_workspace_edit(edit, client.offset_encoding)
+                            end
+                        end, ctx.bufnr)
+                    end, ctx.bufnr)
+                end
                 local function map(mode, lhs, rhs, desc)
                     vim.keymap.set(mode, lhs, rhs, { buffer = buf, desc = desc })
                 end

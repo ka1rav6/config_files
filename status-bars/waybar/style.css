@@ -104,6 +104,22 @@ window#waybar {
     color: @coral;
 }
 
+/* --- Recording indicator -------------------------------------------------
+   Coral because it is the system-wide "critical" accent and a recording in
+   progress is the one state on this bar you must never fail to notice. Solid
+   rather than a pill on @panel-bg like its neighbours, for the same reason.
+
+   The module is absent entirely when nothing is recording (record.sh prints
+   an empty text), so there is no idle styling to write. */
+#custom-record {
+    margin: 5px 2px;
+    padding: 0 10px;
+    border-radius: 6px;
+    background: @coral;
+    color: @bar-bg;
+    font-weight: 700;
+}
+
 /* --- The status group ----------------------------------------------------
    The four modules on the right are one visual unit, not four.
 

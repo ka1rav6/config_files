@@ -175,7 +175,14 @@ Singleton {
                 property bool music: true
                 property bool musicVisualizer: true
                 property bool calendar: true
-                property bool notifications: false   // mako stays the daemon
+                // ON, and unlike every other flag here this one has a
+                // consequence outside this process: Quickshell IS the
+                // notification daemon now, and mako is no longer started in
+                // ~/.config/hypr/autostart.lua. Setting this to false leaves
+                // the machine with NO notification daemon at all until
+                // `spawn("mako")` goes back there. See
+                // services/Notifications.qml for the whole story.
+                property bool notifications: true
             }
 
             // =============================================================

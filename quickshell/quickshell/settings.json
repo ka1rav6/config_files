@@ -45,7 +45,7 @@
         "network": true,
         "ram": true,
         "snapToGrid": true,
-        "visualizer": true,
+        "visualizer": false,
         "widgetLayout": {
             "battery": {
                 "x": 0.8593996840442338,
@@ -112,7 +112,7 @@
         "lockScreen": true,
         "music": true,
         "musicVisualizer": true,
-        "notifications": false,
+        "notifications": true,
         "osd": true,
         "overview": true,
         "settings": true,

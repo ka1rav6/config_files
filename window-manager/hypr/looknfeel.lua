@@ -87,8 +87,8 @@ hl.config({
     -- no_hardware_cursors: draw the cursor into the normal composited frame
     -- instead of handing it to the DRM cursor plane.
     --
-    -- Must stay true while defaults.lua sets AQ_NO_ATOMIC=1. On the legacy DRM
-    -- iface a hardware cursor is moved with drmModeSetCursor/drmModeMoveCursor,
+    -- Kept true, but no longer forced. It was mandatory on the legacy DRM
+    -- iface defaults.lua used to pin: drmModeSetCursor/drmModeMoveCursor,
     -- which are NOT part of the primary plane's page flip -- so any repaint can
     -- land without the cursor plane re-armed and the pointer blinks out until
     -- the next motion event pushes it back. eDP-1 running at scale 1.5 makes it
@@ -96,7 +96,7 @@ hl.config({
     -- "legacy drm: cursor fb" lines in a single session's log).
     --
     -- Costs one frame of pointer latency, which at 120Hz is not perceptible.
-    -- Revisit together with the AQ_NO_ATOMIC removal in defaults.lua.
+    -- Now safe to try as false (atomic arms the cursor plane in the same commit).
     --
     -- no_warps: never drag the pointer to follow focus.
     --
@@ -165,32 +165,32 @@ hl.config({
     },
 
     debug = {
-        -- Kept true, but be clear about what it does and does not buy.
+        -- FALSE since 2026-11-15. It was true, and that is exactly why two
+        -- crashes that day left no evidence to read.
         --
-        -- IT DOES NOT STOP THE LOG GROWING. Measured with this set to true
-        -- (`hyprctl getoption debug:disable_logs` -> true): the log still
-        -- reached 3.4 MB in 4.5 hours, and 99.8% of it was
+        -- This gates HYPRLAND's own messages -- the Lua watchdog warning, the
+        -- window and monitor events leading up to a death, the crash path
+        -- itself. With it on, the log is aquamarine-only, so a session that
+        -- vanished read exactly like one still running.
+        --
+        -- It never bought what it was set for, either. IT DOES NOT STOP THE
+        -- LOG GROWING: measured with it true, the log still reached 3.4 MB in
+        -- 4.5 hours, and 99.8% of that was
         --
         --     DEBUG from aquamarine ]: [libinput] event4 - tap: ...
         --
-        -- i.e. aquamarine's own logger, not Hyprland's. aquamarine hands its
-        -- messages to Hyprland through a callback that this option does not
-        -- gate, and it puts libinput at DEBUG priority, so every touchpad
-        -- event is a line. There is no config lever for it in 0.56.2 /
-        -- aquamarine 0.15.0.
+        -- i.e. aquamarine's own logger, which this option does not gate --
+        -- aquamarine hands its messages to Hyprland through a callback and
+        -- puts libinput at DEBUG, so every touchpad event is a line. Growth is
+        -- input-driven, not continuous: the log does not move at all while the
+        -- machine is idle (verified over 10 s of no input).
         --
-        -- What it DOES buy is suppressing Hyprland's own chatter, which is
-        -- worth keeping off. The growth is input-driven, not continuous: the
-        -- log does not move at all while the machine is idle (verified over
-        -- 10 s of no input), so this is not a background RAM leak -- it is a
-        -- cost proportional to how much you touch the touchpad.
-        --
-        -- The disk half of the problem is handled where it actually belongs:
-        -- ~/.local/bin/hypr-log-persist.sh filters the libinput spam out of
-        -- the copy it mirrors to ~/.local/state/hypr-debug and prunes old
-        -- runs, so resume debugging keeps the lines that matter without
-        -- accumulating tens of MB a day.
-        disable_logs = true,
+        -- The disk half is handled where it actually belongs:
+        -- ~/.local/bin/hypr-log-persist.sh filters the libinput spam out of the
+        -- copy it mirrors to ~/.local/state/hypr-debug and prunes old runs. So
+        -- turning this off adds noise to a file that was already noisy, and
+        -- buys the only lines worth having when something goes wrong.
+        disable_logs = false,
         enable_stdout_logs = false,
     },
 })

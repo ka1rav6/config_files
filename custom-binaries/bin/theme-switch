@@ -16,7 +16,6 @@ WHAT IT TOUCHES
     ~/.config/waybar/style.css      status bar
     ~/.config/wofi/style.css        launcher
     ~/.config/wlogout/style.css     power menu
-    ~/.config/mako/config           notifications
     ~/.config/hypr/looknfeel.lua    window border gradient
     ~/.tmux.conf                    status bar, pane borders, messages
 
@@ -241,7 +240,7 @@ def rgba(h, alpha):
 
 
 def hexa(h, alpha_byte):
-    """#rrggbb -> 'rrggbbAA' for hyprland/mako, alpha as a 0-255 byte."""
+    """#rrggbb -> 'rrggbbAA' for hyprland, alpha as a 0-255 byte."""
     return h.lstrip("#") + format(alpha_byte, "02x")
 
 
@@ -257,7 +256,7 @@ def mix(h1, h2, t):
 # Derives the same nine colours every other theme defines, from the current
 # wallpaper, and then feeds them through the exact same apply() path. That is
 # the whole design: this is a PALETTE GENERATOR, not a second theme system.
-# Nothing downstream -- waybar, mako, Hyprland, Quickshell, ghostty -- can tell
+# Nothing downstream -- waybar, Hyprland, Quickshell, ghostty -- can tell
 # whether the nine colours it received were hand-picked or extracted.
 #
 # HOW THE ACCENTS ARE CHOSEN
@@ -1156,24 +1155,16 @@ def apply(name, t=None):
         )
     )
 
-    # --- mako ----------------------------------------------------------
-    out.append(
-        patch_block(
-            CFG / "mako/config",
-            f"""background-color=#{hexa(t["bg"], 240)}
-text-color={t["text"]}
-border-color={t["a1"]}
-""",
-        )
-    )
-    out.append(
-        patch_block(
-            CFG / "mako/config",
-            f"border-color={t['a3']}\n",
-            "THEME:CRITICAL:START",
-            "THEME:CRITICAL:END",
-        )
-    )
+    # NO mako HERE ANY MORE. Quickshell is the notification daemon
+    # (~/.config/quickshell/services/Notifications.qml) and it reads the
+    # palette live from services/Theme.qml, so notification popups follow the
+    # theme without anything being written for them. ~/.config/mako/config is
+    # still on disk with its THEME blocks intact; nothing reads it, so writing
+    # to it was a file touched per theme switch for no effect.
+    #
+    # If mako is ever put back in ~/.config/hypr/autostart.lua, restore the two
+    # patch_block calls that were here, the ("mako", ["makoctl", "reload"])
+    # entry in the reload list, and the two mako REQUIRED_MARKERS lines.
 
     # --- hyprland border gradient --------------------------------------
     out.append(
@@ -1385,7 +1376,6 @@ def reload_all():
     # puts a libuv watcher on the palette file, so every running instance
     # repaints itself. Same arrangement as Quickshell and theme.json.
     for label, cmd in (
-        ("mako", ["makoctl", "reload"]),
         ("hyprland", ["hyprctl", "reload"]),
     ):
         try:
@@ -1416,8 +1406,6 @@ REQUIRED_MARKERS = [
     ("waybar/style.css", "THEME:START"),
     ("wofi/style.css", "THEME:START"),
     ("wlogout/style.css", "THEME:START"),
-    ("mako/config", "THEME:START"),
-    ("mako/config", "THEME:CRITICAL:START"),
     ("hypr/looknfeel.lua", "THEME:START"),
     (str(TMUX_CONF), "THEME:START"),
 ]

@@ -4,8 +4,9 @@ Everything bound across the Hyprland session and the Wayland tools around it.
 Generated from `~/.config/hypr/bindings.lua`, `~/.config/hypr/scratchpads.lua`,
 `~/.config/hypr/windows.lua`, `~/.config/hypr/lid.lua`,
 `~/.config/hypr/defaults.lua`, `~/.config/waybar/config.jsonc`,
-`~/.config/quickshell/shell.qml`, `~/.config/quickshell/settings.json` and
-`~/.config/mako/config`.
+`~/.config/quickshell/shell.qml`, `~/.config/quickshell/settings.json`,
+`~/.config/quickshell/modules/notifications/` and
+`~/.config/hypr/scripts/record.sh`.
 
 Hyprland is still the whole behaviour layer — every key below is declared in
 `bindings.lua` (plus the two lid switches in `lid.lua`) and nowhere else. The
@@ -316,7 +317,7 @@ desktop's keybindings would live in a file you would not think to grep.
 | Shortcut | Action |
 |---|---|
 | `Super + Space` | **Workspace overview** — a rotating carousel of every workspace |
-| `Super + A` | **Control Center** — Wi-Fi, Bluetooth, audio, brightness, power profile, night light |
+| `Super + A` | **Control Center** — Wi-Fi, Bluetooth, audio (including a per-app mixer), brightness, power profile, night light |
 | `Super + D` | Dashboard — clock, calendar, now playing, CPU/memory/disk/battery |
 | `Super + ,` | Settings — every toggle in the shell, in one window |
 | `Super + Shift + K` | **Command Center** — a searchable GUI over `~/Justfile` and the system CLI |
@@ -499,6 +500,9 @@ running, which matters most for the power menu.
 | `nwg-dock-hyprland` | Quickshell dock | — |
 | `nwg-drawer` | Wofi on `Super + S` | — |
 | wlogout | Quickshell power menu | wlogout, then wofi |
+| mako | Quickshell notifications (popups + history) | mako, themed by `theme-switch` |
+| `Super + N` → fzf in a Ghostty window | Notification centre panel | `mako-fzf-history` |
+| Per-app volume | Control Center → Sound → Applications | pavucontrol |
 
 The tray is the one thing that came back. It went away with `nm-applet` and
 `blueman-applet`, but `kdeconnect-indicator` has no replacement: its menu
@@ -513,16 +517,28 @@ which is exactly when you most want to glance at it.
 | Shortcut | Action |
 |---|---|
 | `Super + V` | Clipboard history — pick in Wofi, copies the selection |
-| `Super + N` | Browse notification history in fzf; Enter reposts the notification |
-| `Super + Ctrl + N` | Restore the most recently dismissed notification |
+| `Super + N` | **Notification centre** — history, do-not-disturb, clear all |
+| `Super + Ctrl + N` | Clear the notification history |
 
 `Super + S` and `Super + V` go through the same guard script
 (`scripts/wofi-launch.sh`), which serialises the decision behind an flock and
 keeps exactly one wofi per mode. Before that, either key could open a second
 layer surface on top of the first, both holding a keyboard grab.
 
-Mako is the notification daemon; the shell's own notification surface is off
-(`Settings.features.notifications`).
+**Quickshell is the notification daemon.** mako is no longer started —
+`org.freedesktop.Notifications` is a single D-Bus name, the first claimant wins
+and the loser silently receives nothing, so two daemons is a coin toss rather
+than a redundant setup. `Settings.features.notifications` is on.
+
+`Super + Ctrl + N` used to be `makoctl restore`, which brought back the last
+notification mako had discarded while suppressed. Nothing is discarded now —
+everything is in the history panel — so the key empties it instead.
+
+The one thing this cost: mako was a separate process and survived a shell
+crash. Notifications now go down with Quickshell until `just qs-restart`. To go
+back, put `spawn("mako")` into `~/.config/hypr/autostart.lua` and set
+`features.notifications` to false; `~/.config/mako/config` is still on disk,
+though `theme-switch` no longer writes its colour blocks.
 
 ## Screenshots
 
@@ -552,6 +568,43 @@ and Space, and neither is retargetable, while a plain global bind would have to
 be non-consuming and would then fork a process on every newline typed on this
 machine. There is no `catchall` here, unlike the workspaces submap — anything
 not bound has to fall through to slurp untouched.
+
+## Screen recording
+
+Same hand as the screenshot and the same shape: `Alt` for the moving picture,
+`Shift` for "the whole screen" rather than a selection.
+
+| Shortcut | Action |
+|---|---|
+| `Super + Alt + R` | Select an area and record; press again to stop |
+| `Super + Alt + Shift + R` | Record the whole screen; press again to stop |
+
+One key for start *and* stop, deliberately. A recording that can only be
+stopped from somewhere else is one that gets killed with `pkill` — and a killed
+`wf-recorder` never writes the container trailer, so the `.mp4` has no index and
+most players refuse to open it. `record.sh stop` sends **SIGINT, never
+SIGKILL**, for the same reason.
+
+Files land in `~/media/video/Recordings`. While recording, a coral **REC** pill
+appears on waybar; clicking it stops the recording too.
+
+Two things worth knowing about this machine:
+
+- **VA-API does not work here.** `wf-recorder -c h264_vaapi` fails with
+  `Failed to initialise VAAPI connection: -1 (unknown libva error)` — libva
+  cannot talk to the iGPU at all, which is also why `vainfo` is not installed.
+  The script tries it once per boot, remembers the failure in
+  `$XDG_RUNTIME_DIR/record.novaapi` and falls back to software encoding, so
+  recording costs real CPU until that driver stack is fixed.
+- **Full-screen capture has to name the output.** With neither `-g` nor `-o` on
+  a multi-monitor machine, `wf-recorder` stops and asks which output on stdin —
+  and launched from a keybind there is no stdin, so the key silently did
+  nothing. A region capture is fine; it works the output out from the geometry.
+
+`Super + Alt + R` sits beside `Super + Alt + P` (whole-screen screenshot) rather
+than following the target modifier scheme in *Ideas 1* below, where `Super +
+Alt` means "launch an app". Screenshots already break that scheme, and keeping
+capture keys together beat keeping the scheme clean.
 
 ## Hardware and Media Keys
 
@@ -704,6 +757,7 @@ is status; the shell is where you change things.
 | Todo | Toggle the todo scratchpad | Jump to the todo workspace | — | — |
 | Window title | — | — | — | — |
 | Clock | **Dashboard**, dropping down from the clock | — | — | — |
+| `REC` | Stop the recording | — | — | — |
 | KDE Connect `󰦉` | **Command Center** | `kdeconnect-app` | Ring the phone | — |
 | Network | Control Center | nm-connection-editor | — | — |
 | Temperature | Control Center | — | — | — |
@@ -770,17 +824,41 @@ the laptop panel is still at the top right of the external monitor.
 
 Which widgets exist is Settings → Desktop.
 
-## Mako notifications (mouse)
+## Notifications (mouse)
+
+Popups, top right under the bar:
 
 | Action | Result |
 |---|---|
-| Left click | Invoke the default action |
-| Middle click | Action menu in Wofi |
-| Right click | Dismiss |
+| An action button | Invoke it; the popup goes away |
+| **Reply** | Inline reply, where the sender offers one — a KDE Connect SMS can be answered from the popup |
+| `×` | Dismiss, which tells the sending application |
+| Hover | Pauses the countdown while you read |
+| `Escape` in a reply field | Close the field without sending |
 
-Per-app overrides: notifications from Ghostty, Chrome/Chromium and Firefox focus
-that window on left click instead, and the Battery and Temperature ones just
-dismiss — there is nothing to open.
+A popup times out after the sender's own timeout, or five seconds if it did not
+set one. **Critical notifications never time out** — the same convention mako
+had. The card is tinted by urgency, so what kind it is reads before the text
+does: the error accent for critical (with a matching border), a hint of the
+theme accent for normal, untinted for low.
+
+There is no icon on a popup, deliberately. There was, with a bell as the
+fallback, but the fallback fired for most notifications on this machine
+(`notify-send -a Foo` carries no icon), a column of bells is not information,
+and the text wanted the ~40px. An application's own image — album art, a
+contact photo — went with it.
+
+In the history panel (`Super + N`):
+
+| Action | Result |
+|---|---|
+| Click a row | Invoke its default action, and close the panel |
+| `×` on a row | Forget that one (no message to the application) |
+| The toggle in the header | Do not disturb — notifications are kept, not shown |
+| **Clear all** | Empty the history |
+
+The history holds the last 50. Everything is kept, including while DND is on;
+the cap is what stops a chatty application growing it without bound.
 
 ---
 
@@ -840,9 +918,11 @@ this has not moved.
 
 ### 5. `N` means three different things
 
-`Super + N` is notification history, `Super + Ctrl + N` restores the last
-notification, and `Super + W` `N` is the nvim workspace. The first two belong
-together; the third is unrelated and only shares the letter.
+`Super + N` opens the notification centre, `Super + Ctrl + N` clears it, and
+`Super + W` `N` is the nvim workspace. The first two now genuinely belong
+together — they are the same panel — so this is less of a collision than it was
+when one of them was `makoctl restore`. The third is still unrelated and only
+shares the letter.
 
 ### 6. Arrows duplicate `hjkl`
 

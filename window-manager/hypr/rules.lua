@@ -198,6 +198,8 @@ for _, component in ipairs({
     "dock",            -- application dock
     "power",           -- power menu
     "calendar",        -- calendar popup
+    "notifications",   -- the notification history panel, SUPER + N
+    "toasts",          -- the notification popups (modules/notifications)
 }) do
     hl.layer_rule({
         name = "blur-qs-" .. component,

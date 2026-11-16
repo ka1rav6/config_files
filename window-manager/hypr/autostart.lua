@@ -112,9 +112,13 @@ hl.config({ misc = { allow_session_lock_restore = true } })
 --   and survives it exiting.
 --
 -- IF QUICKSHELL IS NOT RUNNING
---   Nothing here breaks. Waybar, mako, the scratchpads, every keybind and the
+--   Nothing here breaks. Waybar, the scratchpads, every keybind and the
 --   compositor itself are independent of it. The keybinds that drive its UI
 --   simply do nothing until it is back. Restart it with `just qs-restart`.
+--
+--   ONE EXCEPTION, since mako was retired: NOTIFICATIONS go down with it.
+--   Quickshell owns org.freedesktop.Notifications now, so while it is dead
+--   notify-send succeeds and nothing appears. See the note at spawn() below.
 --
 -- TO DISABLE IT ENTIRELY
 --   Set QUICKSHELL_DISABLE=1 in the environment and reload. Useful for
@@ -306,7 +310,28 @@ hl.on("hyprland.start", function()
     -- idempotent and starts a bar when it finds none, which is exactly this
     -- case; the pgrep guard here is then belt and braces.
     spawn_once("waybar", home .. "/.config/hypr/scripts/waybar-ensure.sh")
-    spawn("mako")
+    -- NO mako HERE ANY MORE, DELIBERATELY.
+    --
+    -- Quickshell is the notification daemon now (see
+    -- ~/.config/quickshell/services/Notifications.qml). This is not a
+    -- preference: org.freedesktop.Notifications is a single D-Bus name, the
+    -- first claimant wins, and the loser silently receives nothing at all. Two
+    -- daemons is not a redundant setup, it is a coin toss.
+    --
+    -- TO GO BACK
+    --   Put `spawn("mako")` here, set features.notifications to false in
+    --   ~/.config/quickshell/settings.json, and `just qs-restart`.
+    --   ~/.config/mako/config is still on disk with its THEME blocks
+    --   intact, but ~/.local/bin/theme-switch no longer writes them -- put
+    --   the two patch_block calls back there too (its own comment says
+    --   which). Nothing was deleted.
+    --
+    -- WHAT THIS COSTS
+    --   mako was a separate process and survived a shell crash. Notifications
+    --   now go down with Quickshell until `just qs-restart`. The scripts that
+    --   send them -- system-monitor-notify and now-playing-notify below -- are
+    --   unaffected either way: they call notify-send and do not care who
+    --   answers.
     -- Both of these hold their own single-instance lock (a mkdir lockdir in
     -- $XDG_RUNTIME_DIR), so they need no guard here -- which is just as well,
     -- because they run as "bash" and `pgrep -x` could not tell them apart.
@@ -318,23 +343,21 @@ hl.on("hyprland.start", function()
     -- Event-driven off udev, so it idles at zero cost. See the script, which
     -- also holds its own lock.
     spawn(home .. "/.config/hypr/scripts/power-refresh.sh watch")
-    -- NO wlsunset HERE, DELIBERATELY -- IT CANNOT WORK ON THIS MACHINE.
+    -- STILL NO wlsunset HERE, but no longer for the old reason.
     --
-    -- Colour temperature needs wlr-gamma-control, and aquamarine refuses it on
-    -- the legacy DRM interface that defaults.lua pins us to with
-    -- AQ_NO_ATOMIC=1. Every modeset logs:
-    --
+    -- Colour temperature needs wlr-gamma-control, which aquamarine refuses on
+    -- the legacy DRM iface. defaults.lua used to pin that iface with
+    -- AQ_NO_ATOMIC=1, so every modeset logged
     --     ERR from aquamarine ]: No support for gamma on the legacy iface
+    -- and `wlsunset -t 4000` sat resident doing NOTHING -- a process, a wrapper
+    -- shell and a wayland connection for an effect the compositor discarded.
+    -- (The flag was a no-op twice over: -t is the *low* temperature and 4000 is
+    -- already its default, and with no -l/-L or -S/-s there was no schedule to
+    -- enter night mode on either.)
     --
-    -- So `wlsunset -t 4000` sat resident doing NOTHING -- a process, a wrapper
-    -- shell and a wayland connection for an effect the compositor discards.
-    -- (The flag was a no-op twice over: -t is the *low* temperature and 4000
-    -- is already its default, and with no -l/-L or -S/-s there was no
-    -- schedule to enter night mode on either.)
-    --
-    -- services/NightLight.qml now probes for gamma support and reports the
-    -- feature unavailable instead of offering a toggle that changes nothing.
-    -- Restore this line together with the AQ_NO_ATOMIC removal in defaults.lua.
+    -- The pin came out on 2026-11-15, so gamma works again -- and
+    -- services/NightLight.qml probes for gamma support, so the Control Center
+    -- toggle is the single thing driving it. A resident wlsunset would fight it.
     hl.exec_cmd(
         "command -v wl-paste >/dev/null 2>&1 && command -v cliphist >/dev/null 2>&1 && exec wl-paste --type text --watch "
             .. home

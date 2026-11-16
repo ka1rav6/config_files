@@ -25,15 +25,15 @@ import qs
 //   system would mean mirroring every browser tab's audio stream for no
 //   reason.
 //
-//   This used to claim it also tracked "whatever streams the Control Center is
-//   showing". It did not -- the tracker below lists exactly two objects -- and
-//   nothing showed streams anyway: the Control Center's Sound page hands
-//   per-application volume to pavucontrol. A `streams()` helper existed here
-//   for nobody, and because its nodes would have been UNTRACKED, any future
-//   caller would have read the stale zeros this very header warns about. It
-//   has been removed rather than left as a trap; if a per-app mixer is ever
-//   built here, add a PwObjectTracker scoped to the panel's lifetime so the
-//   streams are bound only while it is open.
+//   The tracker below therefore lists exactly two objects, and the `streams`
+//   list further down is deliberately NOT one of them: it is a list of nodes,
+//   not a promise that they are bound. Whoever shows those streams binds them,
+//   for as long as they are on screen -- modules/controlcenter/CcAudio.qml
+//   declares a PwObjectTracker over this list, and ControlCenter.qml builds
+//   that page with a Loader, so the streams go live when the Sound page opens
+//   and unbind when it closes. Read `volume` or `properties` off a stream from
+//   anywhere that has not done the same and you get the stale zeros this
+//   header warns about.
 //
 // VOLUME ABOVE 1.0
 //   PipeWire happily accepts volumes over 1.0 by applying software gain, which
@@ -83,6 +83,18 @@ Singleton {
         return Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && n.audio);
     }
 
+    // --- Application streams, for the Control Center's mixer -------------
+    // A playback stream is `Audio | Sink | Stream` in PwNodeType -- isSink is
+    // true for a stream that FEEDS a sink, which is the opposite of what the
+    // name suggests on first read, so the filter says it explicitly here once
+    // rather than being rediscovered at each call site.
+    //
+    // A bound property rather than a function like sinks()/sources() above:
+    // applications come and go while the panel is open (press play in a
+    // browser tab) and a snapshot taken at construction would never show them.
+    readonly property var streams: Pipewire.nodes.values
+        .filter(n => n.isStream && n.isSink && n.audio)
+
     // --- Mutation -----------------------------------------------------
     // Written through the PipeWire objects rather than by shelling out to
     // wpctl. A subprocess per scroll-tick was measurable in the old waybar
@@ -110,6 +122,13 @@ Singleton {
 
     function toggleMicMute() {
         if (root.sourceReady) root.source.audio.muted = !root.source.audio.muted;
+    }
+
+    // Same unity ceiling as setVolume: a per-app gain above 1.0 clips exactly
+    // the same way the master does.
+    function setStreamVolume(node, value) {
+        if (!node || !node.audio) return;
+        node.audio.volume = Math.max(0, Math.min(1, value));
     }
 
     function setDefaultSink(node) {

@@ -1,0 +1,26 @@
+{
+  "cmain": {
+    "prefix": "cmain",
+    "body": [
+      "#include <iostream>",
+      "",
+      "int main(int argc, const char** argv){",
+      "\t$0",
+      "\treturn 0;",
+      "}"
+    ],
+    "description": "main() boilerplate"
+  },
+  "chead": {
+    "prefix": "chead",
+    "body": [
+      "#ifndef $HEADER_GUARD",
+      "#define $HEADER_GUARD",
+      "",
+      "$0",
+      "",
+      "#endif // $HEADER_GUARD"
+    ],
+    "description": "include guard named after the current file"
+  }
+}

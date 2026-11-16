@@ -23,11 +23,18 @@ import qs
 //   because nothing is ever resampled.
 //
 // WHAT A CARD SHOWS
-//   The workspace number and name, and the icon of every window on it, biggest
-//   first. Not a live thumbnail: capturing one needs wlr-screencopy per
-//   workspace per frame, which is exactly the kind of cost this desktop has
-//   been avoiding everywhere else. Icons identify a workspace faster than a
-//   postage-stamp screenshot does anyway.
+//   The workspace number and name, and a thumbnail of each window on it.
+//
+//   ONLY THE CARD AT THE FRONT OF THE RING IS LIVE. This file used to argue
+//   that thumbnails were not worth having at all, and the reason was sound:
+//   capturing every window on every workspace every frame is exactly the cost
+//   this desktop avoids everywhere else. So the capture follows the selection.
+//   OverviewCard binds `live` to isSelected, which is true for exactly one card
+//   at a time, and a card keeps its last frame when it leaves the front -- so
+//   spinning the ring leaves still thumbnails behind it and streams only what
+//   you are actually looking at. A window that yields no frame falls back to
+//   its icon, which is also what happens on a compositor without
+//   hyprland-toplevel-export-v1.
 //
 // NAVIGATION
 //   pointer / scroll   spin the ring
@@ -93,7 +100,13 @@ Scope {
                 title: ipc.title || "",
                 cls: ipc.class || "",
                 floating: !!ipc.floating,
-                address: t.address
+                address: t.address,
+                // The HyprlandToplevel itself, for the thumbnail: its `wayland`
+                // property is the Toplevel a ScreencopyView can capture from.
+                // Kept as the live object rather than copied out, so the card's
+                // binding sees `wayland` arrive -- it is null until Hyprland has
+                // reported the address.
+                toplevel: t
             });
         }
 

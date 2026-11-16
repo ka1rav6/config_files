@@ -1,18 +1,22 @@
 -- Shared variables, read by every other module. Loaded first.
 
--- Force aquamarine onto its legacy (non-atomic) DRM interface.
+-- No AQ_NO_ATOMIC here any more -- aquamarine is back on the atomic DRM iface.
 --
--- aquamarine 0.15.0 hangs inside the atomic DRM commit when it re-enables an
--- output that was previously disabled -- "Modesetting eDP-1" is the last line
--- it ever logs, the panel keeps its backlight but gets no scanout, and only a
--- fresh Hyprland process recovers it (aquamarine #293 / #304 / #307).
+-- It used to pin aquamarine to the legacy (non-atomic) iface, to dodge an
+-- atomic-commit hang in aquamarine 0.15.0 when re-enabling a previously
+-- disabled output (aquamarine #293 / #304 / #307). libaquamarine is 0.16.0
+-- now, which is the condition that note set for taking the pin back out.
 --
--- Set here rather than in autostart.lua because this file is loaded first and
--- aquamarine reads AQ_* only while the backend is coming up. Confirm it took
--- effect by grepping the Hyprland log for:
---     AQ_NO_ATOMIC enabled, using the legacy drm iface
--- Remove once aquamarine > 0.15.0 reaches the PPA.
-hl.env("AQ_NO_ATOMIC", "1")
+-- The legacy iface turned out to have a worse failure of its own: on
+-- 2026-11-15 plugging in HDMI-A-1 modeset the new CRTC, logged two
+--     ERR from aquamarine ]: drm: Cannot commit when a page-flip is awaiting
+-- and the compositor exited not-cleanly a moment later -- start-hyprland
+-- restarted it with --safe-mode. Legacy also has no gamma (no night light)
+-- and cannot keep a hardware cursor armed across repaints.
+--
+-- If the OLD bug returns -- lid open or `dpms on` leaves a lit panel with no
+-- picture, "Modesetting eDP-1" the last line in the log -- put this back:
+--     hl.env("AQ_NO_ATOMIC", "1")
 
 terminal = "ghostty"
 fileManager = "nautilus"

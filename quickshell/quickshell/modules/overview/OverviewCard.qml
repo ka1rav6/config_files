@@ -1,5 +1,7 @@
 import QtQuick
 import Quickshell
+// For ScreencopyView, the window thumbnails below.
+import Quickshell.Wayland
 import qs
 
 // One workspace on the ring: its number, its name, and what is open on it.
@@ -15,8 +17,19 @@ Item {
 
     signal clicked()
 
-    width: 300
-    height: 200
+    // Sized so four 16:9 thumbnails fit in two rows under the header:
+    // (320 - 2*lg - sm) / 2 = 139 wide, 78 tall, 162 with the row gap, against
+    // 248 - 2*lg - 34 header - md = 166 of body. Change one and check the other.
+    width: 320
+    height: 248
+
+    readonly property real tileW: Math.floor((root.width - Appearance.lg * 2 - Appearance.sm) / 2)
+    readonly property real tileH: Math.round(root.tileW * 9 / 16)
+
+    // Four tiles, two rows. The overflow count is drawn over the grid rather
+    // than added below it, so the card's body height never changes.
+    readonly property var tiles: root.workspace.windows.slice(0, 4)
+    readonly property int overflow: root.workspace.windows.length - 4
 
     transformOrigin: Item.Center
 
@@ -100,64 +113,140 @@ Item {
             }
 
             // --- windows ----------------------------------------------------
-            Flow {
+            Item {
                 width: parent.width
-                spacing: Appearance.sm
+                height: grid.height
                 visible: root.workspace.windows.length > 0
 
-                Repeater {
-                    // Six is what fits on two rows at this size; the caption
-                    // below carries the real count.
-                    model: root.workspace.windows.slice(0, 6)
+                Grid {
+                    id: grid
 
-                    Rectangle {
-                        required property var modelData
+                    width: parent.width
+                    columns: 2
+                    spacing: Appearance.sm
 
-                        width: 46
-                        height: 46
-                        radius: Appearance.radiusInner
-                        color: Theme.wash(Theme.text, 0.07)
+                    Repeater {
+                        model: root.tiles
 
-                        Image {
-                            anchors.centerIn: parent
-                            width: 30
-                            height: 30
-                            asynchronous: true
-                            smooth: true
-                            sourceSize.width: 60
-                            sourceSize.height: 60
-                            source: {
-                                const entry = DesktopEntries.heuristicLookup(modelData.cls);
-                                return Quickshell.iconPath(
-                                    entry ? entry.icon : modelData.cls,
-                                    "application-x-executable");
-                            }
-                        }
-
-                        // Floating windows are marked, because "what is on this
-                        // workspace" and "what is tiled on this workspace" are
-                        // different questions and the layout depends on it.
                         Rectangle {
-                            visible: modelData.floating
-                            anchors.right: parent.right
-                            anchors.bottom: parent.bottom
-                            anchors.margins: 3
-                            width: 6
-                            height: 6
-                            radius: 3
-                            color: Theme.accent2
+                            id: tile
+
+                            required property var modelData
+
+                            width: root.tileW
+                            height: root.tileH
+                            radius: Appearance.radiusInner
+                            color: Theme.wash(Theme.text, 0.07)
+                            // The capture is the window's own aspect, not the
+                            // tile's, so without this a tall window bleeds out
+                            // over the rounded corners.
+                            clip: true
+
+                            ScreencopyView {
+                                id: thumb
+
+                                anchors.fill: parent
+                                // Null until Hyprland reports the address; the
+                                // icon below covers that window.
+                                captureSource: tile.modelData.toplevel
+                                    ? tile.modelData.toplevel.wayland : null
+                                // One streaming card at a time -- isSelected is
+                                // true only at the front of the ring. Going
+                                // false stops asking for frames and leaves the
+                                // last one on screen, so a card you have spun
+                                // past keeps a still.
+                                live: root.isSelected
+                                visible: thumb.hasContent
+                            }
+
+                            // What a window's icon resolves to, or "" when
+                            // nothing does.
+                            //
+                            // The `true` overload is used rather than the
+                            // two-argument fallback form, because that form
+                            // builds a request like
+                            // "com.scratchpad.ghostty?fallback=application-x-executable"
+                            // which resolves to NOTHING and logged a warning
+                            // per card per open. It mattered less when this was
+                            // decoration; now it is the fallback for a window
+                            // with no frame, so a failed lookup meant an empty
+                            // tile.
+                            readonly property string iconSource: {
+                                const entry = DesktopEntries.heuristicLookup(tile.modelData.cls);
+                                if (entry && entry.icon !== "") {
+                                    const viaEntry = Quickshell.iconPath(entry.icon, true);
+                                    if (viaEntry !== "") return viaEntry;
+                                }
+                                if (tile.modelData.cls !== "") {
+                                    const viaClass = Quickshell.iconPath(tile.modelData.cls, true);
+                                    if (viaClass !== "") return viaClass;
+                                }
+                                return Quickshell.iconPath("application-x-executable", true);
+                            }
+
+                            // Fallback, and the only thing drawn for a window
+                            // that never yields a frame.
+                            Image {
+                                visible: !thumb.hasContent && tile.iconSource !== ""
+                                anchors.centerIn: parent
+                                width: 30
+                                height: 30
+                                asynchronous: true
+                                smooth: true
+                                sourceSize.width: 60
+                                sourceSize.height: 60
+                                source: tile.iconSource
+                            }
+
+                            // Last resort, so a tile is never simply blank.
+                            Icon {
+                                visible: !thumb.hasContent && tile.iconSource === ""
+                                anchors.centerIn: parent
+                                name: "apps"
+                                size: 24
+                                color: Theme.wash(Theme.text, 0.35)
+                            }
+
+                            // Floating windows are marked, because "what is on
+                            // this workspace" and "what is tiled on this
+                            // workspace" are different questions and the layout
+                            // depends on it.
+                            Rectangle {
+                                visible: tile.modelData.floating
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 3
+                                width: 6
+                                height: 6
+                                radius: 3
+                                color: Theme.accent2
+                            }
                         }
                     }
                 }
-            }
 
-            Text {
-                width: parent.width
-                visible: root.workspace.windows.length > 6
-                text: "+" + (root.workspace.windows.length - 6) + " more"
-                color: Theme.muted
-                font.family: Appearance.font
-                font.pixelSize: Appearance.fontCaption
+                // "and this many more", over the corner of the grid.
+                Rectangle {
+                    visible: root.overflow > 0
+                    anchors.right: grid.right
+                    anchors.bottom: grid.bottom
+                    anchors.margins: Appearance.xs
+                    width: more.implicitWidth + Appearance.sm
+                    height: 18
+                    radius: 9
+                    color: Theme.wash(Theme.surface, 0.92)
+
+                    Text {
+                        id: more
+
+                        anchors.centerIn: parent
+                        text: "+" + root.overflow
+                        color: Theme.muted
+                        font.family: Appearance.font
+                        font.pixelSize: Appearance.fontCaption
+                        font.weight: Appearance.weightMedium
+                    }
+                }
             }
 
             // --- empty state -------------------------------------------------

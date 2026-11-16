@@ -410,8 +410,12 @@ hl.bind(mod .. " + SHIFT + V", hl.dsp.exec_cmd("code"))
 -- drags your focus over to -- something you hid somewhere else.
 hl.bind(mod .. " + SHIFT + A", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/toggle-minimize.sh"))
 hl.bind(mod .. " + ALT + SPACE", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/toggle-waybar.sh"))
-hl.bind(mod .. " + CTRL + N", hl.dsp.exec_cmd("makoctl restore"))
-hl.bind(mod .. " + N", hl.dsp.exec_cmd("ghostty -e ~/.local/bin/mako-fzf-history"))
+-- NOTIFICATIONS MOVED DOWN to the Quickshell IPC section at the bottom of this
+-- file, because they are a Quickshell panel now and the qs() helper they need
+-- is not defined until there. They used to be:
+--
+--   SUPER + CTRL + N   makoctl restore
+--   SUPER + N          ghostty -e ~/.local/bin/mako-fzf-history
 
 -- Jcode launch hotkeys.
 hl.bind("SUPER + semicolon", hl.dsp.exec_cmd(home .. "/.jcode/hotkey/launch_jcode_0_cmd_semicolon.sh"))
@@ -448,6 +452,17 @@ hl.bind(mod .. " + ALT + P", hl.dsp.exec_cmd(screenshot .. "full"))
 hl.bind(mod .. " + ALT + SHIFT + P", hl.dsp.exec_cmd(screenshot .. "full-save"))
 -- Kept: the old muscle memory for "save a region".
 hl.bind(mod .. " + SHIFT + S", hl.dsp.exec_cmd(screenshot .. "region-save"))
+
+-- Recording, on the same hand as the screenshot and with the same shape: ALT
+-- for the moving picture, SHIFT for "the whole screen" rather than a selection.
+--
+-- One key for start AND stop. The script decides which, because a recording
+-- that can only be stopped from somewhere else is a recording that gets killed
+-- with pkill -- and a killed wf-recorder writes no container trailer, so the
+-- file will not play. See the top of scripts/record.sh.
+local record = home .. "/.config/hypr/scripts/record.sh "
+hl.bind(mod .. " + ALT + R", hl.dsp.exec_cmd(record .. "toggle"))
+hl.bind(mod .. " + ALT + SHIFT + R", hl.dsp.exec_cmd(record .. "toggle-full"))
 
 -- Armed by screenshot.sh for exactly as long as slurp is on screen, so RETURN
 -- means "the whole screen" there and nothing anywhere else.
@@ -549,6 +564,15 @@ hl.bind(mod .. " + comma", hl.dsp.exec_cmd(qs("settings", "toggle")))
 -- `quickshell ipc call launcher toggle` if it is ever wanted back.
 hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd(qs("overview", "toggle")))
 hl.bind(mod .. " + D", hl.dsp.exec_cmd(qs("dashboard", "toggle")))
+-- Notification history, on the key it has always been on. It opened a Ghostty
+-- window running fzf over `makoctl history` until Quickshell became the
+-- notification daemon; same key, same job, no terminal.
+hl.bind(mod .. " + N", hl.dsp.exec_cmd(qs("notifications", "toggle")))
+-- Was `makoctl restore`, which brought back the last notification mako had
+-- discarded while suppressed. Nothing is discarded now -- everything is in the
+-- history panel above -- so the key empties it instead, which is the other
+-- thing you want from a pile of notifications.
+hl.bind(mod .. " + CTRL + N", hl.dsp.exec_cmd(qs("notifications", "clear")))
 hl.bind(mod .. " + SHIFT + W", hl.dsp.exec_cmd(qs("wallpaper", "toggle")))
 -- Themes. This was bound to `quickshell ipc call theme toggle` for a target
 -- that never existed -- the shell answered "Target not found." and the key did
