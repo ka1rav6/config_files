@@ -1,0 +1,57 @@
+[Unit]
+Description=Ollama model server (user instance)
+Documentation=https://github.com/ollama/ollama
+# No Wayland or D-Bus dependency: it is an HTTP server on 127.0.0.1:11434.
+
+# WHY A USER UNIT AND NOT THE PACKAGED SYSTEM ONE
+#   /etc/systemd/system/ollama.service exists but is disabled, AND ENABLING IT
+#   WOULD NOT WORK HERE: it runs as `User=ollama`, so its model store is
+#   /usr/share/ollama/.ollama. The models FRIDAY needs -- friday-3b and
+#   friday-7b -- were created with `ollama create` as kairav and live in
+#   ~/.ollama/models, which that user cannot see. FRIDAY would start, reach the
+#   server, and be told the model does not exist.
+#
+#   Before this unit, `ollama serve` was a bare process started by hand. It
+#   died mid-session on 2026-11-16 and FRIDAY answered every question with
+#   "cannot reach the local model server" until it was started again. Nothing
+#   restarted it because nothing owned it.
+#
+#   IF THE SYSTEM UNIT IS EVER ENABLED, STOP THIS ONE FIRST. Both bind
+#   127.0.0.1:11434 and the loser exits; which one that is depends on start
+#   order, so the symptom is intermittent.
+
+[Service]
+Type=exec
+ExecStart=/usr/local/bin/ollama serve
+Restart=on-failure
+RestartSec=3
+# Keeping a model resident across requests is the difference between an ~11s
+# answer and a ~2.5 minute one, because the prompt prefix cache goes with it.
+Environment=OLLAMA_KEEP_ALIVE=30m
+
+# THE TWO LINES THAT DECIDE WHETHER FRIDAY IS USABLE
+#
+#   Ollama refuses integrated GPUs by default and says so once, at INFO, in its
+#   own log:
+#     "dropping integrated GPU; to enable, set OLLAMA_IGPU_ENABLE=1"
+#       id=0 library=Vulkan name=Vulkan0 description="Intel(R) Graphics (LNL)"
+#   and then runs on the CPU -- where it also chose "n_threads = 2 ... / 8".
+#   Two threads of eight, no GPU. Measured on friday-3b: 131 ms per prompt
+#   token and 292 ms per generated token, i.e. 3.4 tokens/sec, which is how
+#   "what is the time" became a 44-second question and, with the wake
+#   listener competing for those same cores, a 900-second timeout.
+#
+#   If the Vulkan path ever misbehaves, remove the first line only: Ollama
+#   falls back to the CPU and num_thread (set in the Modelfiles) still applies.
+Environment=OLLAMA_IGPU_ENABLE=1
+
+# DO NOT SET OLLAMA_FLASH_ATTENTION=1 OR OLLAMA_KV_CACHE_TYPE=q8_0 HERE.
+#   Both look like obvious wins and both are losses on this Vulkan backend.
+#   Measured on friday-3b: generation went 89ms -> 117ms per token, prompt
+#   eval 23ms -> 33ms, and the same question went from 9.4s to 13.9s.
+
+[Install]
+# default.target, NOT graphical-session.target: that target is never activated
+# on this machine (Hyprland starts its session programs directly), so a unit
+# installed there is enabled and never runs. See the comment in friday.service.
+WantedBy=default.target

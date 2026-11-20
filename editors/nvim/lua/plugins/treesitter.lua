@@ -16,6 +16,7 @@ return {
         "zig",
         "javascript",
         "typescript",
+        "v",
       })
     end,
   },

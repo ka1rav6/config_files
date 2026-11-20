@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Arm or disarm FRIDAY's wake-word listening, and say which it now is.
+#
+#   friday-ears          toggle
+#   friday-ears on|off   set explicitly
+#   friday-ears status   report without changing anything
+#
+# WHY A SCRIPT AND NOT A BARE curl IN THE KEYBIND
+#   A keybind that silently flips whether the microphone is open is worse than
+#   no keybind: the one thing the user needs back is which state it is in now.
+#   So this reports, every time, and says why nothing happened when the server
+#   is down.
+set -uo pipefail
+
+url="${FRIDAY_URL:-http://127.0.0.1:8787}"
+say() { notify-send -a FRIDAY -u low "FRIDAY" "$1" 2>/dev/null || echo "$1"; }
+
+case "${1:-toggle}" in
+  on)      body='{"enabled":true}';  method=POST ;;
+  off)     body='{"enabled":false}'; method=POST ;;
+  toggle)  body='{}';                method=POST ;;
+  status)  body='';                  method=GET  ;;
+  *) echo "usage: friday-ears [on|off|toggle|status]" >&2; exit 2 ;;
+esac
+
+if [[ $method == GET ]]; then
+  res=$(curl -fsS --max-time 5 "$url/api/wake" 2>&1)
+else
+  res=$(curl -fsS --max-time 5 -X POST "$url/api/wake" \
+             -H 'Content-Type: application/json' -d "$body" 2>&1)
+fi
+
+if [[ -z "$res" ]] || ! jq -e . >/dev/null 2>&1 <<<"$res"; then
+  say "not running at $url — start it with: friday serve"
+  exit 1
+fi
+
+listening=$(jq -r '.listening' <<<"$res")
+phrase=$(jq -r '.phrase // "friday"' <<<"$res")
+ready=$(jq -r '.voice_ready' <<<"$res")
+
+if [[ "$listening" == "true" ]]; then
+  if [[ "$ready" == "true" ]]; then
+    say "listening — say \"$phrase\""
+  else
+    # Armed but deaf is the confusing state, so it is never reported as "on".
+    say "armed, but there is no local speech model yet. Run: friday whisper install"
+  fi
+else
+  say "not listening"
+fi

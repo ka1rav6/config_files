@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Run the FRIDAY Quickshell widget, or talk to a running one.
+#
+#   scripts/friday-widget                      start it
+#   scripts/friday-widget ipc call friday toggle   open/close the HUD
+#   scripts/friday-widget ipc call friday voice    push to talk
+#   scripts/friday-widget ipc show                 list what it accepts
+#
+# WHY THIS WRAPPER EXISTS
+#   Quickshell does not add a config directory to the QML import path, so
+#   `import friday` cannot resolve without QML2_IMPORT_PATH pointing at the
+#   directory that *contains* the `friday/` module. Getting that wrong fails
+#   with `module "friday" is not installed`, which sounds like a missing
+#   package rather than a missing environment variable.
+#
+#   It appends rather than replaces, so a Quickshell launched through its own
+#   wrapper (which exports QML2_IMPORT_PATH for its built-in modules) keeps
+#   working.
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+config="${root}/quickshell"
+
+if ! command -v quickshell >/dev/null 2>&1; then
+  echo "quickshell is not on PATH. Install it from https://quickshell.org, then re-run." >&2
+  exit 1
+fi
+if [[ ! -f "${config}/shell.qml" ]]; then
+  echo "cannot find ${config}/shell.qml — run this from a FRIDAY checkout." >&2
+  exit 1
+fi
+
+export QML2_IMPORT_PATH="${config}${QML2_IMPORT_PATH:+:${QML2_IMPORT_PATH}}"
+# FRIDAY_URL is honoured by the widget; default matches `friday serve`.
+export FRIDAY_URL="${FRIDAY_URL:-http://127.0.0.1:8787}"
+
+# `ipc call` only reaches an instance that is ALREADY running. With none, it
+# exits non-zero and prints to stderr -- which, from a Hyprland keybind, is
+# nowhere. Pressing the key did nothing and nothing said why.
+#
+# So an ipc subcommand starts the HUD if it has to, then retries. This is the
+# one path a keybind takes, and it is why the bind works on a fresh login even
+# before autostart.lua has run, or after the HUD has crashed.
+if [[ "${1:-}" == "ipc" ]]; then
+  if out=$(quickshell -p "${config}" "$@" 2>/dev/null); then
+    printf '%s\n' "$out"
+    exit 0
+  fi
+  # -n so a race between two presses cannot start two HUDs; -d so it is not a
+  # child of the keybind's shell and survives it.
+  quickshell -p "${config}" -n -d >/dev/null 2>&1 || true
+  # Qt + layer-shell startup is ~0.5s on this machine; 5s of grace, then say so
+  # out loud rather than exiting quietly.
+  for _ in $(seq 1 25); do
+    sleep 0.2
+    if out=$(quickshell -p "${config}" "$@" 2>/dev/null); then
+      printf '%s\n' "$out"
+      exit 0
+    fi
+  done
+  notify-send -a FRIDAY -u normal "FRIDAY" "the panel would not start — run friday-widget in a terminal to see why" 2>/dev/null \
+    || echo "the FRIDAY panel would not start; run: friday-widget" >&2
+  exit 1
+fi
+
+exec quickshell -p "${config}" "$@"

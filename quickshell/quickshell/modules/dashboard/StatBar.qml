@@ -11,6 +11,9 @@ Item {
     property string detail: ""
     property real value: 0             // 0..1
     property color tint: Theme.accent
+    // The lock screen draws white-on-scrim rather than on a themed surface.
+    property color textColor: Theme.text
+    property color mutedColor: Theme.muted
 
     implicitHeight: 38
 
@@ -19,7 +22,7 @@ Item {
 
         name: root.icon
         size: Appearance.iconSize
-        color: Theme.muted
+        color: root.mutedColor
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
     }
@@ -39,7 +42,7 @@ Item {
                 id: labelText
                 anchors.left: parent.left
                 text: root.label
-                color: Theme.text
+                color: root.textColor
                 font.family: Appearance.font
                 font.pixelSize: Appearance.fontSmall
             }
@@ -47,7 +50,7 @@ Item {
             Text {
                 anchors.right: parent.right
                 text: root.detail
-                color: Theme.muted
+                color: root.mutedColor
                 font.family: Appearance.fontMono
                 font.pixelSize: Appearance.fontCaption
             }

@@ -1,0 +1,50 @@
+[Unit]
+Description=FRIDAY personal assistant daemon
+Documentation=https://github.com/kairav/friday
+# Screen capture (grim), window queries (hyprctl) and notifications all need
+# the Wayland session. Hyprland imports WAYLAND_DISPLAY and
+# HYPRLAND_INSTANCE_SIGNATURE into the user manager at startup, so those arrive
+# without being named here -- but only after the session exists.
+#
+# NOT WantedBy=graphical-session.target, AND NOT PartOf IT EITHER.
+#   That target is never activated on this machine -- `systemctl --user
+#   is-active graphical-session.target` says inactive and it has no
+#   ActiveEnterTimestamp, because Hyprland spawns its session programs directly
+#   from autostart.lua instead of through systemd (hyprpaper.service and
+#   waybar.service sit there inactive for the same reason). A unit installed
+#   into that target is therefore enabled, shows no error, and never starts.
+#
+#   So this is started explicitly from hl.on("hyprland.start") in
+#   ~/.config/hypr/autostart.lua, after the session env is exported -- the same
+#   way hyprpolkitagent is. That also gets the ordering right: FRIDAY's screen
+#   capture and window tools need WAYLAND_DISPLAY and
+#   HYPRLAND_INSTANCE_SIGNATURE, which only exist once that export has run.
+#
+#   THE COST: nothing stops it when Hyprland exits, so the wake-word listener
+#   keeps holding the microphone after a logout. `systemctl --user stop friday`
+#   or SUPER+ALT+F.
+
+# Ollama is FRIDAY's only brain here (provider = "ollama", no hosted
+# credential), so without it every request fails. Wants, not Requires: FRIDAY
+# should still come up and serve the panel, the memory and the read-only tools
+# so that the failure is visible and explained rather than invisible.
+Wants=ollama.service
+After=ollama.service
+
+[Service]
+Type=exec
+# LOAD-BEARING. Both .friday/config.toml and data/friday.db are resolved
+# relative to the working directory. Start FRIDAY anywhere else and it comes up
+# with stock defaults -- no workspaces, no permissions, an empty memory -- and
+# reports no error, because a missing project config is a normal state.
+WorkingDirectory=/home/kairav/dev/projects/friday
+ExecStart=/home/kairav/.local/bin/friday serve
+# friday=debug is what makes "I said friday and nothing happened" diagnosable:
+# the listener logs every utterance it transcribed and did not match at debug.
+Environment=RUST_LOG=info,friday=debug
+Restart=on-failure
+RestartSec=3
+# The local model and whisper both compete with whatever Kairav is actually
+# doing. The desktop wins.
+Nice=5
+

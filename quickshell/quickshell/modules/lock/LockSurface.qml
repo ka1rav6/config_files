@@ -205,7 +205,10 @@ WlSessionLockSurface {
 
     // Any key or click anywhere on a secondary monitor is a request to type,
     // so it pulls the caret back to the one screen that has the field.
+    // z -1: declared last, it used to sit ON TOP of everything and swallow
+    // every press -- the submit button never received a click.
     MouseArea {
+        z: -1
         anchors.fill: parent
         onClicked: if (surface.primary) widget.focusField()
     }

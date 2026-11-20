@@ -190,6 +190,9 @@ Item {
                 }
             }
 
+            // Hovering the avatar opens the dashboard (LockDashboard.qml).
+            HoverHandler { id: avatarHover }
+
             scale: root.state_ === "success" ? 1.08 : 1.0
 
             Behavior on scale {
@@ -366,5 +369,17 @@ Item {
                 }
             }
         }
+    }
+
+    // --- dashboard ------------------------------------------------------------
+    // Zero-size, sitting on the avatar centre; the wings lay themselves out
+    // from there, clear of the password field on either side.
+    LockDashboard {
+        x: root.width / 2
+        y: ringHost.height / 2
+        avatarHovered: avatarHover.hovered && root.state_ !== "success"
+        name: root.username.charAt(0).toUpperCase() + root.username.slice(1)
+        clearance: root.width / 2 + Appearance.xl
+        avatarRadius: ringHost.width / 2
     }
 }

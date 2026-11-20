@@ -132,6 +132,35 @@ local function start_quickshell()
     hl.exec_cmd("command -v quickshell >/dev/null 2>&1 && quickshell -c default -n -d >/dev/null 2>&1")
 end
 
+-- FRIDAY's HUD -- a SECOND Quickshell instance, deliberately.
+--
+-- It is loaded with -p from ~/dev/projects/friday/quickshell rather than being
+-- part of the desktop shell above, so that a crash in the assistant panel
+-- cannot take the dock, the Control Center and the notification daemon with
+-- it. The two instances share nothing.
+--
+-- WHY THIS LINE IS NEEDED AT ALL
+--   SUPER+slash runs `friday-widget ipc call friday toggle`, and `ipc call`
+--   only talks to an instance that is ALREADY running -- with none, the keybind
+--   exits non-zero and nothing appears on screen. Nothing says why.
+--
+--   friday-widget is the wrapper, not the binary: it sets QML2_IMPORT_PATH and
+--   -p, without which `import friday` fails as "module not installed".
+--
+-- -n and -d for the same reasons as start_quickshell: `hyprctl reload` re-runs
+-- this file, and -d detaches the HUD from the compositor's spawn shell.
+--
+-- The daemon it talks to is separate and is NOT started here: it is
+-- friday.service, a systemd user unit (systemctl --user status friday). The
+-- HUD is just a client of http://127.0.0.1:8787 and comes up fine without it.
+local function start_friday_hud()
+    if os.getenv("QUICKSHELL_DISABLE") == "1" then
+        return
+    end
+
+    hl.exec_cmd("command -v friday-widget >/dev/null 2>&1 && friday-widget -n -d >/dev/null 2>&1")
+end
+
 -- Launch helper.
 --
 -- WHY `exec` AND NOT A BARE COMMAND
@@ -310,6 +339,15 @@ hl.on("hyprland.start", function()
     -- idempotent and starts a bar when it finds none, which is exactly this
     -- case; the pgrep guard here is then belt and braces.
     spawn_once("waybar", home .. "/.config/hypr/scripts/waybar-ensure.sh")
+    -- FRIDAY's daemon (the HTTP server and the wake-word listener) and its HUD.
+    --
+    -- The daemon is started here rather than by `systemctl --user enable`
+    -- because graphical-session.target is never activated on this machine, so
+    -- a unit installed into it would be enabled and never run -- see the long
+    -- comment in ~/.config/systemd/user/friday.service. Starting an already
+    -- running unit is a no-op, so `hyprctl reload` re-running this is free.
+    hl.exec_cmd("systemctl --user start friday.service 2>/dev/null || true")
+    start_friday_hud()
     -- NO mako HERE ANY MORE, DELIBERATELY.
     --
     -- Quickshell is the notification daemon now (see

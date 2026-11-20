@@ -623,3 +623,35 @@ hl.bind(mod .. " + F2", hl.dsp.exec_cmd(qs("emoji", "toggle")))
 -- dragged. Click the desktop or press Escape to finish. G for "grid" -- E is
 -- the file manager and every other SHIFT combination is already spoken for.
 hl.bind(mod .. " + SHIFT + G", hl.dsp.exec_cmd(qs("widgets", "edit")))
+
+-- ---------------------------------------------------------------------------
+-- FRIDAY
+-- ---------------------------------------------------------------------------
+-- The local assistant in ~/dev/projects/friday. Two keys: one opens the panel,
+-- one decides whether the microphone is open at all.
+--
+-- WHY SUPER + ALT + F AND NOT SUPER + ALT + J
+--   J was the obvious letter and it is taken: SUPER+ALT+H/J/K/L move the
+--   focused window, and losing "move down" from that cluster to free a key for
+--   an assistant is a bad trade. Checked before choosing F:
+--
+--     SUPER + F              fullscreen toggle
+--     SUPER + ALT + F        free
+--     SUPER + ALT + H/J/K/L  move window
+--
+--   so F keeps the whole hjkl cluster intact.
+--
+-- WHY THE PANEL IS NOT `qs(...)`
+--   FRIDAY's widget is its own Quickshell instance with its own config path,
+--   not part of the desktop shell, so `quickshell ipc call` without -p would
+--   talk to the wrong instance. The wrapper sets QML2_IMPORT_PATH and -p; see
+--   the comment at the top of scripts/friday-widget.
+local friday = home .. "/dev/projects/friday"
+
+-- Open or close the panel. Type a question, or press the microphone to speak.
+hl.bind(mod .. " + slash", hl.dsp.exec_cmd(friday .. "/scripts/friday-widget ipc call friday toggle"))
+
+-- Arm or disarm wake-word listening -- "friday, ..." with no keypress. This is
+-- the microphone switch: it notifies which state it just moved to, because a
+-- bind that silently opens a microphone is not something to guess about.
+hl.bind(mod .. " + ALT + F", hl.dsp.exec_cmd(friday .. "/scripts/friday-ears toggle"))

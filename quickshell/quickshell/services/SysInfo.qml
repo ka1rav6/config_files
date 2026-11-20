@@ -62,6 +62,15 @@ Singleton {
     property real diskUsedGb: 0
     property real diskTotalGb: 0
 
+    // Degrees C, or -1 when no sensor was found -- callers hide the row on -1.
+    property real cpuTempC: -1
+
+    // The sysfs file to read it from. Thermal zone NUMBERS are assigned at
+    // probe time and are not stable across boots or kernels, so the zone is
+    // found by its TYPE once at startup: x86_pkg_temp is the package sensor the
+    // CPU itself reports, TCPU is the ACPI view of it, acpitz a last resort.
+    property string tempPath: ""
+
     // Previous /proc/stat totals, for the delta.
     property real lastIdle: 0
     property real lastTotal: 0
@@ -76,6 +85,7 @@ Singleton {
             statFile.reload();
             memFile.reload();
             uptimeFile.reload();
+            if (root.tempPath !== "") tempFile.reload();
             // Disk has no /proc equivalent -- statvfs is a syscall, not a file
             // -- so this is the one subprocess here. It runs at the same
             // gated interval as everything else, and free space does not move
@@ -147,6 +157,27 @@ Singleton {
         path: "/proc/uptime"
         printErrors: false
         onLoaded: root.uptimeSeconds = Math.floor(parseFloat(uptimeFile.text().split(" ")[0]) || 0)
+    }
+
+    // One-shot sensor discovery. Runs once per process, not per poll.
+    Process {
+        running: true
+        command: ["sh", "-c",
+            "for t in x86_pkg_temp TCPU acpitz; do for z in /sys/class/thermal/thermal_zone*; do "
+          + "[ \"$(cat $z/type 2>/dev/null)\" = $t ] && echo $z/temp && exit; done; done"]
+        stdout: SplitParser { onRead: (line) => root.tempPath = line.trim() }
+    }
+
+    FileView {
+        id: tempFile
+
+        path: root.tempPath
+        printErrors: false
+        // Millidegrees. A sensor that reads 0 or garbage is treated as absent.
+        onLoaded: {
+            const milli = parseInt(tempFile.text());
+            root.cpuTempC = milli > 0 ? milli / 1000 : -1;
+        }
     }
 
     Process {

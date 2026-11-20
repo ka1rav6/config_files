@@ -79,6 +79,30 @@ local function expand_trigger()
     return true
 end
 
+-- Space expands the `sout` snippet. It also has to keep the `_get`-style
+-- triggers working: those are abbreviations, and Neovim never expands an
+-- abbreviation for a key that arrives through a mapping, so expand_trigger
+-- stands in for the space the same way it already does for <CR>. Everything is
+-- done here rather than from InsertCharPre because that hook cannot touch the
+-- buffer: deferring the edit let fast typing land the next characters outside
+-- the parens.
+-- shortcut: no other insert-mode abbreviation expands on space in java buffers
+-- now; route it through here if one is ever added.
+local function space_trigger()
+    if expand_trigger() then
+        return
+    end
+    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+    if vim.api.nvim_get_current_line():sub(1, col):match("[%w_]+$") == "sout" then
+        vim.api.nvim_buf_set_text(0, row - 1, col - #"sout", row - 1, col, {})
+        vim.api.nvim_win_set_cursor(0, { row, col - #"sout" })
+        -- Body duplicated from snippets/java.json, where blink expands it on <CR>.
+        vim.snippet.expand("System.out.println($1);$0")
+        return
+    end
+    vim.api.nvim_feedkeys(" ", "ni", false) -- "i": ahead of the keys already queued
+end
+
 -- nvim-jdtls' test runner and test generation both come from the java-test
 -- bundles, which the java extra only loads when nvim-dap is installed; the
 -- dap.core extra is enabled in lazyvim.json, which is where LazyVim wants its
@@ -230,6 +254,7 @@ return {
                 for lhs, fn in pairs(triggers) do
                     vim.keymap.set("ia", lhs, "", { buffer = buf, callback = on_trigger(fn) })
                 end
+                vim.keymap.set("i", "<Space>", space_trigger, { buffer = buf })
             end
         end,
     },

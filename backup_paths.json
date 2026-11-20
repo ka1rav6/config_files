@@ -165,7 +165,7 @@
     "description": "Custom backup: systemd"
   },
   {
-    "path": "/home/kairav/dev/dev_help",
+    "path": "/home/kairav/dev/projects/dev_help",
     "category": "custom",
     "description": "Custom backup: dev_help"
   }

@@ -122,6 +122,8 @@ SettingsCommands    1.0 modules/settings/SettingsCommands.qml
 Lock            1.0 modules/lock/Lock.qml
 LockSurface     1.0 modules/lock/LockSurface.qml
 LockWidget      1.0 modules/lock/LockWidget.qml
+LockWing        1.0 modules/lock/LockWing.qml
+LockDashboard   1.0 modules/lock/LockDashboard.qml
 Widgets         1.0 modules/widgets/Widgets.qml
 DesktopWidget   1.0 modules/widgets/DesktopWidget.qml
 WidgetClock     1.0 modules/widgets/WidgetClock.qml

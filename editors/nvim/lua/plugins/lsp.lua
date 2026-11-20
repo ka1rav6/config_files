@@ -41,6 +41,8 @@ return {
                     },
                 },
 
+                v_analyzer = {},
+
                 zls = {
                     on_attach = function(client)
                         client.server_capabilities.documentFormattingProvider = false

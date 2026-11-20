@@ -395,13 +395,18 @@ MVN  := mvn -q
 MAIN := {{MAIN_CLASS}}
 
 .DEFAULT_GOAL := help
-.PHONY: help run test build jar clean deps repl watch
+.PHONY: help run run-asserts test build jar clean deps repl watch
 
 help:
-~@grep -E '^[a-z]+:.*?##' $(MAKEFILE_LIST) | sed 's/:.*##/\t/' | expand -t16
+~@grep -E '^[a-z][a-z-]*:.*?##' $(MAKEFILE_LIST) | sed 's/:.*##/\t/' | expand -t16
 
 run: ## run Main; pass args with ARGS="a b"
 ~$(MVN) compile exec:java -Dexec.args="$(ARGS)"
+
+# exec:java runs in Maven's own JVM, so MAVEN_OPTS reaches your code and -ea applies.
+# exec:exec would fork and ignore it.
+run-asserts: ## same as run, with assertions enabled (-ea)
+~MAVEN_OPTS=-ea $(MVN) compile exec:java -Dexec.args="$(ARGS)"
 
 # Not $(MVN): -q hides surefire's "Tests run:" summary, so a green run prints nothing.
 test: ## run tests; one class/method with T=MainTest or T=MainTest#greetsByName
@@ -450,6 +455,7 @@ Java {{JAVA}}, Maven. Base package `{{PACKAGE}}`.
 ```
 make           # list targets
 make run       # run Main        (ARGS="a b" to pass arguments)
+make run-asserts # same, with -ea so `assert` statements fire
 make test      # run all tests   (T=MainTest#greetsByName for one)
 make repl      # jshell with the project on the classpath
 make watch     # rerun tests on save

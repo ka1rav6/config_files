@@ -1,3 +1,22 @@
+-- FRIDAY's chat panel.
+--
+-- MATCHED ON TITLE, NOT CLASS ALONE. Every Quickshell toplevel on this machine
+-- reports class "org.quickshell", so a class-only rule would float anything
+-- any Quickshell config ever opens as a window. The title comes from
+-- `title: "FRIDAY"` in ~/dev/projects/friday/quickshell/friday/ui/Hud.qml --
+-- change one and change the other, or the panel opens tiled into whatever
+-- workspace you were working in.
+--
+-- The desktop shell's own surfaces are layer-shell, not toplevels, so they are
+-- not windows and this rule cannot reach them.
+hl.window_rule({
+    name = "friday-panel",
+    match = { class = "^org.quickshell$", title = "^FRIDAY$" },
+    float = true,
+    center = true,
+    size = { 720, 560 },
+})
+
 hl.window_rule({
     name = "floating-audio-controls",
     match = { class = "^(pavucontrol|org.pulseaudio.pavucontrol)$" },
