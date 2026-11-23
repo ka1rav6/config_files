@@ -339,15 +339,37 @@ hl.on("hyprland.start", function()
     -- idempotent and starts a bar when it finds none, which is exactly this
     -- case; the pgrep guard here is then belt and braces.
     spawn_once("waybar", home .. "/.config/hypr/scripts/waybar-ensure.sh")
-    -- FRIDAY's daemon (the HTTP server and the wake-word listener) and its HUD.
+    -- NO FRIDAY HERE ANY MORE, DELIBERATELY -- disabled 2026-11-23.
     --
-    -- The daemon is started here rather than by `systemctl --user enable`
-    -- because graphical-session.target is never activated on this machine, so
-    -- a unit installed into it would be enabled and never run -- see the long
-    -- comment in ~/.config/systemd/user/friday.service. Starting an already
-    -- running unit is a no-op, so `hyprctl reload` re-running this is free.
-    hl.exec_cmd("systemctl --user start friday.service 2>/dev/null || true")
-    start_friday_hud()
+    -- The daemon held the microphone open for the whole session and had
+    -- whisper.cpp transcribe every utterance above min_loudness. Because
+    -- whisper.cpp pads every clip to 30s internally, each call cost the same
+    -- regardless of how short the audio was, so the listener ran whisper-cli
+    -- at ~1.3 cores more or less continuously -- measured at 133% CPU on an
+    -- 8-core machine under the powersave governor, second only to a live
+    -- Google Meet tab. That is the whole reason this is off.
+    --
+    -- Nothing was uninstalled. Still on disk and still working by hand:
+    --   friday.service        systemctl --user start friday
+    --   the HUD               friday-widget -n -d   (or start_friday_hud())
+    --   SUPER+slash           opens the panel -- but `ipc call` only reaches a
+    --                         HUD that is ALREADY running, so with the line
+    --                         below commented out this keybind now exits
+    --                         non-zero and shows nothing until the HUD is
+    --                         started by hand. See bindings.lua:652.
+    --   SUPER+ALT+F           arms/disarms the wake word via friday-ears
+    --
+    -- The wake word is ALSO off at the source now: [wake] enabled = false in
+    -- ~/dev/projects/friday/.friday/config.toml. So even a manual
+    -- `systemctl --user start friday` comes up WITHOUT whisper and without
+    -- touching the microphone -- the panel, memory and tools still work. Set
+    -- that back to true (or press SUPER+ALT+F) to get the listener back.
+    --
+    -- TO GO BACK
+    --   Uncomment the two lines below. start_friday_hud() above is left
+    --   defined on purpose so this is a one-line revert.
+    -- hl.exec_cmd("systemctl --user start friday.service 2>/dev/null || true")
+    -- start_friday_hud()
     -- NO mako HERE ANY MORE, DELIBERATELY.
     --
     -- Quickshell is the notification daemon now (see
