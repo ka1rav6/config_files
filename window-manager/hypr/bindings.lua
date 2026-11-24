@@ -397,6 +397,13 @@ hl.bind(mod .. " + ALT + E", hl.dsp.exec_cmd(fileBrowser))
 -- thumbnail grid is genuinely the better tool.
 hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mod .. " + C", hl.dsp.exec_cmd("google-chrome --new-window"))
+-- Claude Code CLI in a tiled Ghostty window, the same shape as ALT + E's yazi.
+-- Run through an interactive zsh rather than `-e claude` directly: the
+-- compositor's env has neither ~/.local/bin on PATH nor EDITOR=nvim (both live
+-- in ~/.zshrc), and Claude's Ctrl+G opens the prompt in $EDITOR. It starts in
+-- $HOME; `cd` into a project and run `claude` there for per-project sessions.
+-- (SUPER + W, C is still the desktop app's named workspace.)
+hl.bind(mod .. " + ALT + C", hl.dsp.exec_cmd(terminal .. " --title=claude -e zsh -ic claude"))
 -- Clipboard history, through the SAME single-instance guard as SUPER + S. The
 -- pipeline itself moved into scripts/wofi-launch.sh so that the two wofi modes
 -- know about each other -- previously this one could open a second wofi directly

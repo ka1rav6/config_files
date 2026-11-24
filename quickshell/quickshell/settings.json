@@ -145,20 +145,20 @@
         ]
     },
     "equalizer": {
-        "enabled": false,
+        "enabled": true,
         "gains": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
+            -4,
+            -3,
+            -1,
+            1,
+            2,
+            2,
+            2,
+            3,
+            2,
+            1
         ],
-        "preset": "Flat"
+        "preset": "Laptop"
     },
     "features": {
         "calendar": true,
