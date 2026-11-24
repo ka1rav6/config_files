@@ -43,6 +43,43 @@
         "hideOnFullscreen": true,
         "media": true,
         "network": true,
+        "placed": [
+            {
+                "type": "media",
+                "uid": "media",
+                "variant": "card"
+            },
+            {
+                "type": "calendar",
+                "uid": "calendar",
+                "variant": "month"
+            },
+            {
+                "type": "network",
+                "uid": "network",
+                "variant": "card"
+            },
+            {
+                "type": "cpu",
+                "uid": "cpu",
+                "variant": "ring"
+            },
+            {
+                "type": "ram",
+                "uid": "ram",
+                "variant": "ring"
+            },
+            {
+                "type": "battery",
+                "uid": "battery",
+                "variant": "ring"
+            },
+            {
+                "type": "clock",
+                "uid": "clock-mwu9pi5wfw",
+                "variant": "digital"
+            }
+        ],
         "ram": true,
         "snapToGrid": true,
         "visualizer": false,
@@ -55,13 +92,13 @@
                 "x": 0.05496828752642706,
                 "y": 0.3321554770318021
             },
-            "clock": {
-                "x": 0.42283298097251587,
-                "y": 0.24734982332155478
+            "clock-mwu9pi5wfw": {
+                "x": 0.4312896405919662,
+                "y": 0.254416961130742
             },
             "cpu": {
-                "x": 0.7991543340380549,
-                "y": 0.7193675889328063
+                "x": 0.8372093023255814,
+                "y": 0.6996466431095406
             },
             "media": {
                 "x": 0.08456659619450317,
@@ -70,7 +107,13 @@
             "network": {
                 "x": 0.15644820295983086,
                 "y": 0.7193675889328063
+            },
+            "ram": {
+                "x": 0.6892177589852009,
+                "y": 0.3957597173144876
             }
+        },
+        "widgetScale": {
         }
     },
     "dock": {
@@ -101,17 +144,36 @@
             "❤"
         ]
     },
+    "equalizer": {
+        "enabled": false,
+        "gains": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "preset": "Flat"
+    },
     "features": {
         "calendar": true,
         "commandCenter": true,
         "controlCenter": true,
         "dashboard": true,
         "dock": true,
+        "drawer": true,
+        "edgePeek": true,
         "emoji": true,
         "launcher": true,
         "lockScreen": true,
         "music": true,
         "musicVisualizer": true,
+        "networkRadar": true,
         "notifications": true,
         "osd": true,
         "overview": true,

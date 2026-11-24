@@ -126,6 +126,35 @@ ShellRoot {
         sourceComponent: ControlCenter {}
     }
 
+    // The Wi-Fi radar. Opened from the Control Center's Wi-Fi page or
+    // `quickshell ipc call network toggle`; no keybind of its own.
+    Loader {
+        active: Settings.features.networkRadar
+        sourceComponent: NetworkRadar {}
+    }
+
+    // The left drawer. SUPER + D, or rest the pointer on the left edge.
+    Loader {
+        active: Settings.features.drawer
+        sourceComponent: Drawer {}
+    }
+
+    // Screen-edge peeking (Anserin's side panels): left edge -> drawer, right
+    // edge -> Control Center. Each strip exists only on an OUTER edge, never
+    // while something is fullscreen, and only if its panel exists. See
+    // ui/EdgeTrigger.qml.
+    EdgeTrigger {
+        edge: "left"
+        target: "drawer"
+        enabled: Settings.features.edgePeek && Settings.features.drawer
+    }
+
+    EdgeTrigger {
+        edge: "right"
+        target: "control-center"
+        enabled: Settings.features.edgePeek && Settings.features.controlCenter
+    }
+
     // The power menu has no feature flag of its own: a desktop you cannot shut
     // down from is not a desktop. SUPER + M opens this; if the shell is not
     // running that keybind falls back to wlogout via
@@ -288,6 +317,60 @@ ShellRoot {
         }
     }
 
+    // SUPER + D. Falls back to the dashboard when the drawer is switched off,
+    // so the key never goes dead -- the drawer's Home page IS the dashboard's
+    // content, so either way the key shows the same things.
+    IpcHandler {
+        target: "drawer"
+
+        function toggle(): string {
+            if (Shell.has("drawer")) { Shell.toggle("drawer"); return "ok"; }
+            return Shell.toggle("dashboard") ? "ok (dashboard: drawer is disabled)" : "drawer and dashboard are disabled";
+        }
+        function open(): string { return Shell.open("drawer") ? "ok" : "drawer is disabled"; }
+        function close(): void { Shell.close("drawer"); }
+
+        // home | system | media | network | tools
+        function page(name: string): string {
+            if (!Shell.has("drawer")) return "drawer is disabled";
+            Shell.panels["drawer"].page = name;
+            Shell.open("drawer");
+            return "ok";
+        }
+    }
+
+    // The system-wide equalizer (services/Equalizer.qml). Mostly driven from
+    // the drawer's Media page; here so it can be bound to a key or scripted.
+    IpcHandler {
+        target: "equalizer"
+
+        function toggle(): string { Equalizer.toggle(); return Equalizer.enabled ? "on" : "off"; }
+        function on(): void { Equalizer.setEnabled(true); }
+        function off(): void { Equalizer.setEnabled(false); }
+
+        function preset(name: string): string {
+            if (!Equalizer.presets[name]) return "unknown preset; one of: " + Equalizer.presetNames.join(", ");
+            Equalizer.applyPreset(name);
+            return "ok";
+        }
+
+        function status(): string {
+            return (Equalizer.enabled ? "on" : "off")
+                + " · active " + Equalizer.active
+                + " · preset " + Equalizer.preset
+                + " · target " + (Equalizer.targetName || "-")
+                + " · gains " + Equalizer.gains.join(" ");
+        }
+    }
+
+    IpcHandler {
+        target: "network"
+
+        function toggle(): string { return Shell.toggle("network") ? "ok" : "network radar is disabled"; }
+        function open(): string { return Shell.open("network") ? "ok" : "network radar is disabled"; }
+        function close(): void { Shell.close("network"); }
+    }
+
     IpcHandler {
         target: "dashboard"
 
@@ -325,6 +408,29 @@ ShellRoot {
             if (!widgetLayer.item) return "widgets are disabled";
             widgetLayer.item.resetLayout();
             return "layout reset";
+        }
+
+        // Place a widget without opening the picker. Types and styles are in
+        // modules/widgets/WidgetCatalog.qml, e.g. `add clock analog`.
+        function add(type: string, variant: string): string {
+            if (!widgetLayer.item) return "widgets are disabled";
+            if (!WidgetCatalog.typeInfo(type)) return "unknown type: " + type;
+            return "added " + widgetLayer.item.add(type, variant);
+        }
+
+        // uid type variant, one per line.
+        function list(): string {
+            if (!widgetLayer.item) return "widgets are disabled";
+            const p = widgetLayer.item.placedList;
+            return p.length === 0 ? "no widgets placed"
+                : p.map(w => w.uid + " " + w.type + " " + w.variant).join("\n");
+        }
+
+        function remove(uid: string): string {
+            if (!widgetLayer.item) return "widgets are disabled";
+            if (!widgetLayer.item.widget(uid)) return "no widget " + uid;
+            widgetLayer.item.remove(uid);
+            return "removed " + uid;
         }
     }
 

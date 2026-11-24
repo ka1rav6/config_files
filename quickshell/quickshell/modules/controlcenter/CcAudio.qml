@@ -64,7 +64,10 @@ Column {
                 required property var modelData
                 width: parent.width
                 node: modelData
+                // With the equalizer on the default is the Equalizer, so the
+                // device it plays into is the one to mark as current.
                 selected: Audio.sink === modelData
+                    || (Audio.sink === Equalizer.eqNode && Equalizer.targetNode === modelData)
                 icon: "headphones"
                 onChosen: Audio.setDefaultSink(modelData)
             }

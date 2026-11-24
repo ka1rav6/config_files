@@ -65,6 +65,7 @@ Singleton {
     // FileView, not a property of this singleton.
     readonly property alias emoji: adapter.emoji
     readonly property alias visualizer: adapter.visualizer
+    readonly property alias equalizer: adapter.equalizer
     readonly property alias wallpaper: adapter.wallpaper
     readonly property alias performance: adapter.performance
     // Window decoration and window-behaviour policy. `windows` is read by BOTH
@@ -152,6 +153,17 @@ Singleton {
                 property bool dashboard: true
                 property bool widgets: true
                 property bool controlCenter: true
+                // The Wi-Fi radar (modules/network). Its own flag rather than
+                // riding on controlCenter: it is a separate window, and the
+                // Control Center's plain list still works with it off.
+                property bool networkRadar: true
+                // The left drawer (modules/drawer), on SUPER + D. Off sends
+                // SUPER + D back to the dashboard.
+                property bool drawer: true
+                // Hovering the left / right screen edge peeks the drawer /
+                // the Control Center (ui/EdgeTrigger.qml). Off leaves both on
+                // their keys only.
+                property bool edgePeek: true
                 property bool settings: true
 
                 // The Command Center (SUPER + SHIFT + K): a front-end for
@@ -248,14 +260,40 @@ Singleton {
             // lives in `widgetLayout`, keyed by widget id.
             // =============================================================
             property JsonObject desktop: JsonObject {
+                // MIGRATION SOURCE ONLY, since the widget picker. These seven
+                // were "one of each widget, on or off". The desktop is now a
+                // list of placed widgets (`placed`, below), any number of
+                // each, each with a style. On the first start after the
+                // change, modules/widgets/Widgets.qml turns whichever of these
+                // were on into `placed` entries -- reusing these same names as
+                // their ids, so every widget keeps its saved position -- and
+                // never reads them again. Kept so that migration has something
+                // to read, and so an older checkout of the shell still starts.
                 property bool clock: true
                 property bool calendar: false
                 property bool media: true
-                property bool visualizer: true
                 property bool cpu: false
                 property bool ram: false
                 property bool battery: false
                 property bool network: false
+
+                // The audio visualizer is not a card on the desktop but its
+                // own layer along the bottom edge, so it keeps its switch.
+                property bool visualizer: true
+
+                // The widgets on the desktop, in drawing order:
+                //   [{ uid, type, variant }, ...]
+                // `uid` keys widgetLayout and widgetScale. Null means "never
+                // migrated" -- see the note above; an empty list means the
+                // desktop was deliberately cleared. Written by the widget
+                // picker (SUPER + SHIFT + G).
+                property var placed: null
+
+                // uid -> size multiplier (1 = the style's natural size). Kept
+                // apart from `placed` on purpose: dragging the size slider
+                // writes this map, and rewriting `placed` would rebuild every
+                // widget on the desktop on every tick of the slider.
+                property var widgetScale: ({})
 
                 // Hide every desktop widget while a window is fullscreen, so a
                 // video or a game never has a clock floating over it.
@@ -371,6 +409,20 @@ Singleton {
                 property bool showVolume: true
                 property bool showBrightness: true
                 property bool showMic: true
+            }
+
+            // =============================================================
+            // equalizer — the system-wide 10-band EQ (services/Equalizer.qml),
+            // set from the drawer's Media page. Off by default: when it is
+            // off, no filter process exists at all.
+            //   gains   dB per band, 31 Hz .. 16 kHz, each -12 .. +12
+            //   preset  the preset last applied, or "Custom" after a band
+            //           was moved by hand
+            // =============================================================
+            property JsonObject equalizer: JsonObject {
+                property bool enabled: false
+                property string preset: "Flat"
+                property var gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             }
 
             // =============================================================

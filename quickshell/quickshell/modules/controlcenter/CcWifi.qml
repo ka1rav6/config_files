@@ -90,10 +90,29 @@ Column {
         title: "Wi-Fi"
         onBack: root.back()
 
-        Toggle {
-            checked: Network.wifiEnabled
-            enabled: Network.wifiHardwareEnabled
-            onToggled: (v) => Network.setWifiEnabled(v)
+        // A Row because CcHeader's action slot is a plain Item: two children
+        // dropped straight in would sit on top of each other.
+        Row {
+            spacing: Appearance.sm
+
+            // Open the full radar. Shell.open closes this panel on the way, so
+            // the radar takes over rather than stacking on top of it.
+            Button {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: Shell.has("network")
+                width: visible ? Appearance.controlHeight : 0
+                height: Appearance.controlHeight
+                icon: "radar"
+                variant: "ghost"
+                onClicked: Shell.open("network")
+            }
+
+            Toggle {
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Network.wifiEnabled
+                enabled: Network.wifiHardwareEnabled
+                onToggled: (v) => Network.setWifiEnabled(v)
+            }
         }
     }
 

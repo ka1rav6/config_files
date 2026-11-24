@@ -23,16 +23,24 @@ DesktopWidget {
     contentWidth: 352
     contentHeight: 134
 
+    // Transport buttons and a seek bar: punched out of the click-through mask.
+    interactive: true
+
     // The seek bar needs a position to show, and the position tick is
     // reference-counted -- so ask for it only while this widget is actually on
     // screen. An unshown media widget costs no D-Bus reads at all.
+    //
+    // Keyed by widgetId now that the picker can place more than one: a shared
+    // key would let the first one destroyed cancel the other's tick.
+    readonly property string consumer: "desktop-media-" + root.widgetId
+
     onVisibleChanged: {
-        if (root.visible) Media.wantPosition("desktop-media");
-        else Media.dropPosition("desktop-media");
+        if (root.visible) Media.wantPosition(root.consumer);
+        else Media.dropPosition(root.consumer);
     }
 
-    Component.onCompleted: if (root.visible) Media.wantPosition("desktop-media")
-    Component.onDestruction: Media.dropPosition("desktop-media")
+    Component.onCompleted: if (root.visible) Media.wantPosition(root.consumer)
+    Component.onDestruction: Media.dropPosition(root.consumer)
 
     Row {
         anchors.fill: parent

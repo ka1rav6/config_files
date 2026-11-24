@@ -211,6 +211,8 @@ end
 for _, component in ipairs({
     "osd",             -- volume / brightness / mic / media indicator
     "control-center",  -- the quick-settings panel
+    "network",         -- the Wi-Fi radar (modules/network)
+    "drawer",          -- the left-edge drawer (modules/drawer)
     "settings",        -- the full settings window, Commands page included
     "launcher",        -- application launcher
     "dashboard",       -- calendar / system overview

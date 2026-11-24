@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Networking
 import qs
 
@@ -138,9 +139,37 @@ Singleton {
 
     // --- Network list -------------------------------------------------
 
-    // Set true by whatever panel is showing networks, false when it closes.
-    // See the header: this is the battery gate.
-    property bool scanning: false
+    // True while ANY surface showing networks is on screen. See the header:
+    // this is the battery gate.
+    //
+    // WHY A DEMAND SET AND NOT A WRITABLE BOOL
+    //   This used to be a plain `property bool` that each panel drove with its
+    //   own Binding -- the Control Center's Wi-Fi page and Settings > Network
+    //   both did. Two Bindings on one property do not combine: whichever
+    //   re-evaluates last wins. Opening the radar from the Control Center made
+    //   that concrete -- the radar's Binding would write true, then the Control
+    //   Center, closing, would write false a moment later, and the radar would
+    //   sit there with a frozen list. So consumers now register by name with
+    //   wantScan()/dropScan(), exactly as SysInfo's want()/drop() work, and
+    //   scanning is on while the set is non-empty.
+    property var scanConsumers: ({})
+
+    function wantScan(id) {
+        if (root.scanConsumers[id]) return;
+        const next = {};
+        for (const k in root.scanConsumers) next[k] = true;
+        next[id] = true;
+        root.scanConsumers = next;
+    }
+
+    function dropScan(id) {
+        if (!root.scanConsumers[id]) return;
+        const next = {};
+        for (const k in root.scanConsumers) { if (k !== id) next[k] = true; }
+        root.scanConsumers = next;
+    }
+
+    readonly property bool scanning: Object.keys(root.scanConsumers).length > 0
 
     Binding {
         target: root.wifiDevice
@@ -277,6 +306,138 @@ Singleton {
         return s === WifiSecurityType.WpaPsk
             || s === WifiSecurityType.Wpa2Psk
             || s === WifiSecurityType.Sae;
+    }
+
+    // Short human name for a security type, for the radar's detail line.
+    // Grouped by what it means to the person joining, not by the exact NM
+    // enum: WPA and WPA2 personal read the same ("password"), and every EAP
+    // flavour is "Enterprise" because the fix for all of them is the same
+    // trip to nm-connection-editor.
+    function securityLabel(network) {
+        if (!network) return "";
+        switch (network.security) {
+        case WifiSecurityType.Open:          return "Open";
+        case WifiSecurityType.Owe:           return "Enhanced open";
+        case WifiSecurityType.Sae:           return "WPA3";
+        case WifiSecurityType.Wpa2Psk:       return "WPA2";
+        case WifiSecurityType.WpaPsk:        return "WPA";
+        case WifiSecurityType.StaticWep:
+        case WifiSecurityType.DynamicWep:    return "WEP";
+        case WifiSecurityType.Wpa3SuiteB192:
+        case WifiSecurityType.Wpa2Eap:
+        case WifiSecurityType.WpaEap:
+        case WifiSecurityType.Leap:          return "Enterprise";
+        default:                             return "Secured";
+        }
+    }
+
+    // --- Internet reachability ------------------------------------------
+    //
+    // "Connected to Wi-Fi" and "on the internet" are different facts, and the
+    // gap between them is the captive portal: a hotel or campus network that
+    // associates fine and then swallows every request until you sign in. NM
+    // already runs its own connectivity probe and quickshell re-exports the
+    // verdict as a property, so this costs nothing -- no ping, no curl, no
+    // timer here. It is only as fresh as NM's own check interval.
+    //
+    // Unknown is what you get when the probe is disabled in NetworkManager.conf
+    // (or has not run yet). It is reported as unknown, not as "fine", because
+    // claiming internet we have not verified is the exact lie this is for.
+    readonly property int connectivity: Networking.connectivity
+    readonly property bool portal: root.connectivity === NetworkConnectivity.Portal
+    // The same verdict as a plain string, for UI files. They must not compare
+    // against NetworkConnectivity themselves: that enum needs
+    // `import Quickshell.Networking`, and that import brings a TYPE called
+    // `Network` with it which shadows this singleton for the whole file --
+    // every `Network.x` then reads off the wrong object and comes back
+    // undefined. The radar hit exactly that. Keep the enum in here.
+    //   "full" | "portal" | "limited" | "none" | "unknown"
+    readonly property string internetState: {
+        switch (root.connectivity) {
+        case NetworkConnectivity.Full:    return "full";
+        case NetworkConnectivity.Portal:  return "portal";
+        case NetworkConnectivity.Limited: return "limited";
+        case NetworkConnectivity.None:    return "none";
+        default:                          return "unknown";
+        }
+    }
+
+    readonly property string internetLabel: {
+        switch (root.connectivity) {
+        case NetworkConnectivity.Full:    return "Internet";
+        case NetworkConnectivity.Portal:  return "Sign-in required";
+        case NetworkConnectivity.Limited: return "No internet";
+        case NetworkConnectivity.None:    return "Offline";
+        default:                          return "Internet unknown";
+        }
+    }
+
+    // --- IPv4 address, on demand -------------------------------------------
+    //
+    // The one thing the radar shows that NetworkManager's D-Bus model, as
+    // quickshell exposes it, does not carry: the address DHCP handed out. It
+    // comes from a single `ip -j addr` run, and ONLY while something wants it
+    // (wantAddress/dropAddress -- the radar, in its panel or in the drawer).
+    // There is deliberately no timer: the address changes when the connection
+    // changes, so that is when it is re-read, and never otherwise.
+    //
+    // Anserin's equivalent polls `iw link` + `ip addr` every 500 ms while its
+    // panel is open. This reads once per connection change.
+    property var addressConsumers: ({})
+
+    function wantAddress(id) {
+        if (root.addressConsumers[id]) return;
+        const next = {};
+        for (const k in root.addressConsumers) next[k] = true;
+        next[id] = true;
+        root.addressConsumers = next;
+    }
+
+    function dropAddress(id) {
+        if (!root.addressConsumers[id]) return;
+        const next = {};
+        for (const k in root.addressConsumers) { if (k !== id) next[k] = true; }
+        root.addressConsumers = next;
+    }
+
+    readonly property bool addressWanted: Object.keys(root.addressConsumers).length > 0
+    property string ipv4: ""
+
+    readonly property string interfaceName: root.wifiDevice ? root.wifiDevice.name : ""
+
+    function refreshAddress() {
+        if (!root.addressWanted || !root.wifiConnected || root.interfaceName === "") {
+            root.ipv4 = "";
+            return;
+        }
+        addressProc.running = false;   // restart cleanly if one is in flight
+        addressProc.running = true;
+    }
+
+    onAddressWantedChanged: root.refreshAddress()
+    onWifiConnectedChanged: root.refreshAddress()
+    onActiveNetworkChanged: root.refreshAddress()
+
+    Process {
+        id: addressProc
+
+        // argv, not a shell string: the interface name goes in as one argument
+        // and is never interpreted.
+        command: ["ip", "-j", "-4", "addr", "show", "dev", root.interfaceName]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const info = JSON.parse(addressProc.stdout.text)[0].addr_info[0];
+                    root.ipv4 = info.local + "/" + info.prefixlen;
+                } catch (e) {
+                    // No address yet (DHCP still running) or no such device.
+                    // Blank is the honest answer; the next connection change
+                    // asks again.
+                    root.ipv4 = "";
+                }
+            }
+        }
     }
 
     // --- Failure reporting --------------------------------------------

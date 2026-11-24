@@ -57,6 +57,36 @@ Column {
 
         SettingRow {
             width: parent.width
+            label: "Drawer"
+            description: "Left-edge panel: home, system, media, network, tools · SUPER + D (off: SUPER + D opens the dashboard)"
+            Toggle {
+                checked: Settings.features.drawer
+                onToggled: (v) => Settings.features.drawer = v
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            label: "Open panels from screen edges"
+            description: "Rest the pointer on the left edge for the drawer, the right edge for the Control Center"
+            Toggle {
+                checked: Settings.features.edgePeek
+                onToggled: (v) => Settings.features.edgePeek = v
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            label: "Wi-Fi radar"
+            description: "Every network in range, placed by signal · from the Control Center's Wi-Fi page"
+            Toggle {
+                checked: Settings.features.networkRadar
+                onToggled: (v) => Settings.features.networkRadar = v
+            }
+        }
+
+        SettingRow {
+            width: parent.width
             label: "On-screen display"
             description: "Volume, brightness, microphone and media indicators"
             Toggle {

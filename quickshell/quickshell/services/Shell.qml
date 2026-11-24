@@ -73,6 +73,7 @@ Singleton {
         const panel = root.panels[name];
         if (!panel) return false;
         root.closeAll(name);
+        panel.peek = false;     // a deliberate open pins a peeking panel
         panel.show();
         return true;
     }
@@ -87,10 +88,15 @@ Singleton {
     function toggle(name) {
         const panel = root.panels[name];
         if (!panel) return false;
-        if (panel.open) {
+        if (panel.open && panel.peek) {
+            // The key for a panel you are only peeking at keeps it, rather
+            // than closing the thing you were about to use.
+            panel.peek = false;
+        } else if (panel.open) {
             panel.hide();
         } else {
             root.closeAll(name);
+            panel.peek = false;
             panel.show();
         }
         return true;
@@ -116,6 +122,28 @@ Singleton {
     }
 
     readonly property bool anyOpen: root.openPanels.length > 0
+
+    // --- edge peeking -----------------------------------------------------
+    //
+    // Name of the panel whose edge trigger the pointer is on right now, or "".
+    // Written by ui/EdgeTrigger.qml, read by Panel's auto-hide.
+    property string edgeHover: ""
+
+    // Open a panel because its screen edge was hovered. Unlike open():
+    //   * it does NOTHING if any panel is already up. Brushing an edge while
+    //     Settings or the launcher is open must not close what you were
+    //     using -- open() closes the others, which is right for a key press
+    //     and wrong for a hover;
+    //   * the panel opens in peek mode (no focus grab, auto-hides) on the
+    //     screen whose edge was touched.
+    function peek(name, screen) {
+        const panel = root.panels[name];
+        if (!panel || root.anyOpen) return false;
+        panel.targetScreen = screen || null;
+        panel.peek = true;
+        panel.show();
+        return true;
+    }
 
     // For `quickshell ipc call shell panels`.
     readonly property string summary: {

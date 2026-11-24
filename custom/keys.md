@@ -177,7 +177,7 @@ again returns you to the previous workspace.
 
 Special workspaces overlay the current one instead of replacing it. The only
 ones bound now are the scratchpads below — `Super + D` used to toggle a bare
-`special:desktop` overlay and now opens the dashboard instead.
+`special:desktop` overlay, then the dashboard, and now opens the left drawer.
 
 ## Scratchpads
 
@@ -317,20 +317,33 @@ desktop's keybindings would live in a file you would not think to grep.
 | Shortcut | Action |
 |---|---|
 | `Super + Space` | **Workspace overview** — a rotating carousel of every workspace |
-| `Super + A` | **Control Center** — Wi-Fi, Bluetooth, audio (including a per-app mixer), brightness, power profile, night light |
-| `Super + D` | Dashboard — clock, calendar, now playing, CPU/memory/disk/battery |
+| `Super + A` | **Control Center** — Wi-Fi, Bluetooth, audio (including a per-app mixer), brightness, power profile, night light. Slides in from the right edge |
+| `Super + D` | **Drawer** — floats out of the left edge: Home (greeting, clock, quick toggles, now playing, calendar), System (live graphs, busiest processes), Media (player, spectrum, volume, **equalizer**), Network (Wi-Fi radar), Walls (wallpapers), Tools (screenshot/colour/record/emoji/clipboard/lock, timer, calculator). Scroll over its icon rail to flip pages |
 | `Super + ,` | Settings — every toggle in the shell, in one window |
 | `Super + Shift + K` | **Command Center** — a searchable GUI over `~/Justfile` and the system CLI |
 | `Super + Shift + W` | Wallpaper picker |
 | `Super + Shift + T` | Themes — Settings on its Appearance page, where the swatches live |
 | `Super + Shift + B` | Toggle the desktop audio visualizer |
-| `Super + Shift + G` | Arrange the desktop widgets (drag to move; `Escape` or click the desktop to finish) |
+| `Super + Shift + G` | **Widget picker** — add clocks, gauges and players in several styles; click one on the desktop to restyle, resize or remove it; drag to move. `Delete` removes the selected one; `Escape` or click the empty desktop to finish |
 | `Super + F2` | Emoji picker |
 | `Super + M` | Power menu — log out, suspend, restart, shut down |
 | `Super + Escape` | Lock the screen |
 
 `Escape` closes any of them, and so does clicking outside. Opening one closes
 whichever was already up, so two translucent panels can never overlap.
+
+**Screen edges.** Rest the pointer on the middle of the left edge for the
+drawer, the right edge for the Control Center. A panel opened that way only
+*peeks*: it does not take the keyboard and slides back when the pointer leaves.
+Click anything in it (or press its key) and it stays like a normal panel. Only
+outer screen edges have a trigger, and none while a window is fullscreen. Off
+switch: Settings → Components → "Open panels from screen edges".
+
+**Equalizer** has no key either: the Media page, the Equalizer tile on Home,
+or `quickshell ipc call equalizer toggle | preset "Bass boost" | status`.
+
+**Wi-Fi radar** has no key: the radar button on the Control Center's Wi-Fi page,
+the drawer's Network page, or `quickshell ipc call network toggle`.
 
 ### Why none of the existing binds moved
 
@@ -342,7 +355,7 @@ a collision:
 |---|---|---|
 | `Super + A` | Control Center | `Super + Shift + A` is stash/unstash |
 | `Super + Space` | Workspace overview | `Super + Shift + Space` floats; `Super + Alt + Space` toggles waybar |
-| `Super + D` | Dashboard | used to toggle a `desktop` special workspace — that bind and the workspace are gone |
+| `Super + D` | Drawer | used to toggle a `desktop` special workspace, then the dashboard (now the drawer's Home page; the dashboard itself is still on the waybar clock). Falls back to the dashboard if the drawer is switched off |
 | `Super + Shift + W` | Wallpapers | `Super + W` is the workspace submap leader, untouched |
 | `Super + Shift + B` | Visualiser | chosen over `Super + Shift + V`, already `code` |
 | `Super + Shift + T` | Themes | `Super + W` then `T` is the `top` workspace — different leader |

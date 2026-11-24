@@ -64,10 +64,45 @@ Scope {
     // "top-center" is the drop-down position: the card hangs from just under
     // the waybar, horizontally centred, so it reads as falling out of the
     // centre clock module rather than flying in from a corner.
+    //
+    // "left" and "right" are the EDGE placements (from Anserin's side panels):
+    // the card floats just off that screen edge, inset by screenMargin like
+    // every other panel, and slides in sideways rather than scaling up. They
+    // are what the edge triggers (ui/EdgeTrigger.qml) open.
+    //
+    // The gap between the edge and the card is safe to cross: a peeking panel
+    // does not auto-hide while the pointer is still on its edge strip
+    // (Shell.edgeHover), and hoverHideDelay is far longer than the 14 px trip
+    // from the strip onto the card. (They were flush against the edge before
+    // that hold existed, which is what used to stop the hide-and-reopen loop.)
     property string placement: "center"
+
+    readonly property bool edgePlacement: root.placement === "left" || root.placement === "right"
 
     property int panelWidth: Appearance.panelWidth
     property int panelHeight: 0               // 0 = size to content
+
+    // Edge panels only: run the full height between the bar and the bottom
+    // margin instead of sizing to content. The drawer wants this; the Control
+    // Center (a short list) does not.
+    property bool fullHeight: false
+
+    // PEEK: opened by hovering a screen edge rather than by a key or a click.
+    //
+    // A peeking panel is a glance, so it must not behave like a summoned one:
+    //   * no focus grab -- it never steals the keyboard from the window you
+    //     were typing in, and a click elsewhere is not swallowed to close it;
+    //   * it hides on its own once the pointer has been off it for
+    //     Appearance.hoverHideDelay.
+    // The moment you press anything inside it, it is PINNED (peek = false) and
+    // becomes an ordinary panel: grab on, keyboard on demand, no auto-hide. So
+    // hover-to-look and click-to-use both work without a mode switch.
+    property bool peek: false
+
+    // Which output to open on. Null means the focused one. Edge triggers set
+    // it, because the edge you hovered may be on a monitor that does not have
+    // focus yet; it is cleared on close.
+    property var targetScreen: null
 
     // Dim the desktop behind the panel. For surfaces that should feel modal --
     // the launcher, the power menu -- rather than for quick glances.
@@ -97,6 +132,7 @@ Scope {
             loader.activeAsync = true;
             root.opened();
         } else {
+            root.peek = false;
             lifetime.restart();
             root.closed();
         }
@@ -108,7 +144,11 @@ Scope {
         id: lifetime
 
         interval: Appearance.durationSlow + 80
-        onTriggered: if (!root.open) loader.activeAsync = false
+        onTriggered: {
+            if (root.open) return;
+            loader.activeAsync = false;
+            root.targetScreen = null;
+        }
     }
 
     LazyLoader {
@@ -122,14 +162,16 @@ Scope {
             // Follow the focused output rather than a fixed screen, so a panel
             // opens where the user is looking. Hypr.activeScreen also handles
             // the focused monitor having just been unplugged.
-            screen: Hypr.activeScreen
+            screen: root.targetScreen || Hypr.activeScreen
 
             visible: true
             color: "transparent"
 
             WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.namespace: "qs-" + root.name
-            WlrLayershell.keyboardFocus: root.open
+            // None while peeking: hovering an edge must never take the
+            // keyboard away from the window under it.
+            WlrLayershell.keyboardFocus: root.open && !root.peek
                 ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
             // Cover the output, but never reserve space -- windows must not
@@ -142,9 +184,26 @@ Scope {
             // Everything else stays click-through to the desktop below.
             mask: root.scrim ? null : maskRegion
 
+            // The card's RESTING rectangle, given as plain numbers -- not
+            // `item: card`.
+            //
+            // With `item:`, the Region maps the card's rect THROUGH its
+            // transforms, once, and is only recomputed when the card's own
+            // geometry changes. An edge panel is built mid-slide (Translate
+            // x = -width), so the input region was computed off screen and
+            // stayed there: the drawer was drawn where you could see it while
+            // the pointer went straight through it to the edge strip and the
+            // windows behind. A peeking panel therefore never saw the pointer
+            // arrive and auto-hid under it. x/y/width/height ignore
+            // transforms, which is exactly right: the slide and the 96% scale
+            // are decoration, and the clickable area is where the card ends up.
             Region {
                 id: maskRegion
-                item: card
+
+                x: card.x
+                y: card.y
+                width: card.width
+                height: card.height
             }
 
             // --- scrim ---------------------------------------------------
@@ -175,7 +234,12 @@ Scope {
 
                 elevation: 2
                 width: root.panelWidth
-                height: root.panelHeight > 0 ? root.panelHeight : contentLoader.implicitHeight + Appearance.padding * 2
+                height: {
+                    if (root.edgePlacement && root.fullHeight)
+                        return window.height - Appearance.barClearance - Appearance.screenMargin;
+                    if (root.panelHeight > 0) return root.panelHeight;
+                    return contentLoader.implicitHeight + Appearance.padding * 2;
+                }
 
                 Behavior on height {
                     enabled: !Appearance.motionless
@@ -190,10 +254,18 @@ Scope {
                         || root.placement === "bottom"
                         || root.placement === "top-center")
                     ? parent.horizontalCenter : undefined
-                anchors.verticalCenter: root.placement === "center" ? parent.verticalCenter : undefined
-                anchors.right: root.placement === "top-right" ? parent.right : undefined
-                anchors.left: root.placement === "top-left" ? parent.left : undefined
-                anchors.top: root.placement.indexOf("top") === 0 ? parent.top : undefined
+                // A short edge panel is centred on its edge, so it sits over the
+                // edge trigger (which is centred too) instead of above it.
+                anchors.verticalCenter: (root.placement === "center"
+                        || (root.edgePlacement && !root.fullHeight))
+                    ? parent.verticalCenter : undefined
+                anchors.right: (root.placement === "top-right" || root.placement === "right")
+                    ? parent.right : undefined
+                anchors.left: (root.placement === "top-left" || root.placement === "left")
+                    ? parent.left : undefined
+                anchors.top: (root.placement.indexOf("top") === 0
+                        || (root.edgePlacement && root.fullHeight))
+                    ? parent.top : undefined
                 anchors.bottom: root.placement === "bottom" ? parent.bottom : undefined
 
                 anchors.margins: Appearance.screenMargin
@@ -208,14 +280,18 @@ Scope {
                 // arriving, not so much that it reads as a zoom. Both
                 // properties are GPU-composited, so this is free on the iGPU.
                 opacity: root.open ? 1 : 0
-                scale: root.open ? 1 : 0.96
+                // Edge panels slide; they do not also zoom. Scaling a full-height
+                // card reads as the whole screen lurching.
+                scale: root.open || root.edgePlacement ? 1 : 0.96
 
                 transformOrigin: {
                     switch (root.placement) {
                     case "top-right": return Item.TopRight;
                     case "top-left": return Item.TopLeft;
-                case "top-center": return Item.Top;
+                    case "top-center": return Item.Top;
                     case "bottom": return Item.Bottom;
+                    case "left": return Item.Left;
+                    case "right": return Item.Right;
                     default: return Item.Center;
                     }
                 }
@@ -243,9 +319,22 @@ Scope {
                 // clock rather than simply appearing near it. A Translate is
                 // used rather than `y`, so the anchors stay in charge of the
                 // resting position.
+                //
+                // Edge panels slide the WHOLE way in, from just past their own
+                // width off screen, so they read as coming out of the edge you
+                // touched rather than appearing beside it.
                 transform: Translate {
-                    y: root.open ? 0
+                    y: root.open || root.edgePlacement ? 0
                         : root.placement === "bottom" ? 18 : -18
+                    x: (root.open || !root.edgePlacement ? 0 : card.offscreen) + card.enter * card.offscreen
+
+                    Behavior on x {
+                        enabled: !Appearance.motionless
+                        NumberAnimation {
+                            duration: root.open ? Appearance.durationSlow : Appearance.durationNormal
+                            easing.type: root.open ? Appearance.easeEnter : Appearance.easeExit
+                        }
+                    }
 
                     Behavior on y {
                         enabled: !Appearance.motionless
@@ -254,6 +343,55 @@ Scope {
                             easing.type: root.open ? Appearance.easeEnter : Appearance.easeExit
                         }
                     }
+                }
+
+                // --- edge entrance -------------------------------------
+                // The window is BUILT already open (the LazyLoader activates on
+                // open), so the `open`-driven Behaviors above have no "before"
+                // to animate from on a first open. An edge panel's slide is the
+                // whole point of it, so it gets a one-shot entrance of its own:
+                // `enter` starts at 1 (fully off screen) and runs to 0.
+                // Past its own width AND the margin, so it starts wholly off
+                // screen now that it floats.
+                readonly property real offscreen: root.placement === "left"
+                    ? -(card.width + Appearance.screenMargin + 8)
+                    : card.width + Appearance.screenMargin + 8
+                property real enter: root.edgePlacement && !Appearance.motionless ? 1 : 0
+
+                NumberAnimation {
+                    id: enterAnim
+
+                    target: card
+                    property: "enter"
+                    to: 0
+                    duration: Appearance.durationSlow
+                    easing.type: Appearance.easeEnter
+                }
+
+                Component.onCompleted: if (card.enter > 0) enterAnim.start()
+
+                // --- peek: hover-out hides, a press pins ----------------
+                HoverHandler {
+                    id: cardHover
+                }
+
+                Timer {
+                    interval: Appearance.hoverHideDelay
+                    // Also held while the pointer is still on the edge strip
+                    // that opened it, or a pointer parked on the edge would
+                    // hide-and-reopen the panel in a loop.
+                    running: root.open && root.peek && !cardHover.hovered
+                        && Shell.edgeHover !== root.name
+                    onTriggered: root.hide()
+                }
+
+                // DragThreshold makes this a PASSIVE grab: it sees the press
+                // alongside whatever button or field actually takes it, rather
+                // than stealing the click. Pinning is a side effect of using
+                // the panel, never a click of its own.
+                TapHandler {
+                    gesturePolicy: TapHandler.DragThreshold
+                    onPressedChanged: if (pressed && root.peek) root.peek = false
                 }
 
                 // Keyboard handling lives on an item INSIDE the window:
@@ -284,8 +422,16 @@ Scope {
             // work without clicking the panel first.
             onVisibleChanged: if (visible) keys.forceActiveFocus()
 
+            // A pinned peek has to ask for the keyboard now: it opened with
+            // none, and the grab only just switched on.
+            Connections {
+                target: root
+                function onPeekChanged() { if (!root.peek && root.open) keys.forceActiveFocus(); }
+            }
+
             HyprlandFocusGrab {
-                active: root.open && root.closeOnClickOutside
+                // Not while peeking: see `peek`.
+                active: root.open && root.closeOnClickOutside && !root.peek
                 windows: [window]
                 onCleared: root.hide()
             }

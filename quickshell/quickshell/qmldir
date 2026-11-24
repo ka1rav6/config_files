@@ -59,6 +59,7 @@ singleton Network       1.0 services/Network.qml
 singleton Bluetooth     1.0 services/Bluetooth.qml
 singleton Brightness    1.0 services/Brightness.qml
 singleton Cava          1.0 services/Cava.qml
+singleton Equalizer     1.0 services/Equalizer.qml
 singleton Time          1.0 services/Time.qml
 singleton NightLight    1.0 services/NightLight.qml
 singleton Notifications 1.0 services/Notifications.qml
@@ -68,6 +69,8 @@ singleton Wallpaper     1.0 services/Wallpaper.qml
 singleton SysInfo       1.0 services/SysInfo.qml
 singleton Matugen       1.0 services/Matugen.qml
 singleton WindowPolicy  1.0 services/WindowPolicy.qml
+# The widget picker's list of widget types and styles. Data only.
+singleton WidgetCatalog 1.0 modules/widgets/WidgetCatalog.qml
 
 # --- Command Center ----------------------------------------------------------
 # The registry is DATA, the state layer is derived from the services above, and
@@ -89,6 +92,7 @@ QuickTile       1.0 ui/QuickTile.qml
 Toggle          1.0 ui/Toggle.qml
 Slider          1.0 ui/Slider.qml
 Panel           1.0 ui/Panel.qml
+EdgeTrigger     1.0 ui/EdgeTrigger.qml
 
 # --- Modules -----------------------------------------------------------------
 Osd             1.0 modules/osd/Osd.qml
@@ -101,6 +105,11 @@ CcBluetooth     1.0 modules/controlcenter/CcBluetooth.qml
 CcAudio         1.0 modules/controlcenter/CcAudio.qml
 BtRow           1.0 modules/controlcenter/BtRow.qml
 DeviceRow       1.0 modules/controlcenter/DeviceRow.qml
+NetworkRadar    1.0 modules/network/NetworkRadar.qml
+NetworkRadarBody 1.0 modules/network/NetworkRadarBody.qml
+RadarView       1.0 modules/network/RadarView.qml
+RadarNode       1.0 modules/network/RadarNode.qml
+RadarSheet      1.0 modules/network/RadarSheet.qml
 PowerMenu       1.0 modules/power/PowerMenu.qml
 PowerTile       1.0 modules/power/PowerTile.qml
 SettingsWindow  1.0 modules/settings/SettingsWindow.qml
@@ -130,7 +139,13 @@ WidgetClock     1.0 modules/widgets/WidgetClock.qml
 WidgetMedia     1.0 modules/widgets/WidgetMedia.qml
 WidgetCalendar  1.0 modules/widgets/WidgetCalendar.qml
 WidgetNetwork   1.0 modules/widgets/WidgetNetwork.qml
-WidgetGauge     1.0 modules/widgets/WidgetGauge.qml
+WidgetMetric    1.0 modules/widgets/WidgetMetric.qml
+WidgetMediaRound 1.0 modules/widgets/WidgetMediaRound.qml
+WidgetPicker    1.0 modules/widgets/WidgetPicker.qml
+ClockDigital    1.0 modules/widgets/clocks/ClockDigital.qml
+ClockAnalog     1.0 modules/widgets/clocks/ClockAnalog.qml
+ClockStacked    1.0 modules/widgets/clocks/ClockStacked.qml
+ClockMinimal    1.0 modules/widgets/clocks/ClockMinimal.qml
 Visualizer      1.0 modules/visualizer/Visualizer.qml
 WallpaperPicker 1.0 modules/wallpaper/WallpaperPicker.qml
 Launcher        1.0 modules/launcher/Launcher.qml
@@ -147,6 +162,19 @@ DockMenu        1.0 modules/dock/DockMenu.qml
 Dashboard       1.0 modules/dashboard/Dashboard.qml
 WindowControls  1.0 modules/windowcontrols/WindowControls.qml
 Calendar        1.0 modules/dashboard/Calendar.qml
+DashClock       1.0 modules/dashboard/DashClock.qml
+DashActions     1.0 modules/dashboard/DashActions.qml
+DashSystem      1.0 modules/dashboard/DashSystem.qml
+Drawer          1.0 modules/drawer/Drawer.qml
+DrawerTools     1.0 modules/drawer/DrawerTools.qml
+HomePage        1.0 modules/drawer/pages/HomePage.qml
+SystemPage      1.0 modules/drawer/pages/SystemPage.qml
+MediaPage       1.0 modules/drawer/pages/MediaPage.qml
+WallpaperPage   1.0 modules/drawer/pages/WallpaperPage.qml
+PageHeader      1.0 modules/drawer/parts/PageHeader.qml
+MiniRing        1.0 modules/drawer/parts/MiniRing.qml
+Sparkline       1.0 modules/drawer/parts/Sparkline.qml
+EqualizerCard   1.0 modules/drawer/parts/EqualizerCard.qml
 StatBar         1.0 modules/dashboard/StatBar.qml
 
 CmdHome         1.0 modules/commandcenter/CmdHome.qml

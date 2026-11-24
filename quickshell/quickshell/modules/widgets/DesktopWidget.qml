@@ -42,6 +42,45 @@ Item {
     property int contentWidth: 240
     property int contentHeight: 120
 
+    // --- added for the widget picker ------------------------------------------
+
+    // Frameless style: no card behind the content, just the content on the
+    // wallpaper (the Stacked and Minimal clocks). The card still appears while
+    // arranging, so there is something to grab.
+    property bool bare: false
+
+    // Has buttons that must work outside arrange mode. Widgets.qml punches
+    // every interactive widget out of the click-through mask, and nothing else.
+    property bool interactive: false
+
+    // Picked in the arrange-mode inspector.
+    property bool selected: false
+    signal selectRequested()
+
+    // A thumbnail in the picker: no saved position, no dragging, no entrance,
+    // and the subclass should keep any polling it can avoid to itself.
+    property bool preview: false
+
+    // Size multiplier, from Settings.desktop.widgetScale (the inspector's size
+    // slider). Applied as a transform from the top-left corner, so the
+    // content is laid out once at its natural size and scaled as a whole,
+    // rather than every style having to know how to be bigger.
+    property real sizeScale: {
+        if (root.preview) return 1;
+        const map = Settings.desktop.widgetScale || ({});
+        const s = map[root.widgetId];
+        return s > 0 ? s : 1;
+    }
+
+    // What the widget actually occupies on screen, for clamping and snapping.
+    readonly property real shownWidth: root.width * root.sizeScale
+    readonly property real shownHeight: root.height * root.sizeScale
+
+    transform: Scale {
+        xScale: root.sizeScale
+        yScale: root.sizeScale
+    }
+
     // Fractions are resolved against the surface, which is the whole output.
     readonly property var saved: {
         const layout = Settings.desktop.widgetLayout || ({});
@@ -74,6 +113,9 @@ Item {
     // -----------------------------------------------------------------
 
     function applyPosition() {
+        // A picker thumbnail sits wherever its tile puts it.
+        if (root.preview) return;
+
         const pw = root.parent ? root.parent.width : 0;
         const ph = root.parent ? root.parent.height : 0;
         if (pw <= 0 || ph <= 0)
@@ -84,8 +126,10 @@ Item {
 
         // Clamped so a widget can never be dragged (or restored) off screen --
         // a saved position from a wider monitor would otherwise be unreachable.
-        root.x = Math.max(0, Math.min(pw - root.width, Math.round(fx * pw)));
-        root.y = Math.max(0, Math.min(ph - root.height, Math.round(fy * ph)));
+        // Against the SHOWN size, so a widget scaled up is still kept wholly
+        // on screen.
+        root.x = Math.max(0, Math.min(pw - root.shownWidth, Math.round(fx * pw)));
+        root.y = Math.max(0, Math.min(ph - root.shownHeight, Math.round(fy * ph)));
     }
 
     // Re-resolve whenever the stored layout changes (including Reset, which
@@ -93,6 +137,10 @@ Item {
     onSavedChanged: root.applyPosition()
     onWidthChanged: root.applyPosition()
     onHeightChanged: root.applyPosition()
+    onSizeScaleChanged: root.applyPosition()
+    // Widgets.qml re-parents each widget from its Loader onto the desktop
+    // field, so the parent changes once right after creation.
+    onParentChanged: root.applyPosition()
 
     Connections {
         target: root.parent
@@ -138,13 +186,16 @@ Item {
         id: frame
 
         anchors.fill: parent
-        elevation: root.editing ? 2 : 1
+        elevation: root.bare && !root.editing ? 0 : (root.editing ? 2 : 1)
         radius: Appearance.radius
+        border: !root.bare || root.editing
 
         // A widget lives on the wallpaper, not on another surface, so it is
         // deliberately lighter than a panel: enough ground to stay readable
         // over a busy image, not so much that the desktop looks like a form.
-        color: Theme.wash(Theme.surface, root.editing ? 0.95 : 0.72)
+        // A bare style has no ground at all outside arrange mode.
+        color: root.bare && !root.editing ? "transparent"
+            : Theme.wash(Theme.surface, root.editing ? 0.95 : 0.72)
 
         scale: drag.pressed && root.editing ? 1.03 : 1.0
 
@@ -166,15 +217,15 @@ Item {
     // --- edit affordances --------------------------------------------------
     Rectangle {
         anchors.fill: parent
-        visible: root.editing
+        visible: root.editing && !root.preview
         radius: Appearance.radius
         color: "transparent"
-        border.width: 1
-        border.color: Theme.wash(Theme.accent, drag.pressed ? 0.9 : 0.45)
+        border.width: root.selected ? 2 : 1
+        border.color: Theme.wash(Theme.accent, drag.pressed || root.selected ? 0.9 : 0.45)
     }
 
     Rectangle {
-        visible: root.editing
+        visible: root.editing && !root.preview
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: -6
@@ -195,13 +246,16 @@ Item {
         id: drag
 
         anchors.fill: parent
-        enabled: root.editing
+        enabled: root.editing && !root.preview
         cursorShape: root.editing ? Qt.SizeAllCursor : Qt.ArrowCursor
         drag.target: root.editing ? root : null
         drag.minimumX: 0
         drag.minimumY: 0
-        drag.maximumX: (root.parent ? root.parent.width : 0) - root.width
-        drag.maximumY: (root.parent ? root.parent.height : 0) - root.height
+        drag.maximumX: (root.parent ? root.parent.width : 0) - root.shownWidth
+        drag.maximumY: (root.parent ? root.parent.height : 0) - root.shownHeight
+
+        // Pressing a widget while arranging selects it for the inspector.
+        onPressed: root.selectRequested()
 
         onReleased: {
             let px = root.x;

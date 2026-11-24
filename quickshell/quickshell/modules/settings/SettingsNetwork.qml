@@ -22,12 +22,10 @@ Column {
 
     // Scanning costs battery, so it runs only while this page exists. The page
     // is inside a Loader in SettingsWindow.qml, so leaving it destroys this
-    // object and the Bindings release automatically.
-    Binding {
-        target: Network
-        property: "scanning"
-        value: true
-    }
+    // object and releases the demand. Wi-Fi is a named demand rather than a
+    // Binding -- see scanConsumers in services/Network.qml for why.
+    Component.onCompleted: Network.wantScan("settings-network")
+    Component.onDestruction: Network.dropScan("settings-network")
 
     Binding {
         target: Bluetooth

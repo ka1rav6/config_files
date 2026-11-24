@@ -33,7 +33,12 @@ Panel {
     id: root
 
     name: "control-center"
-    placement: "top-right"
+    // On the right screen edge, slid in sideways -- the Anserin layout: the
+    // drawer comes out of the left edge, this out of the right. Rest the
+    // pointer on the right edge to peek it (ui/EdgeTrigger.qml); SUPER + A
+    // and the waybar status icons open it as before. Vertically centred, so it
+    // sits over its edge trigger.
+    placement: "right"
     panelWidth: 400
 
     // Which page is showing. Reset to main on close so reopening always starts
@@ -57,10 +62,15 @@ Panel {
     // ONLY while their page is actually being looked at, and off the instant it
     // is left or the panel is closed. See the headers of services/Network.qml
     // and services/Bluetooth.qml.
-    Binding {
-        target: Network
-        property: "scanning"
-        value: root.open && root.page === "wifi"
+    // Wi-Fi registers a demand rather than writing Network.scanning directly,
+    // so the radar (which this page can open) is not switched off by this
+    // panel closing a frame later. See the note on scanConsumers in
+    // services/Network.qml.
+    readonly property bool wantsWifiScan: root.open && root.page === "wifi"
+
+    onWantsWifiScanChanged: {
+        if (root.wantsWifiScan) Network.wantScan("control-center");
+        else Network.dropScan("control-center");
     }
 
     Binding {
@@ -80,7 +90,10 @@ Panel {
         else Media.dropPosition("control-center");
     }
 
-    Component.onDestruction: Media.dropPosition("control-center")
+    Component.onDestruction: {
+        Media.dropPosition("control-center");
+        Network.dropScan("control-center");
+    }
 
     content: Item {
         // The Card sizes to this, so the content must report a height --

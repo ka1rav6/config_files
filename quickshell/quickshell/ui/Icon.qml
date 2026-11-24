@@ -74,6 +74,24 @@ Text {
         "wifi-off":  "\udb81\uddaa",   // md-wifi_off  U+F05AA
         "wifi-lock": "\udb82\udd2a",   // md-wifi_strength_4_lock  U+F092A
         "ethernet":  "\udb80\ude00",   // md-ethernet  U+F0200
+        "router":    "\udb81\udc69",   // md-router_wireless  U+F0469
+        "radar":     "\udb81\udc37",   // md-radar  U+F0437
+        "web":       "\udb81\udd9f",   // md-web  U+F059F
+        "ip":        "\udb82\ude60",   // md-ip_network  U+F0A60
+        "calculator": "\udb80\udcec",  // md-calculator  U+F00EC
+        "timer":     "\udb81\udd1b",   // md-timer_outline  U+F051B
+        "home":      "\udb80\udedc",   // md-home  U+F02DC
+        "backspace": "\udb80\udc6e",   // md-backspace  U+F006E
+        "stop":      "\udb81\udcdb",   // md-stop  U+F04DB
+        "camera":    "\udb80\udd00",   // md-camera  U+F0100
+        "record":    "\udb81\udc4a",   // md-record_rec  U+F044A
+        "eyedropper": "\udb80\ude0a",  // md-eyedropper  U+F020A
+        "emoticon":  "\udb80\uddf2",   // md-emoticon_outline  U+F01F2
+        "clipboard": "\udb80\udd47",   // md-clipboard_text  U+F0147
+        "equalizer": "\udb83\udea2",   // md-equalizer  U+F0EA2
+        "image-multiple": "\udb80\udef9", // md-image_multiple  U+F02F9
+        "arrow-down": "\udb80\udc45",  // md-arrow_down  U+F0045
+        "arrow-up":  "\udb80\udc5d",   // md-arrow_up  U+F005D
         "airplane":  "\udb80\udc1d",   // md-airplane  U+F001D
         // --- bluetooth -----------------------------------------------
         "bluetooth":           "\udb80\udcaf",   // md-bluetooth  U+F00AF
@@ -150,7 +168,7 @@ Text {
 
     // A visible placeholder beats invisible tofu: a missing icon should look
     // wrong, not look like nothing.
-    text: root.glyphs[root.name] !== undefined ? root.glyphs[root.name] : "󰅑"
+    text: root.glyphs[root.name] !== undefined ? root.glyphs[root.name] : "\udb80\udd51"
 
     font.family: Appearance.fontMono
     font.pixelSize: root.size

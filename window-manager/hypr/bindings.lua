@@ -529,9 +529,12 @@ hl.bind(mod .. " + bracketright", hl.dsp.group.next())
 --     SUPER + A          Control Center   (SUPER+SHIFT+A is stash/unstash)
 --     SUPER + SPACE      workspaces       (SUPER+SHIFT+SPACE floats a window,
 --                                          SUPER+ALT+SPACE toggles waybar)
---     SUPER + D          dashboard        (this used to toggle a "desktop"
+--     SUPER + D          left drawer      (this used to toggle a "desktop"
 --                                          special workspace; that bind and
---                                          its workspace are gone)
+--                                          its workspace are gone. Then it was
+--                                          the dashboard, which is now the
+--                                          drawer's Home page; the dashboard
+--                                          itself is still on the waybar clock)
 --     SUPER + SHIFT + W  wallpapers       (SUPER+W is the workspace submap
 --                                          leader and is untouched)
 --     SUPER + SHIFT + B  visualiser       (chosen over SUPER+SHIFT+V, which is
@@ -563,7 +566,10 @@ hl.bind(mod .. " + comma", hl.dsp.exec_cmd(qs("settings", "toggle")))
 -- competing with it -- it still exists and still answers
 -- `quickshell ipc call launcher toggle` if it is ever wanted back.
 hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd(qs("overview", "toggle")))
-hl.bind(mod .. " + D", hl.dsp.exec_cmd(qs("dashboard", "toggle")))
+-- The left drawer: Home (the old dashboard), System, Media, Network, Tools.
+-- Also opens by resting the pointer on the left screen edge. `drawer toggle`
+-- falls back to the dashboard if the drawer is switched off in Settings.
+hl.bind(mod .. " + D", hl.dsp.exec_cmd(qs("drawer", "toggle")))
 -- Notification history, on the key it has always been on. It opened a Ghostty
 -- window running fzf over `makoctl history` until Quickshell became the
 -- notification daemon; same key, same job, no terminal.

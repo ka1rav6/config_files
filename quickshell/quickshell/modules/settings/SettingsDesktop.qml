@@ -107,27 +107,30 @@ Column {
     SettingsGroup {
         width: parent.width
         title: "WIDGETS"
-        subtitle: "Drag them on the desktop to reposition"
+        subtitle: "Clocks, gauges and players on the wallpaper"
 
+        // The per-widget switches that used to be here became the widget
+        // picker: any number of each widget, in several styles, placed on the
+        // desktop itself. Their old values were migrated into the picker's
+        // list on first run (see modules/widgets/Widgets.qml).
         SettingRow {
             width: parent.width
-            label: "Clock"
-            description: "Time and date"
-            Toggle {
-                checked: Settings.desktop.clock
-                enabled: Settings.features.widgets
-                onToggled: (v) => Settings.desktop.clock = v
+            label: "Choose widgets"
+            description: {
+                const p = Settings.desktop.placed;
+                const n = p && p.length !== undefined ? p.length : 0;
+                return (n === 1 ? "1 widget" : n + " widgets") + " on the desktop. Add, restyle, resize and move them · SUPER + SHIFT + G";
             }
-        }
-
-        SettingRow {
-            width: parent.width
-            label: "Media"
-            description: "Album art and transport for whatever is playing"
-            Toggle {
-                checked: Settings.desktop.media
-                enabled: Settings.features.widgets
-                onToggled: (v) => Settings.desktop.media = v
+            Button {
+                text: "Open picker"
+                variant: "soft"
+                enabled: Settings.features.widgets && !!Shell.widgets
+                onClicked: {
+                    // Close Settings first -- arrange mode raises the widget
+                    // layer to Overlay, and this window would be on top of it.
+                    Shell.closeAll();
+                    if (Shell.widgets) Shell.widgets.edit();
+                }
             }
         }
 
@@ -139,62 +142,6 @@ Column {
                 checked: Settings.desktop.visualizer
                 enabled: Settings.features.widgets && Settings.features.musicVisualizer
                 onToggled: (v) => Settings.desktop.visualizer = v
-            }
-        }
-
-        SettingRow {
-            width: parent.width
-            label: "Calendar"
-            description: "The current month, on the wallpaper"
-            Toggle {
-                checked: Settings.desktop.calendar
-                enabled: Settings.features.widgets && Settings.features.calendar
-                onToggled: (v) => Settings.desktop.calendar = v
-            }
-        }
-
-        SettingRow {
-            width: parent.width
-            label: "Network"
-            description: "Connection name and signal strength"
-            Toggle {
-                checked: Settings.desktop.network
-                enabled: Settings.features.widgets
-                onToggled: (v) => Settings.desktop.network = v
-            }
-        }
-
-        SettingRow {
-            width: parent.width
-            label: "Processor"
-            description: "A ring gauge of CPU load"
-            Toggle {
-                checked: Settings.desktop.cpu
-                enabled: Settings.features.widgets
-                onToggled: (v) => Settings.desktop.cpu = v
-            }
-        }
-
-        SettingRow {
-            width: parent.width
-            label: "Memory"
-            description: "A ring gauge of RAM in use"
-            Toggle {
-                checked: Settings.desktop.ram
-                enabled: Settings.features.widgets
-                onToggled: (v) => Settings.desktop.ram = v
-            }
-        }
-
-        SettingRow {
-            width: parent.width
-            label: "Battery"
-            description: "Charge and time remaining"
-            enabled: Settings.features.widgets && Performance.hasBattery
-            Toggle {
-                checked: Settings.desktop.battery
-                enabled: Settings.features.widgets && Performance.hasBattery
-                onToggled: (v) => Settings.desktop.battery = v
             }
         }
     }
@@ -225,30 +172,16 @@ Column {
 
         SettingRow {
             width: parent.width
-            label: "Arrange widgets"
-            description: "Lifts the widgets above your windows so they can be dragged. Click the desktop or press Escape when done."
-            Button {
-                text: "Arrange"
-                variant: "soft"
-                enabled: Settings.features.widgets && !!Shell.widgets
-                onClicked: {
-                    // Close Settings first -- arrange mode raises the widget
-                    // layer to Overlay, and this window would be on top of it.
-                    Shell.closeAll();
-                    if (Shell.widgets) Shell.widgets.edit();
-                }
-            }
-        }
-
-        SettingRow {
-            width: parent.width
             label: "Reset widget positions"
-            description: "Puts every widget back where it started."
+            description: "Puts every widget back where it started, at its natural size."
             Button {
                 text: "Reset"
                 variant: "soft"
                 enabled: Settings.features.widgets
-                onClicked: Settings.desktop.widgetLayout = ({})
+                onClicked: {
+                    Settings.desktop.widgetLayout = ({});
+                    Settings.desktop.widgetScale = ({});
+                }
             }
         }
     }

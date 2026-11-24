@@ -55,8 +55,13 @@ Singleton {
     // A human name for the device. PipeWire's `description` is the friendly
     // one ("Built-in Audio Speaker"); `nickname` is shorter but often absent,
     // and `name` is the raw alsa id nobody wants to read.
+    //
+    // While the equalizer is on, the default output IS the Equalizer, which is
+    // not where the sound comes out -- so name the real device it feeds.
     readonly property string sinkName: {
         if (!root.sink) return "No output";
+        if (root.sink.name === Equalizer.sinkName && Equalizer.targetDescription !== "")
+            return Equalizer.targetDescription + " · EQ";
         return root.sink.description || root.sink.nickname || root.sink.name || "Output";
     }
 
@@ -75,8 +80,12 @@ Singleton {
     // --- Devices, for the Control Center's picker ----------------------
     // Filtered on demand rather than kept as a live model, because the lists
     // are short and only read while a panel is open.
+    //
+    // The equalizer's virtual output is left out: picking it directly would
+    // mean nothing (it follows whatever real device you pick), and offering
+    // it beside the real devices invites exactly that.
     function sinks() {
-        return Pipewire.nodes.values.filter(n => n.isSink && !n.isStream);
+        return Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && n.name !== Equalizer.sinkName);
     }
 
     function sources() {
