@@ -259,12 +259,23 @@ def copy_path_to_backup(path_entry):
             shutil.rmtree(dest)
         dest.mkdir(parents=True, exist_ok=True)
         for item in source.iterdir():
+            # A symlink whose target is gone (e.g. an uninstalled tool's
+            # entry in ~/.local/bin) is neither a file nor a dir; copytree
+            # would crash on it, so skip it.
+            if item.is_symlink() and not item.exists():
+                print(f"  \u26a0 Skipping broken symlink: {item}")
+                continue
             if should_skip_file(item):
                 continue
             if item.is_file():
                 shutil.copy2(item, dest / item.name)
             else:
-                shutil.copytree(item, dest / item.name, ignore=ignore_excluded)
+                shutil.copytree(
+                    item,
+                    dest / item.name,
+                    ignore=ignore_excluded,
+                    ignore_dangling_symlinks=True,
+                )
     else:
         if should_skip_file(source):
             return False

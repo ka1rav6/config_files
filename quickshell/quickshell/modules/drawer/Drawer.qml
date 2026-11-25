@@ -149,6 +149,33 @@ Panel {
                 width: scroller.width
             }
         }
+
+        // Faster wheel / touchpad scrolling than Flickable's default, which
+        // crawls through a long page like the wallpaper grid.
+        //
+        // This sits ON TOP of the Flickable rather than inside it: a
+        // WheelHandler inside a Flickable never sees the event, because the
+        // Flickable takes the wheel first and runs its own (slow) scrolling.
+        // acceptedButtons: Qt.NoButton means clicks, hover and touch drags
+        // fall straight through to the page underneath -- only the wheel is
+        // caught here. Same trick as the page rail further down.
+        //   wheelStep      pixels per mouse-wheel notch (120 angle units)
+        //   touchpadGain   multiplier on a touchpad's pixel deltas
+        MouseArea {
+            readonly property real wheelStep: 600
+            readonly property real touchpadGain: 12
+
+            anchors.fill: scroller
+            acceptedButtons: Qt.NoButton
+            onWheel: (wheel) => {
+                const dy = wheel.pixelDelta.y !== 0
+                    ? wheel.pixelDelta.y * touchpadGain
+                    : wheel.angleDelta.y / 120 * wheelStep;
+                const max = Math.max(0, scroller.contentHeight - scroller.height);
+                scroller.contentY = Math.max(0, Math.min(max, scroller.contentY - dy));
+                wheel.accepted = true;
+            }
+        }
     }
 
 

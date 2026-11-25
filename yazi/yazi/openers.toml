@@ -62,12 +62,11 @@
 
 # ── Documents ────────────────────────────────────────────────────────────────
 # One window per document, hence batch = false: `o` on four PDFs means "show me
-# these four", not "show me the first one". (Both zathura and sioyek do accept
-# several paths at once and open a window for each, so batch = true also works
-# for them — it is the per-file spawn that is uniform across viewers.)
+# these four", not "show me the first one". Each file gets its own okular
+# process, and so its own window.
 [[rules]]
 ext   = [ "pdf" ]
-run   = "sioyek"
+run   = "okular"
 batch = false
 
 [[rules]]

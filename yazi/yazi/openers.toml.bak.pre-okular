@@ -1,0 +1,153 @@
+# vim:fileencoding=utf-8
+# =============================================================================
+# openers.toml — which app `o` hands a file to, by extension
+# =============================================================================
+# This is the ONE file to edit to change or add an app for an extension. It is
+# read fresh on every `o` press, so there is nothing to reload, restart or
+# regenerate — save the file and the next `o` uses it.
+#
+# Read by ~/.config/hypr/scripts/open-file.py, which yazi's `o` runs
+# (see the keymap entry in keymap.toml). Not a yazi format: yazi never parses
+# this file, so there is no schema URL and no yazi documentation for it.
+#
+# Scope: `o` only. SHIFT+O is yazi's own opener, configured by the [opener] and
+# [open] tables in yazi.toml — a completely separate list. Changing a PDF here
+# does not change what SHIFT+O offers, and vice versa.
+#
+#   To swap an app        change that rule's `run`
+#   To add an extension   add it to an existing rule's `ext` list
+#   To add an app         copy any [[rules]] block and edit the two fields
+#
+# -----------------------------------------------------------------------------
+# Rule fields
+# -----------------------------------------------------------------------------
+#   ext    Extensions that select this rule, WITHOUT the leading dot and
+#          lowercase. Matching is case-insensitive, so "jpg" also catches
+#          .JPG from a camera. Multi-part extensions work too: "tar.gz"
+#          matches archive.tar.gz and not archive.gz.
+#
+#   run    The command. A bare program name is enough — the file paths are
+#          appended when the template names none itself. Placeholders:
+#             %f  the path as yazi passed it (relative to the browsed dir)
+#             %p  the absolute path — needed by anything that treats a bare
+#                 relative name as a search term rather than a file (Chrome)
+#             %d  the directory being browsed
+#          A token containing %f or %p repeats once per file, so `vlc %f` on a
+#          three-file selection becomes `vlc a.mkv b.mkv c.mkv` — unless the
+#          rule sets batch = false, below.
+#          ${VAR} and ${VAR:-fallback} are expanded from the environment.
+#
+#   batch  Optional, default true: one invocation receiving every matched file.
+#          Set false for one process per file — the right answer for a viewer
+#          that shows a single document per window, so `o` on a multi-select
+#          gives you all of them rather than only the first.
+#
+#   mime   Optional extra condition. When present, the file's real MIME type
+#          (from `file --mime-type`) must also match one of these globs, or
+#          the rule is skipped and matching continues. For the rare extension
+#          that names two unrelated formats — see .ts below.
+#
+# -----------------------------------------------------------------------------
+# Two things worth knowing
+# -----------------------------------------------------------------------------
+# Rules are matched TOP TO BOTTOM and the first match wins, so a narrow rule
+# has to sit above a broad one that would also claim the extension.
+#
+# A rule whose program is not installed is skipped rather than obeyed, and you
+# get a desktop notification naming it. So a typo'd `run`, or an app you have
+# not installed yet, falls through to the editor instead of making `o` look
+# broken — the usual symptom is "nothing happened", and this is why it won't.
+# =============================================================================
+
+
+# ── Documents ────────────────────────────────────────────────────────────────
+# One window per document, hence batch = false: `o` on four PDFs means "show me
+# these four", not "show me the first one". (Both zathura and sioyek do accept
+# several paths at once and open a window for each, so batch = true also works
+# for them — it is the per-file spawn that is uniform across viewers.)
+[[rules]]
+ext   = [ "pdf" ]
+run   = "sioyek"
+batch = false
+
+[[rules]]
+ext   = [ "md", "markdown", "mdown", "mkd" ]
+run   = "ghostwriter"
+batch = false
+
+# Chrome's built-in viewers for Office formats, which beats keeping a suite
+# installed for the occasional .docx. %p because a relative path on Chrome's
+# command line is read as a search query, not a file.
+[[rules]]
+ext = [ "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "ods", "odp" ]
+run = "google-chrome %p"
+
+
+# ── Video ────────────────────────────────────────────────────────────────────
+# .ts is deliberately NOT in this list — it gets its own rule below.
+#
+# Video is here, rather than falling through to the editor, because `o` is the
+# key the hand reaches for and a 4GB .mkv loaded into nvim is a frozen terminal
+# rather than a useful buffer. nvim is still reachable for a suspect file:
+# SHIFT+Enter offers it as the last entry of yazi's own `play` opener list.
+[[rules]]
+ext   = [ "mp4", "mkv", "webm", "avi", "mov", "m4v", "flv", "wmv",
+          "mpeg", "mpg", "m2ts", "mts" ]
+run   = "vlc"
+batch = false
+
+# .ts is two unrelated formats: TypeScript source and an MPEG transport stream,
+# and the extension alone cannot tell them apart. Guessing wrong either throws
+# source code at VLC or a 4GB video at nvim, so this is the one rule that pays
+# for a look at the bytes.
+#
+# The globs name the video cases rather than excluding the text one, because
+# `file` does not call TypeScript text/* — it answers application/javascript,
+# so a "not text" test would have sent every .ts source file to VLC. A
+# transport stream has no magic bytes at offset 0 and comes back as
+# application/octet-stream, hence the second glob. Anything else fails the test
+# and falls through to [default], i.e. an editor — the safer wrong answer.
+[[rules]]
+ext   = [ "ts" ]
+mime  = [ "video/*", "application/octet-stream" ]
+run   = "vlc"
+batch = false
+
+
+# ── Audio ────────────────────────────────────────────────────────────────────
+# batch = true here, unlike video: handing VLC a pile of tracks at once is a
+# playlist, which is usually the point with audio and never the point with a
+# film.
+[[rules]]
+ext = [ "mp3", "flac", "wav", "ogg", "opus", "m4a", "aac", "wma" ]
+run = "vlc"
+
+
+# ── Images ───────────────────────────────────────────────────────────────────
+# Commented out on purpose. Images fall through to the editor here so that `o`
+# stays the "I want to work on this" key, and SHIFT+O stays the "I want to look
+# at this" key — that one runs yazi's own `image` opener, which routes to eog.
+#
+# Uncomment to make `o` show images instead:
+#
+# [[rules]]
+# ext   = [ "png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "avif", "svg" ]
+# run   = "eog"
+# batch = false
+
+
+# =============================================================================
+# [default] — everything no rule above claimed
+# =============================================================================
+# Source files, config, plain text, unknown binaries, and directories all land
+# here. batch = true is what makes a multi-file selection open as several
+# buffers in ONE editor rather than a terminal window per file.
+#
+# This is also the fallback when a rule's program turns out not to be
+# installed, so it should stay something that is certain to be there.
+#
+# %d keeps the new terminal in the directory you were browsing, so :e and :find
+# resolve against the right place.
+[default]
+run   = "ghostty --working-directory=%d -e ${EDITOR:-nvim} %f"
+batch = true

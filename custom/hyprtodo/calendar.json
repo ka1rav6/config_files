@@ -1,0 +1,531 @@
+{
+  "kind": "calendar",
+  "label": "Monsoon Semester 2026",
+  "title": "Academic Calendar (2026-27)",
+  "year": 2026,
+  "start": "2026-08-03",
+  "end": "2027-01-16",
+  "weeks": [
+    {
+      "index": 0,
+      "start": "2026-08-03",
+      "end": "2026-08-09"
+    },
+    {
+      "index": 1,
+      "start": "2026-08-10",
+      "end": "2026-08-16"
+    },
+    {
+      "index": 2,
+      "start": "2026-08-17",
+      "end": "2026-08-23"
+    },
+    {
+      "index": 3,
+      "start": "2026-08-24",
+      "end": "2026-08-30"
+    },
+    {
+      "index": 4,
+      "start": "2026-08-31",
+      "end": "2026-09-06"
+    },
+    {
+      "index": 5,
+      "start": "2026-09-07",
+      "end": "2026-09-13"
+    },
+    {
+      "index": 6,
+      "start": "2026-09-14",
+      "end": "2026-09-20"
+    },
+    {
+      "index": 7,
+      "start": "2026-09-21",
+      "end": "2026-09-27"
+    },
+    {
+      "index": 8,
+      "start": "2026-09-28",
+      "end": "2026-10-04"
+    },
+    {
+      "index": 9,
+      "start": "2026-10-05",
+      "end": "2026-10-11"
+    },
+    {
+      "index": 10,
+      "start": "2026-10-12",
+      "end": "2026-10-18"
+    },
+    {
+      "index": 11,
+      "start": "2026-10-19",
+      "end": "2026-10-25"
+    },
+    {
+      "index": 12,
+      "start": "2026-10-26",
+      "end": "2026-11-01"
+    },
+    {
+      "index": 13,
+      "start": "2026-11-02",
+      "end": "2026-11-08"
+    },
+    {
+      "index": 14,
+      "start": "2026-11-09",
+      "end": "2026-11-15"
+    },
+    {
+      "index": 15,
+      "start": "2026-11-16",
+      "end": "2026-11-22"
+    },
+    {
+      "index": 16,
+      "start": "2026-11-23",
+      "end": "2026-11-29"
+    },
+    {
+      "index": 17,
+      "start": "2026-11-30",
+      "end": "2026-12-06"
+    },
+    {
+      "index": 18,
+      "start": "2026-12-07",
+      "end": "2026-12-13"
+    },
+    {
+      "index": 19,
+      "start": "2026-12-14",
+      "end": "2026-12-20"
+    },
+    {
+      "index": 20,
+      "start": "2026-12-21",
+      "end": "2026-12-27"
+    },
+    {
+      "index": 21,
+      "start": "2026-12-28",
+      "end": "2027-01-03"
+    },
+    {
+      "index": 22,
+      "start": "2027-01-04",
+      "end": "2027-01-10"
+    },
+    {
+      "index": 23,
+      "start": "2027-01-11",
+      "end": "2027-01-17"
+    }
+  ],
+  "events": [
+    {
+      "date": "2026-08-06",
+      "end": "2026-08-06",
+      "title": "3 Day Module",
+      "kind": "event"
+    },
+    {
+      "date": "2026-08-08",
+      "end": "2026-08-08",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2026-08-10",
+      "end": "2026-08-10",
+      "title": "1st Day of Class",
+      "kind": "event"
+    },
+    {
+      "date": "2026-08-14",
+      "end": "2026-08-14",
+      "title": "Last day of Add/Drop",
+      "kind": "deadline"
+    },
+    {
+      "date": "2026-08-15",
+      "end": "2026-08-15",
+      "title": "Independence Day",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2026-08-22",
+      "end": "2026-08-22",
+      "title": "Friday timetable",
+      "kind": "tta",
+      "follows": "fri"
+    },
+    {
+      "date": "2026-08-26",
+      "end": "2026-08-26",
+      "title": "Id-e-Milad",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2026-08-28",
+      "end": "2026-08-28",
+      "title": "ESYA",
+      "kind": "event"
+    },
+    {
+      "date": "2026-09-03",
+      "end": "2026-09-03",
+      "title": "Mid Sem Feedback",
+      "kind": "event"
+    },
+    {
+      "date": "2026-09-04",
+      "end": "2026-09-04",
+      "title": "Janmashtami",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2026-09-05",
+      "end": "2026-09-05",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2026-09-08",
+      "end": "2026-09-08",
+      "title": "Foundation Day",
+      "kind": "event"
+    },
+    {
+      "date": "2026-09-08",
+      "end": "2026-09-08",
+      "title": "Friday timetable",
+      "kind": "tta",
+      "follows": "fri"
+    },
+    {
+      "date": "2026-09-12",
+      "end": "2026-09-12",
+      "title": "Wednesday timetable",
+      "kind": "tta",
+      "follows": "wed"
+    },
+    {
+      "date": "2026-09-18",
+      "end": "2026-09-18",
+      "title": "Ph.D. Yearly Review Deadline",
+      "kind": "deadline"
+    },
+    {
+      "date": "2026-09-19",
+      "end": "2026-09-19",
+      "title": "Tuesday timetable",
+      "kind": "tta",
+      "follows": "tue"
+    },
+    {
+      "date": "2026-09-20",
+      "end": "2026-09-28",
+      "title": "Mid Sem Exams",
+      "kind": "exam"
+    },
+    {
+      "date": "2026-09-29",
+      "end": "2026-10-01",
+      "title": "Mid Recess- I (Only for UG students except TAs)",
+      "kind": "recess"
+    },
+    {
+      "date": "2026-10-02",
+      "end": "2026-10-02",
+      "title": "Mahatma Gandhi Birthday",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2026-10-03",
+      "end": "2026-10-03",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2026-10-05",
+      "end": "2026-10-05",
+      "title": "Last day of Late Drop",
+      "kind": "deadline"
+    },
+    {
+      "date": "2026-10-10",
+      "end": "2026-10-10",
+      "title": "Tuesday timetable",
+      "kind": "tta",
+      "follows": "tue"
+    },
+    {
+      "date": "2026-10-15",
+      "end": "2026-10-15",
+      "title": "Approval of New Courses",
+      "kind": "event"
+    },
+    {
+      "date": "2026-10-17",
+      "end": "2026-10-17",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2026-10-20",
+      "end": "2026-10-20",
+      "title": "Dussehra",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2026-10-24",
+      "end": "2026-10-24",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2026-10-26",
+      "end": "2026-10-26",
+      "title": "Maharishi Valmiki Jayanti",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2026-10-30",
+      "end": "2026-10-30",
+      "title": "Monday timetable",
+      "kind": "tta",
+      "follows": "mon"
+    },
+    {
+      "date": "2026-10-31",
+      "end": "2026-10-31",
+      "title": "Tuesday timetable",
+      "kind": "tta",
+      "follows": "tue"
+    },
+    {
+      "date": "2026-11-02",
+      "end": "2026-11-02",
+      "title": "2026 Convocation Rehersal",
+      "kind": "event"
+    },
+    {
+      "date": "2026-11-03",
+      "end": "2026-11-03",
+      "title": "2026 Convocation",
+      "kind": "event"
+    },
+    {
+      "date": "2026-11-07",
+      "end": "2026-11-07",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2026-11-08",
+      "end": "2026-11-08",
+      "title": "Diwali",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2026-11-09",
+      "end": "2026-11-10",
+      "title": "Mid Recess- II (Only for UG students except TAs)",
+      "kind": "recess"
+    },
+    {
+      "date": "2026-11-14",
+      "end": "2026-11-14",
+      "title": "ESYA",
+      "kind": "event"
+    },
+    {
+      "date": "2026-11-16",
+      "end": "2026-11-16",
+      "title": "Chhath Puja",
+      "kind": "event"
+    },
+    {
+      "date": "2026-11-19",
+      "end": "2026-11-19",
+      "title": "End Sem Feedback",
+      "kind": "event"
+    },
+    {
+      "date": "2026-11-20",
+      "end": "2026-11-20",
+      "title": "*Complete all Internal Evaluation",
+      "kind": "deadline"
+    },
+    {
+      "date": "2026-11-21",
+      "end": "2026-11-21",
+      "title": "Monday timetable",
+      "kind": "tta",
+      "follows": "mon"
+    },
+    {
+      "date": "2026-11-24",
+      "end": "2026-11-24",
+      "title": "Guru Nanak's Birthday",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2026-11-25",
+      "end": "2026-11-25",
+      "title": "BTP Report",
+      "kind": "event"
+    },
+    {
+      "date": "2026-11-25",
+      "end": "2026-11-25",
+      "title": "Tuesday timetable",
+      "kind": "tta",
+      "follows": "tue"
+    },
+    {
+      "date": "2026-11-26",
+      "end": "2026-11-26",
+      "title": "Friday timetable",
+      "kind": "tta",
+      "follows": "fri"
+    },
+    {
+      "date": "2026-11-27",
+      "end": "2026-11-27",
+      "title": "Last Day of Class",
+      "kind": "deadline"
+    },
+    {
+      "date": "2026-11-28",
+      "end": "2026-11-28",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2026-11-29",
+      "end": "2026-12-08",
+      "title": "End-Sem Examinations",
+      "kind": "exam"
+    },
+    {
+      "date": "2026-12-09",
+      "end": "2026-12-09",
+      "title": "BTP Presentation",
+      "kind": "event"
+    },
+    {
+      "date": "2026-12-09",
+      "end": "2026-12-11",
+      "title": "Exam Copies to be shown to students",
+      "kind": "exam"
+    },
+    {
+      "date": "2026-12-10",
+      "end": "2026-12-10",
+      "title": "CW Presentations",
+      "kind": "event"
+    },
+    {
+      "date": "2026-12-11",
+      "end": "2026-12-11",
+      "title": "SG Presentations",
+      "kind": "event"
+    },
+    {
+      "date": "2026-12-12",
+      "end": "2026-12-12",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2026-12-14",
+      "end": "2026-12-14",
+      "title": "Moderation Meeting",
+      "kind": "event"
+    },
+    {
+      "date": "2026-12-16",
+      "end": "2026-12-26",
+      "title": "Winter Vacation",
+      "kind": "recess"
+    },
+    {
+      "date": "2026-12-18",
+      "end": "2026-12-18",
+      "title": "Result Declaraton (Tentative)",
+      "kind": "event"
+    },
+    {
+      "date": "2026-12-19",
+      "end": "2026-12-19",
+      "title": "M.Tech. Thesis Evaluation Deadline",
+      "kind": "deadline"
+    },
+    {
+      "date": "2026-12-25",
+      "end": "2026-12-25",
+      "title": "Christmas Day",
+      "kind": "holiday",
+      "gazetted": true
+    },
+    {
+      "date": "2027-01-02",
+      "end": "2027-01-02",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2027-01-07",
+      "end": "2027-01-07",
+      "title": "3 Day Module",
+      "kind": "event"
+    },
+    {
+      "date": "2027-01-09",
+      "end": "2027-01-09",
+      "title": "No class",
+      "kind": "holiday"
+    },
+    {
+      "date": "2027-01-11",
+      "end": "2027-01-11",
+      "title": "1st Day of Class (Winter 2026)",
+      "kind": "event"
+    },
+    {
+      "date": "2027-01-16",
+      "end": "2027-01-16",
+      "title": "No class",
+      "kind": "holiday"
+    }
+  ],
+  "notes": [
+    "*Mid Recess & Winter Vacation - For UG Students only",
+    "*Complete all Internal Evaluation by the mentioned date and show all internal assessment marks / grades to students before the commencement of End Semester Exams",
+    "**M.Tech. students are advised to check the M.Tech. Thesis/SP/CapP Evaluation Guidelines"
+  ],
+  "warnings": [],
+  "source": {
+    "file": "Academic Calendar_Monsoon Semester 2026 AY 26- 27.pdf",
+    "path": "/home/kairav/.config/hyprtodo/sources/Academic Calendar_Monsoon Semester 2026 AY 26- 27.pdf",
+    "modified": "2026-11-25T02:33:57+05:30",
+    "bytes": 67940
+  },
+  "generated_at": "2026-11-25T02:33:57+05:30",
+  "generator": "hyprtodo-pdfsync 1.0"
+}

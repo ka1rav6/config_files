@@ -104,8 +104,9 @@ play = [
 	{ run = 'nvim %s',                                                 desc = "nvim",       block = true,  for = "unix" },
 ]
 pdf = [
-	# zathura takes any number of files and opens a window per document, so %s
-	# (all selected) rather than %s1 does the right thing on a multi-select.
+	# okular is the default. Like zathura it opens one window per document when
+	# given several paths, so %s (all selected) rather than %s1 is right here.
+	{ run = 'okular %s',    desc = "Okular",      orphan = true, for = "linux" },
 	{ run = 'zathura %s',   desc = "zathura",     orphan = true, for = "linux" },
 	{ run = 'sioyek %s',    desc = "sioyek",      orphan = true, for = "linux" },
 	{ run = 'xdg-open %s1', desc = "Default app", for = "linux" },

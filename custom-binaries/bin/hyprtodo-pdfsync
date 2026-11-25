@@ -1,0 +1,1247 @@
+#!/usr/bin/env python3
+"""hyprtodo-pdfsync — turn the IIIT-D mess menu and academic calendar PDFs
+into the JSON the mess (ctrl+m) and calendar (ctrl+c) overlays read.
+
+Every few months a new PDF lands in your inbox. Drop it in
+
+    ~/.config/hyprtodo/sources/
+
+(or run `hyprtodo-pdfsync path/to/new.pdf`, which files it there for you) and
+this rewrites `mess.json` / `calendar.json` next to `timetable.json`. The app
+re-runs it by itself whenever a PDF in that folder changes, so in practice
+pasting the file is the whole workflow.
+
+Design notes
+------------
+* Only the standard library plus `pdftotext` (poppler-utils). No pip, no venv,
+  nothing to keep alive across a distro upgrade.
+* Both PDFs are spreadsheets printed to paper, so the layout *is* the data:
+  words are read with their bounding boxes (`pdftotext -bbox`), grouped into
+  cells by position, and read back out of the grid. That survives reworded
+  dishes and shifted columns in a way that regexes over flat text do not.
+* A PDF that cannot be understood is reported and the previous JSON is left
+  exactly where it was. A stale menu beats an empty one.
+* Anything the parser is unsure about becomes a `warnings` entry that the
+  overlay shows, rather than a silent guess.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import html
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass, field
+from pathlib import Path
+
+VERSION = "1.0"
+
+# --------------------------------------------------------------------------
+# words and boxes
+# --------------------------------------------------------------------------
+
+
+@dataclass
+class Word:
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    text: str
+
+    @property
+    def cx(self) -> float:
+        return (self.x0 + self.x1) / 2
+
+
+@dataclass
+class Run:
+    """A horizontal stretch of words with no meaningful gap: one line of one
+    table cell."""
+
+    words: list[Word]
+
+    @property
+    def x0(self) -> float:
+        return min(w.x0 for w in self.words)
+
+    @property
+    def x1(self) -> float:
+        return max(w.x1 for w in self.words)
+
+    @property
+    def y(self) -> float:
+        return min(w.y0 for w in self.words)
+
+    @property
+    def cx(self) -> float:
+        return (self.x0 + self.x1) / 2
+
+    @property
+    def text(self) -> str:
+        return " ".join(w.text for w in self.words)
+
+
+WORD_RE = re.compile(
+    r'<word xMin="([-\d.]+)" yMin="([-\d.]+)" xMax="([-\d.]+)" yMax="([-\d.]+)">(.*?)</word>',
+    re.S,
+)
+
+
+def pdf_words(path: Path) -> list[Word]:
+    """Word boxes in reading order, via poppler."""
+    exe = shutil.which("pdftotext")
+    if not exe:
+        raise Fatal(
+            "pdftotext is not installed. It ships with poppler-utils:\n"
+            "  sudo pacman -S poppler        # Arch\n"
+            "  sudo apt install poppler-utils # Debian/Ubuntu"
+        )
+    out = subprocess.run(
+        [exe, "-bbox", "-q", str(path), "-"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if out.returncode != 0:
+        raise Fatal(f"pdftotext failed on {path.name}: {out.stderr.strip()}")
+    words = [
+        Word(float(a), float(b), float(c), float(d), html.unescape(e).strip())
+        for a, b, c, d, e in WORD_RE.findall(out.stdout)
+    ]
+    words = [w for w in words if w.text]
+    if not words:
+        raise Fatal(f"{path.name} has no extractable text (a scan, maybe?)")
+    words.sort(key=lambda w: (round(w.y0, 1), w.x0))
+    return words
+
+
+def lines_of(words: list[Word], tol: float = 3.5) -> list[list[Word]]:
+    """Group words into visual lines by baseline."""
+    out: list[list[Word]] = []
+    for w in words:
+        if out and abs(w.y0 - out[-1][0].y0) < tol:
+            out[-1].append(w)
+        else:
+            out.append([w])
+    for line in out:
+        line.sort(key=lambda w: w.x0)
+    return out
+
+
+def runs_of(line: list[Word], gap: float = 2.0) -> list[Run]:
+    """Split a line wherever the gap is wider than ordinary word spacing —
+    which, in a printed spreadsheet, means a cell border.
+
+    The default suits the academic calendar, whose columns are narrow enough
+    that neighbouring cells are only ~2.5pt apart while words inside one are
+    ~1pt. Wider tables pass a bigger gap.
+    """
+    out: list[Run] = []
+    for w in line:
+        if out and w.x0 - out[-1].x1 < gap:
+            out[-1].words.append(w)
+        else:
+            out.append(Run([w]))
+    return out
+
+
+class Fatal(Exception):
+    """Something that makes the whole file unusable."""
+
+
+# --------------------------------------------------------------------------
+# text tidying
+# --------------------------------------------------------------------------
+
+ALPHA_RUN = re.compile(r"[A-Za-z]+")
+# Printing an .xlsx leaves range artefacts like "Mar+A1:F11malade" behind.
+EXCEL_JUNK = re.compile(r"\+?\$?[A-Z]{1,3}\$?\d{1,4}:\$?[A-Z]{1,3}\$?\d{1,4}")
+
+
+def unsmallcaps(text: str) -> str:
+    """`noveMber & DeceMber` -> `November & December`.
+
+    Small-caps headings come out of poppler with the capitals intact and the
+    rest lowercased. Any run of letters that mixes cases with a capital past
+    the first position is one of those.
+    """
+
+    def fix(m: re.Match[str]) -> str:
+        run = m.group(0)
+        if any(c.isupper() for c in run[1:]) and any(c.islower() for c in run):
+            return run[:1].upper() + run[1:].lower()
+        return run
+
+    return ALPHA_RUN.sub(fix, text)
+
+
+def untitle(text: str) -> str:
+    """"MONSOON SEMESTER 2026" -> "Monsoon Semester 2026". Headings set in
+    full caps are shouting; the overlay renders them at its own weight."""
+    if text == text.upper() and any(c.isalpha() for c in text):
+        return ALPHA_RUN.sub(lambda m: m.group(0).capitalize(), text)
+    return text
+
+
+def tidy_cell(text: str) -> str:
+    """Normalise spacing, but keep the punctuation at the edges: a fragment
+    that ends in "," or starts with "," is how the PDF tells us where the next
+    line of the same cell attaches."""
+    text = EXCEL_JUNK.sub("", text)
+    text = text.replace("–", "-").replace("—", "-").replace("’", "'")
+    text = re.sub(r"\s+", " ", text).strip()
+    # " ," and "( x )" are how a spreadsheet looks when nobody proof-read it.
+    text = re.sub(r"\s+([,.;:])", r"\1", text)
+    text = re.sub(r"\(\s+", "(", text)
+    text = re.sub(r"\s+\)", ")", text)
+    return text
+
+
+def tidy(text: str) -> str:
+    return tidy_cell(text).strip(" ,;")
+
+
+def squash(text: str) -> str:
+    """Comparison key that survives a word wrapped mid-syllable: the grid
+    renders "Independence" as "Indepen" / "dence" on two lines."""
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def join_wrapped(parts: list[str]) -> str:
+    """Join the lines of one cell back into a sentence."""
+    out = ""
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        if not out:
+            out = part
+        elif part[0] in ",.;:)" or out[-1] in "(/-,":
+            out += part
+        elif (
+            out[-1].islower()
+            and part[0].islower()
+            and len(part) <= 3
+            and " " not in part
+        ):
+            # A word broken across two lines of the same cell, with no hyphen
+            # to show it: "Presentation" / "s", "Presentati" / "ons".
+            out += part
+        else:
+            out += " " + part
+    return out
+
+
+def split_items(text: str) -> list[str]:
+    """One cell of dishes -> one dish per entry."""
+    items: list[str] = []
+    for raw in re.split(r",|•", text):
+        item = tidy(raw)
+        if not item:
+            continue
+        # "Egg Bhurji, /Seasonal fruit" is an either/or, not a dish called
+        # "/Seasonal fruit".
+        alternative = item.startswith("/")
+        item = item.lstrip("/ ").rstrip(" .")
+        # Unbalanced bracket left behind by the comma split.
+        if item.count("(") != item.count(")"):
+            item = item.replace("(", "").replace(")", "").strip()
+        if not item:
+            continue
+        item = item[:1].upper() + item[1:]
+        items.append(f"or {item}" if alternative else item)
+    return items
+
+
+# --------------------------------------------------------------------------
+# mess menu
+# --------------------------------------------------------------------------
+
+DAY_IDS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+DAY_FULL = {
+    "monday": "mon",
+    "tuesday": "tue",
+    "wednesday": "wed",
+    "thursday": "thu",
+    "friday": "fri",
+    "saturday": "sat",
+    "sunday": "sun",
+}
+# Menu cells sit ~24pt apart, so a generous gap keeps a dish list in one run
+# while still never merging two columns.
+CELL_GAP = 8.0
+MEAL_ORDER = ["breakfast", "lunch", "snacks", "dinner"]
+MEAL_NAMES = {
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "snacks": "Snacks",
+    "dinner": "Dinner",
+}
+# Fallbacks only; the real ones come off the "Timings:" line.
+MEAL_FALLBACK = {
+    "breakfast": ("07:30", "09:30"),
+    "lunch": ("12:30", "14:30"),
+    "snacks": ("17:00", "18:10"),
+    "dinner": ("19:30", "21:30"),
+}
+MONTHS = [
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+]
+MONTH_NUM = {m: i + 1 for i, m in enumerate(MONTHS)}
+MONTH_NUM.update({m[:3]: i + 1 for i, m in enumerate(MONTHS)})
+MONTH_NUM["sept"] = 9
+MONTH_NUM["thur"] = 0  # guard: never a month
+
+
+def to24(clock: str, meridiem: str | None) -> str:
+    h, m = (int(x) for x in clock.split(":"))
+    ap = (meridiem or "").lower()
+    if ap == "pm" and h < 12:
+        h += 12
+    if ap == "am" and h == 12:
+        h = 0
+    return f"{h:02d}:{m:02d}"
+
+
+TIMING_RE = re.compile(
+    r"(breakfast|lunch|snacks|dinner)\s*[-:]?\s*"
+    r"(\d{1,2}:\d{2})\s*(am|pm)?\s*[-]\s*(\d{1,2}:\d{2})\s*(am|pm)?",
+    re.I,
+)
+COST_RE = re.compile(
+    r"cost\s+for\s+(?:evening\s+)?(breakfast|lunch|snacks|dinner)\s*:?\s*rs\.?\s*(\d+)", re.I
+)
+
+
+def parse_mess(words: list[Word], source: Path) -> dict:
+    warnings: list[str] = []
+    lines = lines_of(words)
+
+    # --- the header row names the columns and fixes their centres ---------
+    header: list[Run] | None = None
+    for line in lines:
+        rs = runs_of(line, gap=CELL_GAP)
+        labels = [r.text.lower() for r in rs]
+        if "breakfast" in labels and "lunch" in labels and "dinner" in labels:
+            header = rs
+            break
+    if header is None:
+        raise Fatal("no Day/Breakfast/Lunch/Snacks/Dinner header row found")
+
+    columns: list[tuple[str, float]] = []  # (meal id or "day", centre x)
+    for run in header:
+        key = run.text.lower().strip()
+        if key.startswith("day"):
+            columns.append(("day", run.cx))
+        elif key in MEAL_NAMES:
+            columns.append((key, run.cx))
+    if len(columns) < 5:
+        warnings.append(f"only {len(columns)} of 5 menu columns recognised")
+    header_y = header[0].y
+
+    # --- the day rows fix the row centres --------------------------------
+    rows: list[tuple[str, float]] = []  # (day id, centre y)
+    day_x0 = []
+    for line in lines:
+        if line[0].y0 <= header_y:
+            continue
+        for run in runs_of(line, gap=CELL_GAP):
+            day = DAY_FULL.get(run.text.lower().strip().rstrip(":"))
+            if day and all(d != day for d, _ in rows):
+                rows.append((day, run.y))
+                day_x0.append(run.x0)
+    if not rows:
+        raise Fatal("no weekday rows found in the menu table")
+    missing = [d for d in DAY_IDS if d not in {d for d, _ in rows}]
+    if missing:
+        warnings.append("no row for " + ", ".join(missing))
+
+    # The small print under the table runs to the page margin, left of the
+    # weekday column; nothing inside a cell ever starts that far out.
+    left_margin = min(day_x0) - 5
+    table_bottom = max(y for _, y in rows) + 1.2 * _row_pitch(rows)
+    for line in lines:
+        if line[0].y0 > max(y for _, y in rows) and line[0].x0 < left_margin:
+            table_bottom = min(table_bottom, line[0].y0 - 1)
+            break
+
+    # --- every other run drops into the nearest (row, column) cell -------
+    cells: dict[tuple[str, str], list[tuple[float, float, str]]] = {}
+    footer: list[tuple[float, str]] = []
+    for line in lines:
+        y = line[0].y0
+        if y <= header_y:
+            continue
+        for run in runs_of(line, gap=CELL_GAP):
+            text = tidy_cell(run.text)
+            if not text:
+                continue
+            if y > table_bottom:
+                footer.append((y, tidy(text)))
+                continue
+            day = _nearest(rows, y)
+            col = _nearest(columns, run.cx)
+            if col == "day":
+                continue  # the weekday label itself
+            cells.setdefault((day, col), []).append((y, run.x0, text))
+
+    days: dict[str, dict[str, list[str]]] = {}
+    for day in DAY_IDS:
+        meals: dict[str, list[str]] = {}
+        for meal in MEAL_ORDER:
+            # Reading order within the cell: down the lines, left to right.
+            parts = [t for _, _, t in sorted(cells.get((day, meal), []))]
+            items = split_items(join_wrapped(parts))
+            if items:
+                meals[meal] = items
+        if meals:
+            days[day] = meals
+        elif day in {d for d, _ in rows}:
+            warnings.append(f"{day}: no dishes read from the PDF")
+
+    # --- timings, costs and the small print under the table --------------
+    footer_text = " ".join(t for _, t in footer)
+    timings: dict[str, tuple[str, str]] = {}
+    for meal, s, sap, e, eap in TIMING_RE.findall(footer_text):
+        timings[meal.lower()] = (to24(s, sap), to24(e, eap))
+    costs = {m.lower(): int(v) for m, v in COST_RE.findall(footer_text)}
+
+    meals_out = []
+    for meal in MEAL_ORDER:
+        start, end = timings.get(meal, MEAL_FALLBACK[meal])
+        if meal not in timings:
+            warnings.append(f"{meal}: timing not found, using {start}-{end}")
+        entry = {"id": meal, "name": MEAL_NAMES[meal], "start": start, "end": end}
+        if meal in costs:
+            entry["cost"] = costs[meal]
+        meals_out.append(entry)
+
+    notes = []
+    for _, text in footer:
+        clean = tidy(text.lstrip("• ").strip())
+        if not clean or clean.lower().startswith("timings"):
+            continue
+        notes.append(clean)
+
+    # Anything promised "every day" is worth pulling out of the small print.
+    everyday: list[str] = []
+    for note in notes:
+        if "every day" in note.lower() and "breakfast" in note.lower():
+            head = re.split(r"\bwill be there\b", note, maxsplit=1)[0]
+            everyday = split_items(head)
+            break
+
+    title = unsmallcaps(" ".join(w.text for w in lines[0]))
+    return {
+        "kind": "mess",
+        "label": _mess_label(title),
+        "title": tidy(title),
+        "meals": meals_out,
+        "days": days,
+        "everyday": everyday,
+        "notes": notes,
+        "warnings": warnings,
+    }
+
+
+def _row_pitch(rows: list[tuple[str, float]]) -> float:
+    ys = sorted(y for _, y in rows)
+    gaps = [b - a for a, b in zip(ys, ys[1:])]
+    return (sum(gaps) / len(gaps)) if gaps else 24.0
+
+
+def _nearest(options, value):
+    return min(options, key=lambda kv: abs(kv[1] - value))[0]
+
+
+def _mess_label(title: str) -> str:
+    """"Mess Menu [IIIT-D] November & December-2026(...)" -> "November &
+    December 2026"."""
+    months = []
+    for word in re.findall(r"[A-Za-z]+", title):
+        key = word.lower()
+        if key in MONTH_NUM and MONTH_NUM[key] and word.lower() not in months:
+            months.append(word.capitalize())
+    year = re.search(r"(20\d{2})", title)
+    if months:
+        span = " & ".join(dict.fromkeys(months))
+        return f"{span} {year.group(1)}" if year else span
+    return "Mess Menu"
+
+
+# --------------------------------------------------------------------------
+# academic calendar
+# --------------------------------------------------------------------------
+
+GRID_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat"]
+DAY_TOKEN = {
+    "mon": "mon", "monday": "mon",
+    "tue": "tue", "tues": "tue", "tuesday": "tue",
+    "wed": "wed", "weds": "wed", "wednesday": "wed",
+    "thu": "thu", "thur": "thu", "thurs": "thu", "thursday": "thu",
+    "fri": "fri", "friday": "fri",
+    "sat": "sat", "saturday": "sat",
+    "sun": "sun", "sunday": "sun",
+}
+WEEK_RE = re.compile(r"^week$", re.I)
+PAREN_MONTHS = re.compile(r"^\(([A-Za-z]+)(?:\s*-\s*([A-Za-z]+))?\)$")
+# "TT-Fri 3" in a cell duplicates the adjustment table at the foot of the page,
+# which is unambiguous; the table wins.
+TT_MARKER = re.compile(r"^TT\s*-\s*(mon|tue|wed|thu|thur|fri|sat)\b", re.I)
+TTA_RE = re.compile(
+    r"(\d{1,2})\s+([A-Za-z]+)\s*\(([A-Za-z]+)\)\s*-\s*([A-Za-z]+)\s+TT", re.I
+)
+GH_RE = re.compile(r"^(\d{1,2})\s*-\s*([A-Za-z]{3,9})\s+(.{3,60})$")
+# Labels from the colour key, not information.
+LEGEND_RE = re.compile(
+    r"^(GH:|H:|Color codes|Time ?Table|Dropped GH|Examination Dates|Important Dates)", re.I
+)
+# "(20Sept - 28 Sept)", "(29th Nov - 8th Dec)" — an explicit range beats the
+# column the text happens to sit over.
+RANGE_RE = re.compile(
+    r"\((\d{1,2})(?:st|nd|rd|th)?\s*([A-Za-z]{3,9})?\s*-\s*"
+    r"(\d{1,2})(?:st|nd|rd|th)?\s*([A-Za-z]{3,9})\)"
+)
+
+
+@dataclass
+class Block:
+    """One cell's worth of text, with the dates it sits above."""
+
+    text: str
+    dates: list[dt.date] = field(default_factory=list)
+
+
+def _month_num(token: str) -> int | None:
+    key = re.sub(r"[^a-z]", "", token.lower())
+    for length in (len(key), 4, 3):
+        if key[:length] in MONTH_NUM and MONTH_NUM[key[:length]]:
+            return MONTH_NUM[key[:length]]
+    return None
+
+
+def parse_calendar(words: list[Word], source: Path) -> dict:
+    warnings: list[str] = []
+    lines = lines_of(words)
+
+    head = " ".join(w.text for w in lines[0])
+    sub = " ".join(w.text for w in lines[1]) if len(lines) > 1 else ""
+    years = re.findall(r"20\d{2}", head + " " + sub)
+    base_year = int(years[-1]) if years else dt.date.today().year
+    label = untitle(tidy(unsmallcaps(sub)).strip("()")) or untitle(tidy(unsmallcaps(head)))
+
+    # --- find the footer first; everything above it is the week grid ------
+    footer_start = len(lines)
+    for i, line in enumerate(lines):
+        text = " ".join(w.text for w in line).lower()
+        if "gazetted holidays" in text or "time table adjustment" in text:
+            footer_start = i
+            break
+    grid_lines, footer_lines = lines[:footer_start], lines[footer_start:]
+
+    # --- bands: four weeks across, repeated down the page ----------------
+    bands: list[dict] = []
+    for i, line in enumerate(grid_lines):
+        weeks = _week_headers(line)
+        if weeks:
+            bands.append({"i": i, "weeks": weeks, "cols": [], "events": []})
+    if not bands:
+        raise Fatal('no "Week N (Month)" headers found — is this an academic calendar?')
+
+    for b, band in enumerate(bands):
+        end = bands[b + 1]["i"] if b + 1 < len(bands) else len(grid_lines)
+        band["end"] = end
+        day_i = num_i = None
+        for i in range(band["i"] + 1, end):
+            tokens = [w.text.lower().rstrip(".") for w in grid_lines[i]]
+            days = sum(1 for t in tokens if DAY_TOKEN.get(t))
+            nums = sum(1 for t in tokens if t.isdigit() and 1 <= int(t) <= 31)
+            if day_i is None and days >= 6:
+                day_i = i
+            elif day_i is not None and num_i is None and nums >= 6:
+                num_i = i
+                break
+        if day_i is None or num_i is None:
+            warnings.append(f"week band {b + 1}: no day/date rows, skipped")
+            band["cols"] = []
+            continue
+        band["day_i"], band["num_i"] = day_i, num_i
+        band["cols"] = _columns(grid_lines[day_i])
+        band["numbers"] = [
+            w for w in grid_lines[num_i] if w.text.isdigit() and 1 <= int(w.text) <= 31
+        ]
+
+    # --- dates: anchor on the first Monday, then it is pure arithmetic ---
+    anchor = _anchor_monday(bands, base_year, warnings)
+    week_start: dict[int, dt.date] = {}
+    col_date: list[dict[int, dt.date]] = []
+    for band in bands:
+        mapping: dict[int, dt.date] = {}
+        for ci in range(len(band["cols"])):
+            group = ci // len(GRID_DAYS)
+            if group >= len(band["weeks"]):
+                continue
+            wk = band["weeks"][group][0]
+            start = anchor + dt.timedelta(days=7 * wk)
+            week_start[wk] = start
+            mapping[ci] = start + dt.timedelta(days=ci % len(GRID_DAYS))
+        col_date.append(mapping)
+
+    # Printed day numbers are a free checksum on the arithmetic above.
+    for band, mapping in zip(bands, col_date):
+        for ci, word in enumerate(band.get("numbers", [])):
+            date = mapping.get(ci)
+            if date and int(word.text) != date.day:
+                wk = band["weeks"][min(ci // len(GRID_DAYS), len(band["weeks"]) - 1)][0]
+                warnings.append(
+                    f"week {wk}: PDF says {word.text}, "
+                    f"dates line up as {date.day} — check the calendar"
+                )
+                break
+
+    # --- cell text -> blocks ---------------------------------------------
+    blocks: list[Block] = []
+    for b, band in enumerate(bands):
+        if not band["cols"]:
+            continue
+        mapping = col_date[b]
+        bounds = _boundaries(band["cols"])
+        pending: list[tuple[float, tuple[int, ...], str]] = []
+        for i in range(band["num_i"] + 1, band["end"]):
+            for run in runs_of(grid_lines[i]):
+                text = tidy(run.text)
+                if not text or _is_noise(text):
+                    continue
+                cols = _covered(run, bounds)
+                if not cols:
+                    continue
+                pending.append((run.y, tuple(cols), text))
+        # Text that overflows onto the next band's header line still belongs
+        # to this band's cells.
+        if b + 1 < len(bands):
+            for run in runs_of(grid_lines[bands[b + 1]["i"]]):
+                if _week_headers([run.words[0]]) or _is_week_token(run.text):
+                    continue
+                text = tidy(run.text)
+                if text and not _is_noise(text):
+                    cols = _covered(run, bounds)
+                    if cols:
+                        pending.append((run.y, tuple(cols), text))
+
+        for cols, parts in _merge_vertically(pending):
+            dates = [mapping[c] for c in cols if c in mapping]
+            if dates:
+                blocks.append(Block(join_wrapped(parts), dates))
+
+    # --- the two tables at the foot of the page --------------------------
+    footer_runs: list[str] = []
+    for line in footer_lines:
+        # The legend tables sit side by side with wide gutters between them,
+        # but "15-Aug" and "Independence Day" are one entry.
+        for run in runs_of(line, gap=20.0):
+            text = tidy(run.text)
+            if text:
+                footer_runs.append(text)
+
+    events: list[dict] = []
+    tta_dates: set[dt.date] = set()
+    holiday_names: dict[dt.date, str] = {}
+    notes: list[str] = []
+
+    for text in footer_runs:
+        m = TTA_RE.search(text)
+        if m:
+            day, month, _printed, follow = m.groups()
+            date = _make_date(int(day), month, base_year)
+            target = DAY_TOKEN.get(follow.lower())
+            if date and target:
+                tta_dates.add(date)
+                events.append(
+                    {
+                        "date": date.isoformat(),
+                        "end": date.isoformat(),
+                        "title": f"{follow.capitalize()} timetable",
+                        "kind": "tta",
+                        "follows": target,
+                    }
+                )
+                continue
+        m = GH_RE.match(text)
+        if m and _month_num(m.group(2)):
+            date = _make_date(int(m.group(1)), m.group(2), base_year)
+            name = tidy(m.group(3))
+            if date and name:
+                holiday_names[date] = name
+                events.append(
+                    {
+                        "date": date.isoformat(),
+                        "end": date.isoformat(),
+                        "title": name,
+                        "kind": "holiday",
+                        "gazetted": True,
+                    }
+                )
+                continue
+        if len(text) > 24 and not LEGEND_RE.match(text):
+            notes.append(text)
+
+    # --- grid blocks -> events -------------------------------------------
+    named = {squash(n) for n in holiday_names.values()}
+    gazetted = {d for d, n in holiday_names.items() if n}
+    grouped: dict[str, list[list[dt.date]]] = {}
+    kinds: dict[str, str] = {}
+    for block in blocks:
+        text = block.text
+        if TT_MARKER.match(text):
+            continue  # the adjustment table already has it
+        if squash(text) in {"h", ""}:
+            for date in block.dates:
+                if date not in holiday_names:
+                    holiday_names.setdefault(date, "")
+                    events.append(
+                        {
+                            "date": date.isoformat(),
+                            "end": date.isoformat(),
+                            "title": "No class",
+                            "kind": "holiday",
+                        }
+                    )
+            continue
+        if squash(text) in named:
+            continue  # the gazetted-holiday table says it better
+        # The grid spells festivals its own way ("Janamashtami" against the
+        # table's "Janmashtami"). On a day the table already names, a short
+        # name with no digits is that same holiday, not a second event.
+        if (
+            len(set(block.dates)) == 1
+            and block.dates[0] in gazetted
+            and len(text.split()) <= 3
+            and not any(c.isdigit() for c in text)
+        ):
+            continue
+        dates = block.dates
+        explicit = _explicit_range(text, base_year)
+        if explicit:
+            dates = explicit
+            text = tidy(RANGE_RE.sub("", text))
+        key = squash(text)
+        kinds[key] = text
+        # Same wording in two places is one spell only if it is one stretch of
+        # the term: "3 Day Module" runs in August *and* in January.
+        runs = grouped.setdefault(key, [])
+        near = dt.timedelta(days=14)
+        for run in runs:
+            if min(dates) - max(run) <= near and min(run) - max(dates) <= near:
+                run.extend(dates)
+                break
+        else:
+            runs.append(list(dates))
+
+    for key, runs in grouped.items():
+        text = kinds[key]
+        for dates in runs:
+            lo, hi = min(dates), max(dates)
+            kind = _classify(text)
+            if kind == "holiday" and holiday_names.get(lo):
+                continue
+            events.append(
+                {
+                    "date": lo.isoformat(),
+                    "end": hi.isoformat(),
+                    "title": text,
+                    "kind": kind,
+                }
+            )
+
+    events.sort(key=lambda e: (e["date"], e["end"], e["title"]))
+    # A named holiday and a bare "No class" on the same day are one holiday.
+    events = _dedupe(events)
+
+    weeks_out = [
+        {"index": w, "start": d.isoformat(), "end": (d + dt.timedelta(days=6)).isoformat()}
+        for w, d in sorted(week_start.items())
+    ]
+    starts = [dt.date.fromisoformat(e["date"]) for e in events] or [anchor]
+    ends = [dt.date.fromisoformat(e["end"]) for e in events] or [anchor]
+    last_week = max(week_start.values(), default=anchor) + dt.timedelta(days=5)
+
+    return {
+        "kind": "calendar",
+        "label": label,
+        "title": untitle(tidy(unsmallcaps(head))),
+        "year": base_year,
+        "start": min(min(starts), anchor).isoformat(),
+        "end": max(max(ends), last_week).isoformat(),
+        "weeks": weeks_out,
+        "events": events,
+        "notes": notes,
+        "warnings": warnings,
+    }
+
+
+def _is_week_token(text: str) -> bool:
+    """A band header, whole ("Week 19 (Dec)") or in the pieces the cell-border
+    split leaves behind ("Week 19", "(Dec)")."""
+    return bool(re.fullmatch(r"week\s*\d*(\s*\([A-Za-z-]+\))?|\([A-Za-z-]+\)", text, re.I))
+
+
+def _week_headers(line: list[Word]) -> list[tuple[int, float, tuple[str, ...]]]:
+    """(week number, x, month names) for every "Week N (Month)" on a line.
+
+    The month in the header is what dates the grid: "Week 0 (Aug)" plus the
+    first printed day number is enough to place the whole semester.
+    """
+    out: list[tuple[int, float, tuple[str, ...]]] = []
+    for i, w in enumerate(line):
+        if not WEEK_RE.match(w.text):
+            continue
+        rest = line[i + 1 : i + 4]
+        number = next((r for r in rest if r.text.isdigit()), None)
+        months = next(
+            ((r, PAREN_MONTHS.match(r.text)) for r in rest if PAREN_MONTHS.match(r.text)),
+            None,
+        )
+        if number is not None and months is not None:
+            groups = tuple(g for g in months[1].groups() if g)
+            out.append((int(number.text), w.x0, groups))
+    return out
+
+
+def _columns(day_line: list[Word]) -> list[tuple[str, float, float]]:
+    """The six day columns of each week, as (day id, x0, x1) of the label."""
+    out: list[tuple[str, float, float]] = []
+    for w in day_line:
+        day = DAY_TOKEN.get(w.text.lower().rstrip("."))
+        if day and day != "sun":
+            out.append((day, w.x0, w.x1))
+    return out
+
+
+def _boundaries(cols: list[tuple[str, float, float]]) -> list[tuple[float, float]]:
+    """Half-open x ranges, split at the midpoints between label centres."""
+    centres = [(x0 + x1) / 2 for _, x0, x1 in cols]
+    mids = [(a + b) / 2 for a, b in zip(centres, centres[1:])]
+    out = []
+    for i, c in enumerate(centres):
+        left = mids[i - 1] if i else c - (mids[0] - c if mids else 15.0)
+        right = mids[i] if i < len(mids) else c + (c - mids[-1] if mids else 15.0)
+        out.append((left, right))
+    return out
+
+
+def _covered(run: Run, bounds: list[tuple[float, float]]) -> list[int]:
+    """Which day columns a run of text sits over.
+
+    A cell's text is centred, so a narrow run picks exactly one column and a
+    run wider than a column — the text of a merged cell — picks all the
+    columns it reaches.
+    """
+    width = run.x1 - run.x0
+    col = sorted(right - left for left, right in bounds)[len(bounds) // 2]
+    share = 0.15 if width > 1.3 * col else 0.5
+    hits = []
+    for i, (left, right) in enumerate(bounds):
+        overlap = min(run.x1, right) - max(run.x0, left)
+        if overlap <= 0:
+            continue
+        if overlap >= share * min(right - left, width):
+            hits.append(i)
+    if hits:
+        return hits
+    # Short text that straddles a boundary: whichever column holds its middle.
+    for i, (left, right) in enumerate(bounds):
+        if left <= run.cx < right:
+            return [i]
+    return []
+
+
+def _merge_vertically(
+    pending: list[tuple[float, tuple[int, ...], str]]
+) -> list[tuple[tuple[int, ...], list[str]]]:
+    """Stitch a wrapped cell back together: consecutive lines over the same
+    columns are one block, and a narrow continuation line under a wide span
+    joins that span.
+
+    Only ever narrow-under-wide. A *wide* run below a narrow one is the text
+    of a different, merged cell that happens to start under its neighbour.
+    """
+    pending.sort(key=lambda p: (p[0], p[1]))
+    blocks: list[dict] = []
+    for y, cols, text in pending:
+        host = next(
+            (
+                b
+                for b in blocks
+                if y - b["y"] <= 9.0
+                and (b["cols"] == cols or set(cols) < set(b["cols"]))
+            ),
+            None,
+        )
+        if host is None:
+            blocks.append({"y": y, "cols": cols, "parts": [text]})
+        else:
+            host["y"] = y
+            host["parts"].append(text)
+    return [(tuple(b["cols"]), b["parts"]) for b in blocks]
+
+
+def _is_noise(text: str) -> bool:
+    """Stray superscripts and the week-number counters printed next to the
+    day names carry no information of their own."""
+    if re.fullmatch(r"\d{1,2}", text) and int(text) <= 31:
+        return True
+    if re.fullmatch(r"[*•.,:;/()-]+", text):
+        return True
+    return False
+
+
+def _anchor_monday(bands: list[dict], base_year: int, warnings: list[str]) -> dt.date:
+    """The Monday of week 0.
+
+    Each band header carries its own month, so any band with a readable first
+    week can date the whole grid; week 0 is then that Monday minus 7n days.
+    An academic year straddles New Year, so a month before July belongs to
+    `base_year + 1`.
+    """
+    for band in bands:
+        if not band.get("cols") or not band.get("numbers") or not band.get("weeks"):
+            continue
+        week, _, months = band["weeks"][0]
+        day = int(band["numbers"][0].text)
+        for name in months:
+            month = _month_num(name)
+            if not month:
+                continue
+            year = base_year if month >= 7 else base_year + 1
+            # "Week 4 (Aug-Sept)" starts in the first of the two months, but
+            # if the day number cannot be that month take the second.
+            try:
+                first = dt.date(year, month, day)
+            except ValueError:
+                continue
+            if first.weekday() != 0:
+                continue
+            return first - dt.timedelta(days=7 * week)
+    warnings.append("could not date the first week; assuming the Monday of this week")
+    today = dt.date.today()
+    return today - dt.timedelta(days=today.weekday())
+
+
+def _make_date(day: int, month_word: str, base_year: int) -> dt.date | None:
+    month = _month_num(month_word)
+    if not month:
+        return None
+    year = base_year if month >= 7 else base_year + 1
+    try:
+        return dt.date(year, month, day)
+    except ValueError:
+        return None
+
+
+def _explicit_range(text: str, base_year: int) -> list[dt.date] | None:
+    m = RANGE_RE.search(text)
+    if not m:
+        return None
+    d1, m1, d2, m2 = m.groups()
+    end = _make_date(int(d2), m2, base_year)
+    start = _make_date(int(d1), m1 or m2, base_year)
+    if not start or not end or end < start:
+        return None
+    return [start, end]
+
+
+KIND_RULES = [
+    ("exam", re.compile(r"\bexam", re.I)),
+    ("recess", re.compile(r"\b(recess|vacation|break)\b", re.I)),
+    ("deadline", re.compile(r"\b(deadline|last day|last date|complete all)\b", re.I)),
+    ("holiday", re.compile(r"^h$", re.I)),
+]
+
+
+def _classify(text: str) -> str:
+    for kind, rule in KIND_RULES:
+        if rule.search(text):
+            return kind
+    return "event"
+
+
+def _dedupe(events: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    for event in events:
+        clash = next(
+            (
+                e
+                for e in out
+                if e["date"] == event["date"]
+                and e["end"] == event["end"]
+                and (
+                    squash(e["title"]) == squash(event["title"])
+                    or (e["kind"] == "holiday" and event["kind"] == "holiday")
+                )
+            ),
+            None,
+        )
+        if clash is None:
+            out.append(event)
+            continue
+        # Prefer the entry that actually has a name.
+        if clash["title"] in ("", "No class") and event["title"] not in ("", "No class"):
+            clash.update(event)
+    return out
+
+
+# --------------------------------------------------------------------------
+# driving it
+# --------------------------------------------------------------------------
+
+
+def sniff(words: list[Word]) -> str | None:
+    text = " ".join(w.text for w in words[:60]).lower()
+    if "mess" in text and "menu" in text:
+        return "mess"
+    if "academic" in text and "calendar" in text:
+        return "calendar"
+    # Fall back to the shape of the document.
+    body = " ".join(w.text for w in words).lower()
+    if "breakfast" in body and "snacks" in body and "dinner" in body:
+        return "mess"
+    if "semester" in body and re.search(r"week\s*\d+", body):
+        return "calendar"
+    return None
+
+
+def config_dir() -> Path:
+    env = os.environ.get("HYPRTODO_CONFIG_DIR")
+    if env:
+        return Path(env).expanduser()
+    base = os.environ.get("XDG_CONFIG_HOME") or "~/.config"
+    return Path(base).expanduser() / "hyprtodo"
+
+
+def write_json(path: Path, payload: dict) -> None:
+    """Atomic, so a half-written file is never what the overlay reads."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2, ensure_ascii=False)
+            fh.write("\n")
+        os.chmod(tmp, 0o644)  # mkstemp is 0600; this is a config file to read
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+PARSERS = {"mess": parse_mess, "calendar": parse_calendar}
+
+
+def convert(pdf: Path, kind: str | None = None) -> dict:
+    words = pdf_words(pdf)
+    kind = kind or sniff(words)
+    if kind not in PARSERS:
+        raise Fatal(
+            f"{pdf.name}: cannot tell whether this is the mess menu or the "
+            "academic calendar — pass --as mess / --as calendar"
+        )
+    payload = PARSERS[kind](words, pdf)
+    stat = pdf.stat()
+    payload["source"] = {
+        "file": pdf.name,
+        "path": str(pdf),
+        "modified": dt.datetime.fromtimestamp(stat.st_mtime).astimezone().isoformat(timespec="seconds"),
+        "bytes": stat.st_size,
+    }
+    payload["generated_at"] = dt.datetime.now().astimezone().isoformat(timespec="seconds")
+    payload["generator"] = f"hyprtodo-pdfsync {VERSION}"
+    return payload
+
+
+def self_check() -> int:
+    """Asserts over the text and geometry helpers — the parts that quietly go
+    wrong when a new PDF shifts by a point or two."""
+    w = lambda x0, x1, t: Word(x0, 10.0, x1, 18.0, t)  # noqa: E731
+
+    assert unsmallcaps("noveMber & DeceMber") == "November & December"
+    assert tidy("Kadhi pakoda ( 3 Pcs ) ,Plain") == "Kadhi pakoda (3 Pcs),Plain"
+    assert tidy_cell("Roti ,").endswith(",") and tidy("Roti ,") == "Roti"
+    assert squash("Indepen dence Day") == squash("Independence Day")
+
+    # cell lines stitched back together
+    assert join_wrapped(["Mix Veg Raita,Plain Rice,", "Missi Roti,Salad"]) == (
+        "Mix Veg Raita,Plain Rice,Missi Roti,Salad"
+    )
+    assert join_wrapped(["Presentation", "s"]) == "Presentations"
+    assert join_wrapped(["Last day", "of Add/", "Drop"]) == "Last day of Add/Drop"
+    assert join_wrapped(["Boiled Eggs/Seasonal", "fruit"]) == "Boiled Eggs/Seasonal fruit"
+
+    assert split_items("Egg Bhurji, /Seasonal fruit") == ["Egg Bhurji", "or Seasonal fruit"]
+    assert split_items("Rice,Roti,Salad,.") == ["Rice", "Roti", "Salad"]
+    assert split_items("Salad (Only Onion)") == ["Salad (Only Onion)"]
+
+    # a cell border is a wider gap than a word space
+    line = [w(453.1, 477.0, "Presentation"), w(479.5, 503.4, "Presentation")]
+    assert len(runs_of(line)) == 2, "2.5pt cell border must split"
+    line = [w(458.4, 469.5, "Exam"), w(470.5, 484.1, "Copies")]
+    assert len(runs_of(line)) == 1, "1pt word space must not split"
+
+    # centred text picks its column; text wider than a column picks all it reaches
+    bounds = [(49.8, 75.3), (75.3, 104.0), (104.0, 137.5), (137.5, 172.3), (172.3, 207.0)]
+    assert _covered(Run([w(173.0, 206.0, "Gandhi Jayanti")]), bounds) == [4]
+    assert _covered(Run([w(81.0, 163.0, "Mid Recess- I")]), bounds) == [1, 2, 3]
+
+    # a narrow continuation joins the span above it; a wider run starts a cell
+    merged = _merge_vertically(
+        [(324.3, (2,), "BTP"), (330.1, (2,), "Presentation"), (340.4, (2, 3), "Exam Copies")]
+    )
+    assert [p for _, p in merged] == [["BTP", "Presentation"], ["Exam Copies"]]
+
+    # an academic year rolls over at New Year
+    assert _make_date(15, "Aug", 2026) == dt.date(2026, 8, 15)
+    assert _make_date(11, "Jan", 2026) == dt.date(2027, 1, 11)
+    assert _explicit_range("Exams (29th Nov - 8th Dec)", 2026) == [
+        dt.date(2026, 11, 29),
+        dt.date(2026, 12, 8),
+    ]
+    assert _explicit_range("Mid Sem Exams (20Sept - 28 Sept)", 2026) == [
+        dt.date(2026, 9, 20),
+        dt.date(2026, 9, 28),
+    ]
+    assert _classify("End-Sem Examinations") == "exam"
+    assert _classify("Winter Vacation") == "recess"
+    assert _classify("Last Day of Class") == "deadline"
+    assert _is_week_token("Week 19 (Dec)") and _is_week_token("(Jan)")
+    assert not _is_week_token("Winter Vacation")
+
+    print("self-check: all good")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(
+        prog="hyprtodo-pdfsync",
+        description="Regenerate mess.json and calendar.json from the source PDFs.",
+        epilog="With no arguments it syncs every PDF in ~/.config/hyprtodo/sources/.",
+    )
+    ap.add_argument("pdfs", nargs="*", type=Path, help="PDFs to import (filed into sources/)")
+    ap.add_argument("--sources", type=Path, default=None, help="folder of source PDFs")
+    ap.add_argument("--out", type=Path, default=None, help="where the JSON goes")
+    ap.add_argument("--as", dest="kind", choices=sorted(PARSERS), help="skip auto-detection")
+    ap.add_argument("--force", action="store_true", help="rebuild even if nothing changed")
+    ap.add_argument("--stdout", action="store_true", help="print the JSON instead of writing it")
+    ap.add_argument("--quiet", "-q", action="store_true")
+    ap.add_argument("--self-check", action="store_true", help="test the parser helpers")
+    ap.add_argument("--version", action="version", version=f"hyprtodo-pdfsync {VERSION}")
+    args = ap.parse_args(argv)
+
+    if args.self_check:
+        return self_check()
+
+    cfg = config_dir()
+    sources = (args.sources or cfg / "sources").expanduser()
+    out_dir = (args.out or cfg).expanduser()
+
+    def say(*parts):
+        if not args.quiet:
+            print(*parts, file=sys.stderr)
+
+    todo: list[tuple[Path, str | None]] = []
+    if args.pdfs:
+        for pdf in args.pdfs:
+            pdf = pdf.expanduser()
+            if not pdf.is_file():
+                print(f"hyprtodo-pdfsync: {pdf}: no such file", file=sys.stderr)
+                return 2
+            if not args.stdout and pdf.parent.resolve() != sources.resolve():
+                # Keep the original around: next time the app can re-run this
+                # on its own without hunting through Downloads.
+                sources.mkdir(parents=True, exist_ok=True)
+                # Both the sweep below and the app's "is a PDF newer than its
+                # JSON" check look for a .pdf suffix, so a file saved without
+                # one would import now and then never auto-update again.
+                name = pdf.name if pdf.suffix.lower() == ".pdf" else pdf.name + ".pdf"
+                filed = sources / name
+                shutil.copy2(pdf, filed)
+                say(f"filed {pdf.name} -> {filed}")
+                pdf = filed
+            todo.append((pdf, args.kind))
+    else:
+        if not sources.is_dir():
+            sources.mkdir(parents=True, exist_ok=True)
+            say(f"created {sources} — drop the mess menu and academic calendar PDFs in it")
+            return 0
+        found = sorted(p for p in sources.iterdir() if p.suffix.lower() == ".pdf")
+        if not found:
+            say(f"no PDFs in {sources}")
+            return 0
+        todo = [(p, args.kind) for p in found]
+
+    # Newest PDF per kind wins, so last term's menu sitting in the folder does
+    # not fight with this term's.
+    resolved: dict[str, tuple[Path, dict]] = {}
+    failures = 0
+    for pdf, kind in todo:
+        try:
+            payload = convert(pdf, kind)
+        except Fatal as e:
+            print(f"hyprtodo-pdfsync: {e}", file=sys.stderr)
+            failures += 1
+            continue
+        except Exception as e:  # noqa: BLE001 — a surprise here must not be silent
+            print(f"hyprtodo-pdfsync: {pdf.name}: {type(e).__name__}: {e}", file=sys.stderr)
+            failures += 1
+            continue
+        got = payload["kind"]
+        if got in resolved and resolved[got][0].stat().st_mtime > pdf.stat().st_mtime:
+            say(f"skipping {pdf.name}: {resolved[got][0].name} is newer")
+            continue
+        resolved[got] = (pdf, payload)
+
+    if args.stdout:
+        for kind in sorted(resolved):
+            json.dump(resolved[kind][1], sys.stdout, indent=2, ensure_ascii=False)
+            sys.stdout.write("\n")
+        return 1 if failures and not resolved else 0
+
+    for kind, (pdf, payload) in sorted(resolved.items()):
+        target = out_dir / f"{kind}.json"
+        if not args.force and target.exists():
+            try:
+                old = json.loads(target.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                old = None
+            if old is not None:
+                a = {k: v for k, v in old.items() if k != "generated_at"}
+                b = {k: v for k, v in payload.items() if k != "generated_at"}
+                if a == b:
+                    say(f"{target.name} already up to date ({pdf.name})")
+                    continue
+        write_json(target, payload)
+        counted = (
+            f"{sum(len(m) for m in payload['days'].values())} dishes"
+            if kind == "mess"
+            else f"{len(payload['events'])} events"
+        )
+        say(f"wrote {target} from {pdf.name} ({counted})")
+        for warning in payload.get("warnings", []):
+            say(f"  ! {warning}")
+
+    return 1 if failures and not resolved else 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except KeyboardInterrupt:
+        sys.exit(130)

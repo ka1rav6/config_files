@@ -33,6 +33,7 @@ dash
 dbus-user-session
 default-jdk
 diffutils
+direnv
 docker-buildx-plugin
 docker-ce
 docker-ce-cli
@@ -56,11 +57,14 @@ g++-14
 g++-15
 gcc
 gcc-15
+gcc-15-multilib
 gcc-multilib
 gcc-riscv64-unknown-elf
+gh
 ghostty
 ghostwriter
 git
+git-delta
 gnome-shell-extension-prefs
 gnome-todo
 gnupg
@@ -94,6 +98,7 @@ ibus-table-cangjie5
 imagemagick
 init
 inotify-tools
+intel-gpu-tools
 intel-media-va-driver
 kdeconnect
 language-pack-en
@@ -174,6 +179,7 @@ libxcb-icccm4-dev
 libxcb-res0-dev
 libxcb-xfixes0-dev
 libxdo-dev
+lieer
 linux-generic
 linux-generic-hwe-24.04
 linux-image-generic
@@ -202,11 +208,13 @@ network-manager-gnome
 ninja-build
 nlohmann-json3-dev
 nodejs
+notmuch
 npm
 nsnake
 obs-studio
 openjdk-17-jdk
 openjdk-21-jdk
+openjdk-25-source
 p7zip-full
 pandoc
 pavucontrol
@@ -256,6 +264,7 @@ sioyek
 sl
 slurp
 software-properties-common
+systemd-coredump
 tcc
 texlive-fonts-extra
 texlive-fonts-recommended
@@ -284,6 +293,7 @@ vulkan-tools
 waybar
 wayland-protocols
 wev
+wf-recorder
 wget
 wireplumber
 wl-clipboard

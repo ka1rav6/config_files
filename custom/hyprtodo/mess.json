@@ -1,0 +1,259 @@
+{
+  "kind": "mess",
+  "label": "November & December 2026",
+  "title": "Mess Menu [IIIT-D] November & December-2026(Implemented From-01 November & December)",
+  "meals": [
+    {
+      "id": "breakfast",
+      "name": "Breakfast",
+      "start": "07:30",
+      "end": "09:30",
+      "cost": 45
+    },
+    {
+      "id": "lunch",
+      "name": "Lunch",
+      "start": "12:30",
+      "end": "14:30",
+      "cost": 70
+    },
+    {
+      "id": "snacks",
+      "name": "Snacks",
+      "start": "17:00",
+      "end": "18:10",
+      "cost": 30
+    },
+    {
+      "id": "dinner",
+      "name": "Dinner",
+      "start": "19:30",
+      "end": "21:30",
+      "cost": 60
+    }
+  ],
+  "days": {
+    "mon": {
+      "breakfast": [
+        "Mix Veg Parantha",
+        "Green Chutney",
+        "Egg Bhurji",
+        "or Seasonal fruit"
+      ],
+      "lunch": [
+        "DaI Makhani",
+        "Mix Veg",
+        "Peas Pulao",
+        "Boondi Raita",
+        "Roti",
+        "Salad",
+        "Papad"
+      ],
+      "snacks": [
+        "Aloo Tikki Chat (2pcs)"
+      ],
+      "dinner": [
+        "Panchratna Dal",
+        "Veg Kofta",
+        "Plain Rice",
+        "Roti",
+        "Salad",
+        "Jalebi(2 pcs)"
+      ]
+    },
+    "tue": {
+      "breakfast": [
+        "Poori",
+        "Aaloo Subji",
+        "Omelette (2 Eggs)",
+        "Seasonal fruit"
+      ],
+      "lunch": [
+        "Rajma",
+        "Aloo Patta Gobhi Matar sabji",
+        "Jeera Rice",
+        "Roti",
+        "Salad",
+        "Papad",
+        "Boondi raita"
+      ],
+      "snacks": [
+        "Veg Macroni & Tea"
+      ],
+      "dinner": [
+        "Black Masoor dal",
+        "Soya onion aloo",
+        "Jeera Rice",
+        "Roti",
+        "Salad"
+      ]
+    },
+    "wed": {
+      "breakfast": [
+        "Pao bhaji(6pcs)",
+        "Boiled egg(2pcs) /Banana"
+      ],
+      "lunch": [
+        "Chana Dal",
+        "Sarson Saag",
+        "Mix Veg Raita",
+        "Plain Rice",
+        "Missi Roti",
+        "Salad"
+      ],
+      "snacks": [
+        "Veg noodles",
+        "Coffee"
+      ],
+      "dinner": [
+        "Kadhai Chicken (2 Pcs)",
+        "Matar Paneer",
+        "Sabut Moong Dal",
+        "Jeera Rice",
+        "Roti",
+        "Salad"
+      ]
+    },
+    "thu": {
+      "breakfast": [
+        "Matar Kulcha",
+        "Egg Bhurji",
+        "Sprouts Chat"
+      ],
+      "lunch": [
+        "Kadhi pakoda (3 Pcs)",
+        "Fried Aloo jeera",
+        "Plain Rice",
+        "Roti",
+        "Salad (Only Onion)",
+        "Fryums"
+      ],
+      "snacks": [
+        "Pani Puri"
+      ],
+      "dinner": [
+        "Chole",
+        "Khata Meetha Kaddu",
+        "Plain Rice",
+        "Roti",
+        "Salad",
+        "Gulab Jamun(2 pcs)"
+      ]
+    },
+    "fri": {
+      "breakfast": [
+        "Veg Poha",
+        "Chutney",
+        "Boiled Eggs",
+        "Papaya"
+      ],
+      "lunch": [
+        "Idli",
+        "Vada",
+        "Sambhar",
+        "Coconut Chutney",
+        "Lemon Rice",
+        "Kheer"
+      ],
+      "snacks": [
+        "Samosa & Tea"
+      ],
+      "dinner": [
+        "Egg Curry",
+        "Kadhai Paneer",
+        "Urad chana Dal",
+        "Jeera Rice",
+        "Roti",
+        "Salad"
+      ]
+    },
+    "sat": {
+      "breakfast": [
+        "Methi paratha",
+        "Aloo ki sabji",
+        "Chutney",
+        "Pickle",
+        "Boiled Eggs/Seasonal fruit"
+      ],
+      "lunch": [
+        "Chole Bhature",
+        "Plain Rice",
+        "Salad (Onion)",
+        "Chutney",
+        "Green Chilli Fry",
+        "Plain Curd",
+        "Fryums",
+        "Jal Jeera"
+      ],
+      "snacks": [
+        "Bhelpuri",
+        "Tea"
+      ],
+      "dinner": [
+        "Veg Khichdi",
+        "Dahi",
+        "Papad",
+        "Black chana Grevy",
+        "Roti",
+        "Salad"
+      ]
+    },
+    "sun": {
+      "breakfast": [
+        "Vermicilli",
+        "Chutney",
+        "Omelette (2 Eggs)",
+        "Seasonal fruit"
+      ],
+      "lunch": [
+        "Red Masoor Dal",
+        "Lauki Chana dal dry",
+        "Plain Rice",
+        "Roti",
+        "Salad"
+      ],
+      "snacks": [
+        "Aloo Sandwich",
+        "Tea"
+      ],
+      "dinner": [
+        "Chicken Biryani",
+        "Malai Kofta",
+        "Veg Biryani",
+        "Mint Raita",
+        "Roti",
+        "Salad",
+        "Fruit Custard"
+      ]
+    }
+  },
+  "everyday": [
+    "Bread (White & Brown)",
+    "Butter",
+    "Jam (Mixed fruit Jam/ Orange Marmalade)",
+    "Cornflakes",
+    "Milk/Tea/Coffee and Chocolate Powder"
+  ],
+  "notes": [
+    "Bread (White & Brown), Butter, Jam (Mixed fruit Jam/ Orange Marmalade), Cornflakes, Milk/Tea/Coffee and Chocolate Powder will be there every day in Breakfast.",
+    "Few Important Points are mentioned below:",
+    "1. You will be given only 1 of the following for breakfast: 2 eggs or 2 fruits or 1 fruit + 1 egg (in case of Pear, 2 eggs or 1 fruit).",
+    "2. If you wish to purchase extra eggs, it will cost Rs. 15 / egg.",
+    "3. Similarly, for milk, you are allowed to have a glass of milk (200ml), if you wish to purchase extra, it can be done for Rs. 10 / glass.",
+    "4. Sweet Dish 1 Serving.",
+    "5. Only two servings of cornflakes will be provided during breakfast.",
+    "Cost for Breakfast: Rs. 45 Cost for Lunch: Rs.70",
+    "Cost for Evening Snacks: Rs. 30",
+    "Cost for Dinner: Rs. 60 (for Monday, Tuesday, Thursday, Saturday) Rs. 80 (for Wednesday, Friday, Sunday)",
+    "Rs. 80 (for Wednesday, Sunday only non-veg)"
+  ],
+  "warnings": [],
+  "source": {
+    "file": "Mess Menu [IIIT-D] November & December-2026(Implemented from-01 November & December).pdf",
+    "path": "/home/kairav/.config/hyprtodo/sources/Mess Menu [IIIT-D] November & December-2026(Implemented from-01 November & December).pdf",
+    "modified": "2026-11-25T02:33:57+05:30",
+    "bytes": 589935
+  },
+  "generated_at": "2026-11-25T02:33:57+05:30",
+  "generator": "hyprtodo-pdfsync 1.0"
+}

@@ -1,13 +1,13 @@
 {
   "name": "auto",
-  "desc": "matugen tonal-spot from wallhaven-j5v28q.jpg",
-  "bg": "#1a1111",
-  "surface": "#271d1c",
-  "surface2": "#322827",
-  "border": "#453735",
-  "text": "#d1c0be",
-  "muted": "#ad9997",
-  "a1": "#da8781",
-  "a2": "#b69967",
-  "a3": "#ff638e"
+  "desc": "matugen tonal-spot from city-wallhaven-6lpmmw.jpg",
+  "bg": "#15130c",
+  "surface": "#212017",
+  "surface2": "#2c2a21",
+  "border": "#3d3a2d",
+  "text": "#c8c3b6",
+  "muted": "#a19d8d",
+  "a1": "#a99f4d",
+  "a2": "#7ea68f",
+  "a3": "#ff7063"
 }
