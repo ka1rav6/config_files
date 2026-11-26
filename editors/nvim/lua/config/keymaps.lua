@@ -87,6 +87,24 @@ map("n", "<leader>zc", "zM", {
     desc = "Close All Folds",
 })
 
+-- CURSOR MOVEMENT
+
+map("n", "j", "gj", {
+    desc = "Move one physical Line",
+})
+
+map("n", "k", "gk", {
+    desc = "Move one physical Line",
+})
+
+map("n", "$", "g$", {
+    desc = "Move in the same physical line",
+})
+
+map("n", "_", "g_", {
+    desc = "Move in the same physical line",
+})
+
 -- ==========================================
 -- LSP
 -- ==========================================

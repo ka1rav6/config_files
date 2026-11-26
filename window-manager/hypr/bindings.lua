@@ -234,6 +234,11 @@ hl.bind(mod .. " + RIGHT", workspace_warp("e+1"))
 hl.bind(mod .. " + SHIFT + LEFT", hl.dsp.window.move({ workspace = "e-1" }))
 hl.bind(mod .. " + SHIFT + RIGHT", hl.dsp.window.move({ workspace = "e+1" }))
 
+-- Close the gaps between occupied workspaces. Docked: the external packs up
+-- from 1 and the laptop packs down to 10 (1 4 6 | 8 10 -> 1 2 3 | 9 10); on
+-- one screen everything packs up from 1. See scripts/compact-workspaces.sh.
+hl.bind(mod .. " + Z", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/compact-workspaces.sh"))
+
 -- Move and resize windows with the mouse.
 --
 --   SUPER + left-drag          Hyprland's own drag, unwrapped. A tiled window

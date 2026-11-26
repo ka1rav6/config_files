@@ -59,5 +59,6 @@ video/3gpp2=vlc.desktop
 video/x-ogm+ogg=vlc.desktop
 video/x-theora+ogg=vlc.desktop
 x-scheme-handler/codex=chatgpt.desktop
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
 
 [Added Associations]
