@@ -27,9 +27,11 @@ import qs
 //   (QS-<Style>-invert) and has the qs-pointer plugin draw it inverted: each
 //   pixel the opposite of the screen under it, like Windows' inverted pointer.
 //   Without the plugin it is simply a white cursor. Installed themes are never
-//   inverted. The trail, click effect and ring are drawn white and the plugin
-//   inverts their layer (qs-cursorfx) the same way, so they match the pointer:
-//   a black trail behind a black pointer on a white page.
+//   inverted. The plugin also draws the TRAIL itself, inverted the same way,
+//   so it always matches the pointer: a black trail behind a black pointer on
+//   a white page, a white one on a dark page (Pointer.drawsTrail; CursorFx
+//   hides its own trail then). The click effect and ring stay in Quickshell's
+//   layer, which cannot invert, and are drawn in black.
 //   <dir name>    any installed XCursor theme
 //
 // APPLYING

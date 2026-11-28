@@ -48,13 +48,13 @@
     "cursor": {
         "click": "off",
         "color": "invert",
-        "hideAfter": 0,
+        "hideAfter": 10,
         "normalTheme": "accent:Fluent",
         "press": true,
         "ring": false,
         "ringRadius": 26,
         "ringStyle": "bars",
-        "size": 24,
+        "size": 20,
         "speed": "normal",
         "theme": "accent:Circle",
         "trail": "comet",
@@ -108,7 +108,7 @@
         ],
         "ram": true,
         "snapToGrid": true,
-        "visualizer": false,
+        "visualizer": true,
         "widgetLayout": {
             "battery": {
                 "x": 0.8593996840442338,
@@ -119,8 +119,8 @@
                 "y": 0.4028268551236749
             },
             "clock-mwu9pi5wfw": {
-                "x": 0.4312896405919662,
-                "y": 0.254416961130742
+                "x": 0.4296998420221169,
+                "y": 0.19825072886297376
             },
             "cpu": {
                 "x": 0.8625592417061612,
@@ -256,7 +256,7 @@
         "ringRadius": 220,
         "sensitivity": 1,
         "smoothing": 0.9041796875,
-        "style": "ring"
+        "style": "dots"
     },
     "wallpaper": {
         "deriveAccents": false,

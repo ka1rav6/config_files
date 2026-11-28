@@ -68,6 +68,16 @@ Singleton {
     // Draw the themed cursor inverted against the screen (CursorTheme sets it
     // for the "invert" colour).
     property bool wantInvert: false
+    // Whether the plugin actually has inversion enabled.
+    property bool inverted: false
+    // While inverting, a plugin that can draws the trail itself, inverted
+    // like the pointer (a Qt layer can only paint colours, never "the
+    // opposite of what is under me"). CursorFx sets these from the trail
+    // settings and hides its own trail while `drawsTrail && inverted`.
+    property bool drawsTrail: false
+    property string trailMode: "off"
+    property real trailLife: 0
+    property real trailHead: 0
 
     readonly property bool tracking: root.available && root.wantTrack
 
@@ -131,7 +141,13 @@ Singleton {
 
     // Everything the plugin should currently be doing, sent in one go -- after
     // it (re)appears, and that is the only time all of it is needed.
+    function sendTrail() {
+        if (root.available && root.drawsTrail)
+            root.send(["trail", root.trailMode, Math.round(root.trailLife), root.trailHead.toFixed(1)]);
+    }
+
     function pushAll() {
+        root.sendTrail();
         root.send(["track", root.wantTrack ? 1 : 0]);
         root.send(["clicks", root.wantClicks ? 1 : 0]);
         root.send(["shapes", root.wantShapes ? 1 : 0]);
@@ -148,8 +164,24 @@ Singleton {
     onWantClicksChanged: if (root.available) root.send(["clicks", root.wantClicks ? 1 : 0])
     onWantShapesChanged: if (root.available) root.send(["shapes", root.wantShapes ? 1 : 0])
     onWantPopChanged: if (root.available) root.send(["pop", root.wantPop ? 1 : 0])
-    onWantInvertChanged: if (root.available) root.send(["invert", root.wantInvert ? 1 : 0])
-    onAvailableChanged: if (root.available) root.pushAll()
+    onTrailModeChanged: root.sendTrail()
+    onTrailLifeChanged: root.sendTrail()
+    onTrailHeadChanged: root.sendTrail()
+    onDrawsTrailChanged: root.sendTrail()
+    onWantInvertChanged: {
+        if (root.available)
+            root.send(["invert", root.wantInvert ? 1 : 0]);
+
+        root.inverted = root.available && root.wantInvert;  
+    }
+    onAvailableChanged: {
+        if (root.available) {
+            root.pushAll();
+            root.inverted = root.wantInvert;
+        } else {
+            root.inverted = false;
+        }
+    }
 
     // ---- probing -------------------------------------------------------------
     property int probes: 0
@@ -165,6 +197,8 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 const ok = this.text.indexOf("shape-hooks") >= 0;
+                // Older builds have no "trail" line and cannot draw it.
+                root.drawsTrail = ok && this.text.indexOf("\ntrail ") >= 0;
                 if (ok && !root.available) {
                     root.available = true;
                 } else if (ok && root.available) {
@@ -226,6 +260,7 @@ Singleton {
                 retry.stop();
                 if (root.available) root.pushAll();
                 else root.available = true;   // onAvailableChanged pushes
+                root.probe();                 // learns drawsTrail
             } else if (name === "configreloaded") {
                 root.probes = 0;
                 root.probe();

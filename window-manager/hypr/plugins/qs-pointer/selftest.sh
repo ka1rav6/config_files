@@ -25,7 +25,18 @@ logdir="${QS_POINTER_OUT:-${XDG_CACHE_HOME:-$HOME/.cache}/qs-pointer}"
 mkdir -p "$logdir"
 Hyprland -c "$dir/selftest.lua" >"$logdir/selftest.log" 2>&1 &
 pid=$!
-cleanup() { kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null; }
+# The process started above is not necessarily the compositor (it may fork
+# away), and a nested Hyprland ignores SIGTERM -- so the instance's own pid is
+# looked up from hyprctl once it is up, and it is killed outright. Without
+# this every selftest left a hidden nested Hyprland running.
+real=""
+cleanup() {
+    for p in $pid $real; do kill -TERM "$p" 2>/dev/null; done
+    sleep 0.5
+    for p in $pid $real; do kill -KILL "$p" 2>/dev/null; done
+    # ...and anything it forked that is still running its config.
+    pkill -KILL -f "^Hyprland -c $dir/selftest.lua\$" 2>/dev/null
+}
 trap cleanup EXIT
 
 sig=""
@@ -39,6 +50,10 @@ for _ in $(seq 50); do
     [[ -n "$sig" ]] && break
 done
 [[ -n "$sig" && "$sig" != "$live" ]] || { echo "selftest: nested Hyprland did not start" >&2; exit 2; }
+real="$(hyprctl instances -j 2>/dev/null | python3 -c "import json,sys; print(next((str(i['pid']) for i in json.load(sys.stdin) if i['instance']=='$sig'), ''))" 2>/dev/null)"
+# Never the live session's own process.
+livepid="$(hyprctl instances -j 2>/dev/null | python3 -c "import json,sys; print(next((str(i['pid']) for i in json.load(sys.stdin) if i['instance']=='$live'), ''))" 2>/dev/null)"
+[[ -n "$real" && "$real" != "$livepid" ]] || real=""
 
 H() { hyprctl -i "$sig" "$@"; }
 H monitors -j | python3 -c 'import json,sys; ms=[m["name"] for m in json.load(sys.stdin)]; sys.exit(0 if ms and all(n.startswith("WAYLAND") for n in ms) else 1)' \
@@ -46,7 +61,7 @@ H monitors -j | python3 -c 'import json,sys; ms=[m["name"] for m in json.load(sy
 
 H plugin load "$so" >/dev/null 2>&1
 sleep 1
-kill -0 "$pid" 2>/dev/null || { echo "selftest: CRASHED on load" >&2; exit 1; }
+kill -0 "${real:-$pid}" 2>/dev/null || { echo "selftest: CRASHED on load" >&2; exit 1; }
 H qspointer zone selftest 0 0 100 100 >/dev/null
 H qspointer track 1 >/dev/null
 H qspointer clicks 1 >/dev/null
@@ -59,13 +74,23 @@ H qspointer status | grep -q 'track 1' || { echo "selftest: plugin did not answe
 sleep 0.3
 H eval "hl.dispatch(hl.dsp.cursor.move({x=400,y=300}))" >/dev/null
 sleep 0.3
-kill -0 "$pid" 2>/dev/null || { echo "selftest: CRASHED after enabling" >&2; exit 1; }
+kill -0 "${real:-$pid}" 2>/dev/null || { echo "selftest: CRASHED after enabling" >&2; exit 1; }
+# the inverted trail draws through that same hook: run every mode
+for mode in comet dots sparks; do
+    H qspointer trail "$mode" 300 8 >/dev/null
+    for i in 0 1 2 3 4 5; do
+        H eval "hl.dispatch(hl.dsp.cursor.move({x=$((200 + i * 30)),y=$((200 + i * 15))}))" >/dev/null
+    done
+    H qspointer status | grep -q "trail $mode" || { echo "selftest: trail $mode not taken" >&2; exit 1; }
+    sleep 0.4
+    kill -0 "${real:-$pid}" 2>/dev/null || { echo "selftest: CRASHED drawing the $mode trail" >&2; exit 1; }
+done
 H qspointer invert 0 >/dev/null
 sleep 0.2
-kill -0 "$pid" 2>/dev/null || { echo "selftest: CRASHED turning invert off" >&2; exit 1; }
+kill -0 "${real:-$pid}" 2>/dev/null || { echo "selftest: CRASHED turning invert off" >&2; exit 1; }
 H qspointer invert 1 >/dev/null
 H plugin unload "$so" >/dev/null 2>&1
 sleep 0.3
-kill -0 "$pid" 2>/dev/null || { echo "selftest: CRASHED on unload" >&2; exit 1; }
+kill -0 "${real:-$pid}" 2>/dev/null || { echo "selftest: CRASHED on unload" >&2; exit 1; }
 echo "selftest: ok"
 exit 0

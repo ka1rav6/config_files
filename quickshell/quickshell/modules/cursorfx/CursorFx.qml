@@ -25,9 +25,28 @@ Scope {
     id: root
 
     // The same colour the pointer itself is drawn in (services/CursorTheme).
-    readonly property color tint: CursorTheme.color
+    readonly property color tint: {
+        const c = CursorTheme.color;
+
+        if (!Pointer.inverted)
+            return c;
+
+        return Qt.rgba(
+            1.0 - c.r,
+            1.0 - c.g,
+            1.0 - c.b,
+            c.a
+        );
+    }
 
     readonly property bool trailOn: Settings.cursor.trail !== "off"
+    // While the pointer is inverted the plugin draws the trail, inverted the
+    // same way, so the two are always one colour; this layer's trail hides.
+    readonly property bool pluginTrail: Pointer.inverted && Pointer.drawsTrail
+    readonly property real trailLife: 90 + Settings.cursor.trailLength * 260
+    // As wide as the pointer itself (the accent dot is a fifth of the cursor
+    // size), so the trail reads as the cursor streaking.
+    readonly property real trailHead: Math.max(4, Settings.cursor.size * (CursorTheme.isAccent ? 0.22 : 0.3))
     readonly property bool clickOn: Settings.cursor.click !== "off"
     readonly property bool ringOn: Settings.cursor.ring
 
@@ -39,12 +58,16 @@ Scope {
     // Ask the plugin for exactly what is on.
     Binding { target: Pointer; property: "wantTrack"; value: root.trailOn || root.clickOn || root.ringOn }
     Binding { target: Pointer; property: "wantClicks"; value: root.clickOn }
+    Binding { target: Pointer; property: "trailMode"; value: root.trailOn ? Settings.cursor.trail : "off" }
+    Binding { target: Pointer; property: "trailLife"; value: root.trailLife }
+    Binding { target: Pointer; property: "trailHead"; value: root.trailHead }
 
     Component.onCompleted: if (root.ringLive) Cava.want(root.cavaId, 48)
     Component.onDestruction: {
         Cava.drop(root.cavaId);
         Pointer.wantTrack = false;
         Pointer.wantClicks = false;
+        Pointer.trailMode = "off";
     }
 
     Variants {
@@ -77,14 +100,12 @@ Scope {
                 id: trail
 
                 anchors.fill: parent
-                visible: root.trailOn
+                visible: root.trailOn && !root.pluginTrail
 
                 readonly property string mode: Settings.cursor.trail
-                readonly property real life: 90 + Settings.cursor.trailLength * 260
+                readonly property real life: root.trailLife
                 readonly property int maxPoints: 40
-                // As wide as the pointer itself (the accent dot is a fifth of
-                // the cursor size), so the trail reads as the cursor streaking.
-                readonly property real head: Math.max(4, Settings.cursor.size * (CursorTheme.isAccent ? 0.22 : 0.3))
+                readonly property real head: root.trailHead
                 readonly property real spacing: mode === "dots" ? Math.max(10, head * 1.6) : Math.max(2, head * 0.3)
 
                 property var points: []      // [{x, y, t}]
@@ -109,7 +130,7 @@ Scope {
 
                 Connections {
                     target: Pointer
-                    enabled: root.trailOn && panel.here
+                    enabled: trail.visible && panel.here
                     // The overlay draws a frame behind Hyprland's pointer, so
                     // the head leads by ~a frame along the current velocity.
                     function onMoved() { trail.add(panel.cx + Pointer.vx * 14, panel.cy + Pointer.vy * 14); }
@@ -181,7 +202,7 @@ Scope {
                 // Emit only while moving: stop a beat after the last move.
                 Connections {
                     target: Pointer
-                    enabled: trail.mode === "sparks" && panel.here
+                    enabled: trail.mode === "sparks" && trail.visible && panel.here
                     function onMoved() { sparkEmitter.enabled = true; sparkStop.restart(); }
                 }
                 Timer {
