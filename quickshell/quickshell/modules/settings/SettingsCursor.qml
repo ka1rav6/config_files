@@ -207,7 +207,7 @@ Column {
                     ? (CursorTheme.isAccent ? "The pointer and its trail, click effect and ring all use this colour."
                                             : "Pick an Accent style above to colour the pointer itself; the trail, click effect and ring use this colour either way.")
                     : "Installed themes keep their own colours; the trail, click effect and ring use this one."
-                    + (CursorTheme.inverted ? (CursorTheme.isAccent ? " Invert draws the pointer as the opposite of whatever is under it, like Windows' inverted pointer; the effects can't invert, so they are white."
+                    + (CursorTheme.inverted ? (CursorTheme.isAccent ? " Invert draws the pointer, its trail, click effect and ring as the opposite of whatever is under them, like Windows' inverted pointer."
                                                                     : " Invert only works with an Accent style.") : "")
                 color: Theme.muted
                 font.family: Appearance.font

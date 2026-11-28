@@ -27,8 +27,9 @@ import qs
 //   (QS-<Style>-invert) and has the qs-pointer plugin draw it inverted: each
 //   pixel the opposite of the screen under it, like Windows' inverted pointer.
 //   Without the plugin it is simply a white cursor. Installed themes are never
-//   inverted. The trail, click effect and ring cannot invert (they are
-//   ordinary windows), so they are white.
+//   inverted. The trail, click effect and ring are drawn white and the plugin
+//   inverts their layer (qs-cursorfx) the same way, so they match the pointer:
+//   a black trail behind a black pointer on a white page.
 //   <dir name>    any installed XCursor theme
 //
 // APPLYING

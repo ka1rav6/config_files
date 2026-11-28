@@ -30,6 +30,11 @@
 //                                        Meant for a pure-white theme, which
 //                                        Quickshell generates for it. Cursors a
 //                                        client draws itself are left as they are.
+//                                        Quickshell's cursor-effects layer
+//                                        (namespace "qs-cursorfx": trail, click
+//                                        effect, ring) is inverted with it, so a
+//                                        white trail turns black over a white page
+//                                        just like the pointer.
 //   hyprctl qspointer status             what is on, for debugging
 //
 // Built and loaded by ./load.sh at login, which rebuilds it whenever Hyprland
@@ -49,6 +54,7 @@
 #include <hyprland/src/render/OpenGL.hpp>
 #include <hyprland/src/render/pass/PassElement.hpp>
 #include <hyprland/src/state/MonitorState.hpp>
+#include <hyprland/src/desktop/view/LayerSurface.hpp>
 
 #include <chrono>
 #include <map>
@@ -199,10 +205,13 @@ class CInvertPass : public IPassElement {
         if (m_begin) {
             wasBlend = gl->blendEnabled();
             gl->blend(true); // cache and GL both: ONE, ONE_MINUS_SRC_ALPHA
-            glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+            // Colour inverts; alpha composites as usual, so the framebuffer's
+            // alpha channel stays what the rest of the renderer expects.
+            glBlendFuncSeparate(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         } else {
-            // Force both the cache and GL back to "over", whatever happened
-            // in between, then restore whether blending was on at all.
+            // Force both the cache and GL (colour and alpha: glBlendFunc sets
+            // both) back to "over", whatever happened in between, then
+            // restore whether blending was on at all.
             gl->blendFunc(GL_ZERO, GL_ZERO);
             gl->blendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
             gl->blend(wasBlend);
@@ -236,6 +245,21 @@ static void onSwCursors(Pointer::CPointerManager* self, Render::CRenderContext& 
         Render::IHyprRenderer::addPassElement(ctx, makeUnique<CInvertPass>(false));
 }
 
+// The effects layer: the same two pass elements round its surfaces.
+static constexpr const char* FX_LAYER = "qs-cursorfx";
+using LayerFn = void (*)(Render::IHyprRenderer*, Render::CRenderContext&, PHLLS, PHLMONITOR, const Time::steady_tp&, bool, bool, bool);
+static CFunctionHook* layerHook;
+
+static void onLayer(Render::IHyprRenderer* self, Render::CRenderContext& ctx, PHLLS ls, PHLMONITOR mon, const Time::steady_tp& now, bool popups, bool lockscreen,
+                    bool workspaceScene) {
+    const bool inv = invertOn && ls && ls->m_namespace == FX_LAYER && self->glBackend();
+    if (inv)
+        Render::IHyprRenderer::addPassElement(ctx, makeUnique<CInvertPass>(true));
+    ((LayerFn)layerHook->m_original)(self, ctx, std::move(ls), std::move(mon), now, popups, lockscreen, workspaceScene);
+    if (inv)
+        Render::IHyprRenderer::addPassElement(ctx, makeUnique<CInvertPass>(false));
+}
+
 // A hardware cursor plane cannot blend with the screen, so while inverting
 // the cursor is always drawn by the renderer.
 static void setInvert(bool on) {
@@ -247,8 +271,10 @@ static void setInvert(bool on) {
             Pointer::mgr()->unlockSoftwareAll();
         softwareLocked = invertOn;
     }
-    for (auto& m : State::monitorState()->monitors())
+    for (auto& m : State::monitorState()->monitors()) {
         Pointer::mgr()->damageCursor(m);
+        g_pHyprRenderer->damageMonitor(m); // the effects layer, wherever it is drawn
+    }
 }
 
 // --- hyprctl qspointer ... ---------------------------------------------------
@@ -308,7 +334,7 @@ static std::string command(const std::string& line) {
     }
     if (verb == "status") {
         std::ostringstream s;
-        s << "track " << trackOn << "\nclicks " << clicksOn << "\nshapes " << shapesOn << "\npop " << popOn << "\ninvert " << invertOn << "\nshape-hooks " << (nameHook && surfaceHook) << "\ninvert-hook " << (swHook != nullptr) << "\nzones";
+        s << "track " << trackOn << "\nclicks " << clicksOn << "\nshapes " << shapesOn << "\npop " << popOn << "\ninvert " << invertOn << "\nshape-hooks " << (nameHook && surfaceHook) << "\ninvert-hook " << (swHook != nullptr) << "\ninvert-fx-hook " << (layerHook != nullptr) << "\nzones";
         for (auto& [name, z] : zones)
             s << " " << name << (z.inside ? "*" : "");
         return s.str() + "\n";
@@ -347,6 +373,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE h) {
     nameHook    = hook("setCursorFromName", (void*)&onName);
     surfaceHook = hook("setCursorSurface", (void*)&onSurface);
     swHook      = hook("renderSoftwareCursorsFor", (void*)&onSwCursors, "CPointerManager::");
+    layerHook   = hook("renderLayer", (void*)&onLayer, "IHyprRenderer::");
 
     ctl = HyprlandAPI::registerHyprCtlCommand(handle, {"qspointer", IPC::Socket1::COMMAND_MATCH_PREFIX, [](const IPC::Socket1::SRequest& req) {
         return IPC::Socket1::SResponse{command(req.command)};
