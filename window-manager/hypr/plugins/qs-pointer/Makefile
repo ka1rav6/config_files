@@ -6,8 +6,8 @@ CXX ?= g++-14
 # Where the .so goes; load.sh points this at ~/.cache/qs-pointer.
 OUT ?= .
 
-$(OUT)/qs-pointer.so: main.cpp /usr/include/hyprland/src/version.h
-	$(CXX) -shared -fPIC -std=c++2b -O2 $< -o $@ `pkg-config --cflags pixman-1 libdrm hyprland pangocairo libinput libudev wayland-server xkbcommon`
+$(OUT)/qs-pointer.so: main.cpp compat/glslang/Include/glslang_c_interface.h /usr/include/hyprland/src/version.h
+	$(CXX) -shared -fPIC -std=c++2b -O2 -idirafter compat $< -o $@ `pkg-config --cflags pixman-1 libdrm hyprland pangocairo libinput libudev wayland-server xkbcommon`
 
 clean:
 	rm -f $(OUT)/qs-pointer.so

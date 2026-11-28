@@ -65,6 +65,9 @@ Singleton {
     // Press bounce: on a click the plugin shows the theme's pop_<shape>
     // cursor. Only meaningful for the accent Fluent theme (CursorTheme sets it).
     property bool wantPop: false
+    // Draw the themed cursor inverted against the screen (CursorTheme sets it
+    // for the "invert" colour).
+    property bool wantInvert: false
 
     readonly property bool tracking: root.available && root.wantTrack
 
@@ -133,6 +136,7 @@ Singleton {
         root.send(["clicks", root.wantClicks ? 1 : 0]);
         root.send(["shapes", root.wantShapes ? 1 : 0]);
         root.send(["pop", root.wantPop ? 1 : 0]);
+        root.send(["invert", root.wantInvert ? 1 : 0]);
         root.send(["unzone", "*"]);
         for (const name in root.zones) {
             const z = root.zones[name];
@@ -144,6 +148,7 @@ Singleton {
     onWantClicksChanged: if (root.available) root.send(["clicks", root.wantClicks ? 1 : 0])
     onWantShapesChanged: if (root.available) root.send(["shapes", root.wantShapes ? 1 : 0])
     onWantPopChanged: if (root.available) root.send(["pop", root.wantPop ? 1 : 0])
+    onWantInvertChanged: if (root.available) root.send(["invert", root.wantInvert ? 1 : 0])
     onAvailableChanged: if (root.available) root.pushAll()
 
     // ---- probing -------------------------------------------------------------

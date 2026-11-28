@@ -23,6 +23,13 @@
 //                                        cursor (the Fluent accent theme's swell-
 //                                        and-settle); only for themes that have
 //                                        them, so Quickshell turns it on only then
+//   hyprctl qspointer invert 0|1         draw the themed cursor INVERTED: each
+//                                        pixel becomes the opposite of what is
+//                                        under it (white over black, black over
+//                                        white), like Windows' inverted pointer.
+//                                        Meant for a pure-white theme, which
+//                                        Quickshell generates for it. Cursors a
+//                                        client draws itself are left as they are.
 //   hyprctl qspointer status             what is on, for debugging
 //
 // Built and loaded by ./load.sh at login, which rebuilds it whenever Hyprland
@@ -37,6 +44,11 @@
 #include <hyprland/src/pointer/cursor/CursorManager.hpp>
 #include <hyprland/src/managers/input/InputManager.hpp>
 #include <hyprland/src/Compositor.hpp>
+#include <hyprland/src/pointer/PointerManager.hpp>
+#include <hyprland/src/render/Renderer.hpp>
+#include <hyprland/src/render/OpenGL.hpp>
+#include <hyprland/src/render/pass/PassElement.hpp>
+#include <hyprland/src/state/MonitorState.hpp>
 
 #include <chrono>
 #include <map>
@@ -50,6 +62,7 @@ static bool trackOn  = false;
 static bool clicksOn = false;
 static bool shapesOn = false;
 static bool popOn    = false;
+static bool invertOn = false;
 
 struct SZone {
     double x, y, w, h;
@@ -145,14 +158,97 @@ static void onSurface(CCursorManager* self, SP<Desktop::View::CWLSurface> surf, 
     postShape("");
 }
 
-static CFunctionHook* hook(const std::string& name, void* fn) {
+static CFunctionHook* hook(const std::string& name, void* fn, const std::string& cls = "CCursorManager::") {
     for (auto& m : HyprlandAPI::findFunctionsByName(handle, name))
-        if (m.demangled.contains("CCursorManager::" + name)) {
+        if (m.demangled.contains(cls + name)) {
             auto h = HyprlandAPI::createFunctionHook(handle, m.address, fn);
             h->hook();
             return h;
         }
     return nullptr;
+}
+
+// --- inverted cursor ---------------------------------------------------------
+// Hyprland draws the (software) cursor as one texture pass element, blended
+// with GL_ONE, GL_ONE_MINUS_SRC_ALPHA (premultiplied "over"). Inverting is the
+// same draw with GL_ONE_MINUS_DST_COLOR as the source factor:
+//
+//     out = src * (1 - dst) + dst * (1 - srcAlpha)
+//
+// which for a white pixel of coverage a is mix(dst, 1 - dst, a): fully covered
+// pixels are the exact inverse of the screen, anti-aliased edges fade into it.
+//
+// The renderer re-sets the blend function before every draw, but through a
+// cache that skips the GL call when the cached value already matches. So two
+// pass elements go round the cursor's: the first makes the cache say "over"
+// (blend(true)) and then sets the real GL state to "invert" behind its back;
+// the cursor draw asks for "over", the cache says it is already there, and the
+// inverted state is what it draws with. The second puts the real state back
+// and resyncs the cache, so nothing after the cursor is affected.
+using Render::GL::CHyprOpenGLImpl;
+
+class CInvertPass : public IPassElement {
+  public:
+    explicit CInvertPass(bool begin) : m_begin(begin) {}
+
+    std::vector<UP<IPassElement>> draw(Render::CRenderContext&) override {
+        auto gl = g_pHyprRenderer->glBackend();
+        if (!gl)
+            return {};
+        static bool wasBlend = true;
+        if (m_begin) {
+            wasBlend = gl->blendEnabled();
+            gl->blend(true); // cache and GL both: ONE, ONE_MINUS_SRC_ALPHA
+            glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+        } else {
+            // Force both the cache and GL back to "over", whatever happened
+            // in between, then restore whether blending was on at all.
+            gl->blendFunc(GL_ZERO, GL_ZERO);
+            gl->blendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+            gl->blend(wasBlend);
+        }
+        return {};
+    }
+    bool needsLiveBlur(Render::CRenderContext&) override { return false; }
+    bool needsPrecomputeBlur(Render::CRenderContext&) override { return false; }
+    // Never dropped by the occlusion pass: the "end" one must always run once
+    // the "begin" one has.
+    bool                undiscardable(Render::CRenderContext&) override { return true; }
+    const char*         passName() override { return m_begin ? "CQsInvertBegin" : "CQsInvertEnd"; }
+    ePassElementType    type() override { return EK_CUSTOM; }
+
+  private:
+    bool m_begin;
+};
+
+using SwCursorFn = void (*)(Pointer::CPointerManager*, Render::CRenderContext&, PHLMONITOR, const Time::steady_tp&, CRegion&, std::optional<Vector2D>, bool, bool);
+static CFunctionHook* swHook;
+static bool           softwareLocked = false;
+
+static void onSwCursors(Pointer::CPointerManager* self, Render::CRenderContext& ctx, PHLMONITOR mon, const Time::steady_tp& now, CRegion& damage,
+                        std::optional<Vector2D> pos, bool screencopy, bool force) {
+    // Only the theme's own cursors ("" = a client is drawing its own).
+    const bool inv = invertOn && !lastShape.empty() && g_pHyprRenderer->glBackend();
+    if (inv)
+        Render::IHyprRenderer::addPassElement(ctx, makeUnique<CInvertPass>(true));
+    ((SwCursorFn)swHook->m_original)(self, ctx, std::move(mon), now, damage, pos, screencopy, force);
+    if (inv)
+        Render::IHyprRenderer::addPassElement(ctx, makeUnique<CInvertPass>(false));
+}
+
+// A hardware cursor plane cannot blend with the screen, so while inverting
+// the cursor is always drawn by the renderer.
+static void setInvert(bool on) {
+    invertOn = on && swHook;
+    if (invertOn != softwareLocked) {
+        if (invertOn)
+            Pointer::mgr()->lockSoftwareAll();
+        else
+            Pointer::mgr()->unlockSoftwareAll();
+        softwareLocked = invertOn;
+    }
+    for (auto& m : State::monitorState()->monitors())
+        Pointer::mgr()->damageCursor(m);
 }
 
 // --- hyprctl qspointer ... ---------------------------------------------------
@@ -177,6 +273,12 @@ static std::string command(const std::string& line) {
         return flag(clicksOn);
     if (verb == "pop")
         return flag(popOn);
+    if (verb == "invert") {
+        bool on = false;
+        flag(on);
+        setInvert(on);
+        return invertOn || !on ? "ok" : "invert unavailable (render hook missing)";
+    }
     if (verb == "shapes") {
         flag(shapesOn);
         if (shapesOn && lastShape != "-")
@@ -206,12 +308,12 @@ static std::string command(const std::string& line) {
     }
     if (verb == "status") {
         std::ostringstream s;
-        s << "track " << trackOn << "\nclicks " << clicksOn << "\nshapes " << shapesOn << "\npop " << popOn << "\nshape-hooks " << (nameHook && surfaceHook) << "\nzones";
+        s << "track " << trackOn << "\nclicks " << clicksOn << "\nshapes " << shapesOn << "\npop " << popOn << "\ninvert " << invertOn << "\nshape-hooks " << (nameHook && surfaceHook) << "\ninvert-hook " << (swHook != nullptr) << "\nzones";
         for (auto& [name, z] : zones)
             s << " " << name << (z.inside ? "*" : "");
         return s.str() + "\n";
     }
-    return "qspointer: track|clicks|shapes|pop 0|1, zone NAME X Y W H, unzone NAME|*, status";
+    return "qspointer: track|clicks|shapes|pop|invert 0|1, zone NAME X Y W H, unzone NAME|*, status";
 }
 
 static CHyprSignalListener moveListener;
@@ -244,6 +346,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE h) {
     // plugin still loads and everything but `qsshape` keeps working.
     nameHook    = hook("setCursorFromName", (void*)&onName);
     surfaceHook = hook("setCursorSurface", (void*)&onSurface);
+    swHook      = hook("renderSoftwareCursorsFor", (void*)&onSwCursors, "CPointerManager::");
 
     ctl = HyprlandAPI::registerHyprCtlCommand(handle, {"qspointer", IPC::Socket1::COMMAND_MATCH_PREFIX, [](const IPC::Socket1::SRequest& req) {
         return IPC::Socket1::SResponse{command(req.command)};
@@ -255,6 +358,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE h) {
 }
 
 APICALL EXPORT void PLUGIN_EXIT() {
+    setInvert(false);
     moveListener.reset();
     clickListener.reset();
     wl_event_source_remove(trailTimer);

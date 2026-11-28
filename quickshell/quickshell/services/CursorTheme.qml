@@ -21,6 +21,14 @@ import qs
 //   toggleCircle() flips between accent:Circle and whatever was in use before
 //   (kept in Settings.cursor.normalTheme), from Settings › Cursor or
 //   `quickshell ipc call cursor toggleCircle`.
+//
+// INVERTED
+//   Settings.cursor.color "invert" builds the accent style in pure white
+//   (QS-<Style>-invert) and has the qs-pointer plugin draw it inverted: each
+//   pixel the opposite of the screen under it, like Windows' inverted pointer.
+//   Without the plugin it is simply a white cursor. Installed themes are never
+//   inverted. The trail, click effect and ring cannot invert (they are
+//   ordinary windows), so they are white.
 //   <dir name>    any installed XCursor theme
 //
 // APPLYING
@@ -56,7 +64,10 @@ Singleton {
     // pointer. Settings.cursor.color is "accent" (follows the theme), "white",
     // "black", or a "#rrggbb" picked from the swatches. Installed themes keep
     // their own colours; the effects still use this.
-    readonly property var named: ({ white: "f4f5f7", black: "1b1d22" })
+    readonly property var named: ({ white: "f4f5f7", black: "1b1d22", invert: "ffffff" })
+    readonly property bool inverted: String(Settings.cursor.color) === "invert"
+    // The colour as it appears in theme names: "invert" stays a word.
+    readonly property string colorTag: root.inverted ? "invert" : root.colorHex
     readonly property string colorHex: {
         const c = String(Settings.cursor.color || "accent");
         if (c.startsWith("#") && c.length >= 7) return c.slice(1, 7).toLowerCase();
@@ -65,6 +76,8 @@ Singleton {
         return root.accentHex;
     }
     readonly property color color: "#" + root.colorHex
+    // What cursor-gen.py is given.
+    readonly property string genColor: root.inverted ? "invert" : "#" + root.colorHex
     readonly property string fallback: Quickshell.env("XCURSOR_THEME") || "Yaru"
 
     // The theme Hyprland should actually be running.
@@ -73,7 +86,7 @@ Singleton {
     readonly property bool circle: root.choice === "accent:Circle"
     // Styles with a click animation (pop_<shape> cursors) and a speed.
     readonly property bool animated: root.fluent || root.circle
-    readonly property string resolved: root.isAccent ? "QS-" + root.accentStyle + "-" + root.colorHex + (root.animated ? "-" + root.speed : "")
+    readonly property string resolved: root.isAccent ? "QS-" + root.accentStyle + "-" + root.colorTag + (root.animated ? "-" + root.speed : "")
         : root.choice !== "" ? root.choice
         : root.fallback
 
@@ -92,13 +105,13 @@ Singleton {
     // Previews of the accent styles in the current accent (cursor-gen.py
     // preview), keyed by style.
     function accentPreview(style) {
-        return "file://" + root.previewDir + "/accent-" + style + "-" + root.colorHex + ".png?" + root.previewStamp;
+        return "file://" + root.previewDir + "/accent-" + style + "-" + root.colorTag + ".png?" + root.previewStamp;
     }
     property int previewStamp: 0
 
     Process {
         id: accentPreviewer
-        command: ["python3", "-I", Quickshell.shellDir + "/scripts/cursor-gen.py", "preview", root.previewDir, "#" + root.colorHex]
+        command: ["python3", "-I", Quickshell.shellDir + "/scripts/cursor-gen.py", "preview", root.previewDir, root.genColor]
         onExited: root.previewStamp++
     }
 
@@ -197,7 +210,7 @@ Singleton {
     function generate() {
         if (!root.isAccent) return;
         root.generating = true;
-        generator.command = ["python3", "-I", Quickshell.shellDir + "/scripts/cursor-gen.py", root.accentStyle, "#" + root.colorHex, root.speed];
+        generator.command = ["python3", "-I", Quickshell.shellDir + "/scripts/cursor-gen.py", root.accentStyle, root.genColor, root.speed];
         generator.running = true;
     }
 
@@ -263,7 +276,7 @@ Singleton {
         function onHideAfterChanged() { root.engaged = true; root.pushHide(); }
     }
 
-    onColorHexChanged: {
+    onColorTagChanged: {
         accentPreviewer.running = true;
         if (root.isAccent && root.engaged) debounce.restart();
     }
@@ -280,6 +293,13 @@ Singleton {
     // Press bounce: the plugin swaps in the theme's pop_<shape> cursor on a
     // click. Only Fluent and Circle have those, and it is an animation, so not
     // in saver.
+    // Inverted drawing, for the white theme built for it.
+    Binding {
+        target: Pointer
+        property: "wantInvert"
+        value: root.isAccent && root.inverted
+    }
+
     Binding {
         target: Pointer
         property: "wantPop"

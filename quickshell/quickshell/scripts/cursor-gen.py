@@ -5,6 +5,12 @@ Usage:
   cursor-gen.py STYLE '#rrggbb' [SPEED]     build; prints the theme name
   cursor-gen.py preview OUTDIR '#rrggbb'    PNG previews of every style
 
+The colour may also be 'invert': the shapes are drawn pure white, rim and all,
+for the qs-pointer plugin to draw INVERTED (the opposite of whatever is under
+each pixel: white over black, black over white). On its own, without the
+plugin inverting it, such a theme is just a white cursor. Its name uses
+'invert' in place of the hex.
+
 STYLE is Fluent, Circle, Dot, Ring or Arrow. SPEED (Fluent and Circle) is fast,
 normal or slow.
 
@@ -85,8 +91,27 @@ GROUPS = {
 
 
 def rgb(hexstr):
+    if hexstr == "invert":
+        return (255, 255, 255)
     h = hexstr.lstrip("#")
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def tag(color):
+    """What the colour is called in theme and preview names."""
+    return "invert" if color == "invert" else color.lstrip("#").lower()[:6]
+
+
+def set_colour(color):
+    """The accent, and the rim to go with it. Inverted cursors get a white
+    rim: under inversion a dark rim would just darken the screen round the
+    shape, while a white one at partial opacity becomes a soft inverted edge."""
+    accent = rgb(color)
+    set_edge(accent)
+    if color == "invert":
+        global EDGE
+        EDGE = (255, 255, 255)
+    return accent
 
 
 def set_edge(accent):
@@ -400,9 +425,8 @@ def ensure_reachable(name):
 
 
 def build(style, color, speed):
-    accent = rgb(color)
-    set_edge(accent)
-    hexname = color.lstrip("#").lower()[:6]
+    accent = set_colour(color)
+    hexname = tag(color)
     name = f"QS-{style}-{hexname}" + (f"-{speed}" if style in ("Fluent", "Circle") else "")
     dest = ICONS / name
     if not (dest / "cursors" / "default").exists():
@@ -425,11 +449,10 @@ def build(style, color, speed):
 
 def preview(outdir, color):
     """accent-<Style>-<hex>.png: pointer, link and text side by side at 48 px."""
-    accent = rgb(color)
-    set_edge(accent)
+    accent = set_colour(color)
     out = Path(outdir)
     out.mkdir(parents=True, exist_ok=True)
-    hexname = color.lstrip("#").lower()[:6]
+    hexname = tag(color)
     for style in ("Fluent", "Circle", "Dot", "Ring", "Arrow"):
         dest = out / f"accent-{style}-{hexname}.png"
         if dest.exists():

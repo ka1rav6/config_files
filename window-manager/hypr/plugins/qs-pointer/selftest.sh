@@ -52,9 +52,18 @@ H qspointer track 1 >/dev/null
 H qspointer clicks 1 >/dev/null
 H qspointer shapes 1 >/dev/null
 H qspointer pop 1 >/dev/null
+# invert hooks the renderer, so make it draw a few frames with it on
+H qspointer invert 1 >/dev/null
+H eval "hl.dispatch(hl.dsp.cursor.move({x=200,y=200}))" >/dev/null
 H qspointer status | grep -q 'track 1' || { echo "selftest: plugin did not answer" >&2; exit 1; }
-sleep 0.5
+sleep 0.3
+H eval "hl.dispatch(hl.dsp.cursor.move({x=400,y=300}))" >/dev/null
+sleep 0.3
 kill -0 "$pid" 2>/dev/null || { echo "selftest: CRASHED after enabling" >&2; exit 1; }
+H qspointer invert 0 >/dev/null
+sleep 0.2
+kill -0 "$pid" 2>/dev/null || { echo "selftest: CRASHED turning invert off" >&2; exit 1; }
+H qspointer invert 1 >/dev/null
 H plugin unload "$so" >/dev/null 2>&1
 sleep 0.3
 kill -0 "$pid" 2>/dev/null || { echo "selftest: CRASHED on unload" >&2; exit 1; }

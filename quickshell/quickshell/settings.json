@@ -47,7 +47,7 @@
     },
     "cursor": {
         "click": "off",
-        "color": "white",
+        "color": "invert",
         "hideAfter": 0,
         "normalTheme": "accent:Fluent",
         "press": true,
