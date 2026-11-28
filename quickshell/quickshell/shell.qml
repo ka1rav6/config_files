@@ -98,6 +98,9 @@ ShellRoot {
         // whether or not the control cluster is enabled, so it cannot be left
         // to WindowControls constructing it lazily.
         void WindowPolicy.visible;
+        void CursorTheme.choice;
+        void AnimationPolicy.stop;
+        void BarHover.active;
     }
 
     // -----------------------------------------------------------------
@@ -187,6 +190,18 @@ ShellRoot {
         sourceComponent: Visualizer {}
     }
 
+    // Cursor effects (trail, click, ring visualizer). Needs the qs-pointer
+    // Hyprland plugin for the pointer position; built only while an effect is
+    // switched on, and never in Battery Saver (with "stop animations"), game
+    // mode, or with motion turned off. See modules/cursorfx/CursorFx.qml.
+    Loader {
+        active: Pointer.available
+            && (Settings.cursor.trail !== "off" || Settings.cursor.click !== "off" || Settings.cursor.ring)
+            && !Performance.stopAnimations
+            && !Performance.gameMode
+        sourceComponent: CursorFx {}
+    }
+
     // NO LOCK LOADER HERE, DELIBERATELY.
     //
     // The lock screen used to live in this process. When the session fell over
@@ -262,6 +277,13 @@ ShellRoot {
     Loader {
         active: Settings.features.dashboard
         sourceComponent: Dashboard {}
+    }
+
+    // Now playing, dropping out of the bar: the media pill's hover/click and
+    // `quickshell ipc call media toggle`. modules/media/MediaDropdown.qml.
+    Loader {
+        active: Settings.features.music
+        sourceComponent: MediaDropdown {}
     }
 
     // The macOS-style control cluster on the active window's top-right corner.
@@ -472,6 +494,21 @@ ShellRoot {
         // in the history -- so the useful version of that key is "show me what
         // I missed", which is what this does.
         function clear(): string { Notifications.clear(); return "ok"; }
+
+        // The waybar bell (custom/notifications) runs this when Quickshell
+        // signals it -- see services/BarHover.qml. Waybar JSON: text, class,
+        // tooltip.
+        function bar(): string {
+            const n = Notifications.count;
+            const icon = Notifications.dnd ? "\udb80\udc9b" : n > 0 ? "\udb80\udc9a" : "\udb80\udc9c";
+            return JSON.stringify({
+                text: n > 0 && !Notifications.dnd ? icon + " " + Math.min(n, 99) : icon,
+                class: Notifications.dnd ? "dnd" : n > 0 ? "unread" : "empty",
+                tooltip: (Notifications.dnd ? "Do not disturb · " : "")
+                    + (n === 0 ? "No notifications" : n === 1 ? "1 notification" : n + " notifications")
+                    + "\nClick: open · Right-click: do not disturb"
+            });
+        }
     }
 
     IpcHandler {
@@ -496,6 +533,31 @@ ShellRoot {
     }
 
     IpcHandler {
+        target: "media"
+
+        function toggle(): string { return Shell.toggle("media") ? "ok" : "media is disabled"; }
+        function open(): string { return Shell.open("media") ? "ok" : "media is disabled"; }
+        function close(): void { Shell.close("media"); }
+
+        // The bar pill (custom/media in waybar), signalled by BarHover on
+        // SIGRTMIN+11. Empty text hides it: nothing is shown unless a track is
+        // actually playing or paused -- see Media.shown.
+        function bar(): string {
+            if (!Media.shown || !Settings.features.music) return JSON.stringify({ text: "" });
+            const t = Media.title.length > 18 ? Media.title.slice(0, 17) + "\u2026" : Media.title;
+            return JSON.stringify({
+                text: (Media.playing ? "\udb81\udc0a" : "\udb80\udfe4") + " " + t,
+                class: Media.playing ? "playing" : "paused",
+                tooltip: Media.title + (Media.artist !== "" ? "\n" + Media.artist : "") + "\n" + Media.identity
+            });
+        }
+
+        function playPause(): void { Media.playPause(); }
+        function next(): void { Media.next(); }
+        function previous(): void { Media.previous(); }
+    }
+
+    IpcHandler {
         target: "visualizer"
 
         // The bind is SUPER + SHIFT + B. This toggles the DESKTOP widget, not
@@ -509,6 +571,21 @@ ShellRoot {
 
         function on(): void { Settings.desktop.visualizer = true; }
         function off(): void { Settings.desktop.visualizer = false; }
+
+        // Switch style by id (mirror, bars, center, peaks, dots, line, ring),
+        // or step to the next one. Both turn the visualizer on.
+        function style(name: string): string {
+            if (!Settings.visualizerStyles.some(s => s.id === name))
+                return "unknown style; one of: " + Settings.visualizerStyles.map(s => s.id).join(", ");
+            Settings.visualizer.style = name;
+            Settings.desktop.visualizer = true;
+            return name;
+        }
+        function next(): string {
+            const list = Settings.visualizerStyles;
+            const i = list.findIndex(s => s.id === Settings.visualizer.style);
+            return style(list[(i + 1) % list.length].id);
+        }
 
         // Why the bars are or are not moving.
         function status(): string { return Cava.status; }

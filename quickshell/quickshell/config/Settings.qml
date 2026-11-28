@@ -68,6 +68,20 @@ Singleton {
     readonly property alias equalizer: adapter.equalizer
     readonly property alias wallpaper: adapter.wallpaper
     readonly property alias performance: adapter.performance
+    readonly property alias cursor: adapter.cursor
+    readonly property alias bar: adapter.bar
+
+    // Every desktop visualizer style, in display order. One list, read by the
+    // Super+D Media page, Settings > Visualizer and `visualizer next`.
+    readonly property var visualizerStyles: [
+        { id: "mirror", label: "Waveform" },
+        { id: "bars",   label: "Bars" },
+        { id: "center", label: "Center" },
+        { id: "peaks",  label: "Peaks" },
+        { id: "dots",   label: "Dots" },
+        { id: "line",   label: "Lollipop" },
+        { id: "ring",   label: "Ring" }
+    ]
     // Window decoration and window-behaviour policy. `windows` is read by BOTH
     // halves of the desktop: modules/windowcontrols draws from it, and
     // services/WindowPolicy.qml pushes the two drag values into the
@@ -227,6 +241,12 @@ Singleton {
                 // entirely (accessibility: prefers-reduced-motion), 1 is the
                 // designed speed, 2 is half speed.
                 property real motion: 1.0
+
+                // Panels that hang from the bar (the clock's dashboard, the
+                // notification center, the hover dropdowns) slide down out of
+                // it when they open and back up when they close. Off = they
+                // fade and scale in place, as before.
+                property bool slideDropdowns: true
 
                 // UI typeface. Inter is installed and is what the design was
                 // drawn against; JetBrainsMono Nerd Font supplies the glyphs.
@@ -499,6 +519,64 @@ Singleton {
                 // How far the band floats above the bottom edge, for "mirror".
                 // Ignored by "bars", which must touch the edge it grows from.
                 property int offset: 280
+
+                // Radius of the circle the "ring" style stands its bars on.
+                property int ringRadius: 220
+            }
+
+            // =============================================================
+            // cursor — theme, size, and the pointer effects.
+            //
+            // The theme is applied live with `hyprctl setcursor` and gsettings
+            // (services/CursorTheme.qml), and written to
+            // ~/.config/hypr/cursor.lua so the next login starts with it.
+            // The effects (modules/cursorfx) need the pointer position, which
+            // comes from the qs-pointer Hyprland plugin (services/Pointer.qml);
+            // without the plugin they simply stay off.
+            // =============================================================
+            property JsonObject bar: JsonObject {
+                // Hovering the bar's media pill, clock or bell drops its panel
+                // (services/BarHover.qml). Needs the qs-pointer plugin.
+                property bool hover: true
+
+                // Where the pills are, in logical px. These must match
+                // ~/.config/waybar: margin-top + the pill inset (top), the bar
+                // height (height), margin-right (right), and the fixed pill
+                // widths set by min-width + padding in style.css.
+                property int top: 8
+                property int height: 38
+                property int right: 14
+                property int gap: 6
+                property int mediaWidth: 170
+                property int clockWidth: 170
+                property int bellWidth: 50
+            }
+
+            property JsonObject cursor: JsonObject {
+                // Directory name under an icons dir; "" = leave the login
+                // default (XCURSOR_THEME in autostart.lua) alone.
+                property string theme: ""
+                property int size: 24
+                // Fluent only: how fast it morphs between shapes -- "fast",
+                // "normal" or "slow" -- and whether it swells on a click.
+                property string speed: "normal"
+                property bool press: true
+                // Hide the pointer after this many idle seconds; 0 = never.
+                property int hideAfter: 0
+
+                // "off" | "comet" | "dots" | "sparks"
+                property string trail: "off"
+                // 0..1, how long the trail hangs behind the pointer.
+                property real trailLength: 0.5
+                // "off" | "ripple" | "pop" | "burst"
+                property string click: "off"
+                // Ring visualizer round the pointer while music plays.
+                property bool ring: false
+                // "bars" | "dots" | "wave"
+                property string ringStyle: "bars"
+                property int ringRadius: 26
+                // "accent" | "text" | "white" -- what colour the effects use.
+                property string color: "accent"
             }
 
             // =============================================================
@@ -542,6 +620,11 @@ Singleton {
                 // fullscreen. Distinct from desktop.hideOnFullscreen: this one
                 // stops work, that one only hides pixels.
                 property bool gameMode: true
+
+                // In Battery Saver, stop every animation: the shell's own
+                // (motion goes to 0, not just slower) and Hyprland's window
+                // and workspace animations. Cursor effects also stop.
+                property bool saverStopsAnimations: true
             }
 
             // =============================================================

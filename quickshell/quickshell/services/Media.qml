@@ -35,7 +35,13 @@ Singleton {
     // destroyed QObject is how QML crashes.
     property string lastActiveName: ""
 
-    readonly property var players: Mpris.players ? Mpris.players.values : []
+    // playerctld is playerctl's proxy -- it mirrors whichever real player is
+    // active, under its own bus name, and waybar's mpris module D-Bus-activates
+    // it. Counting it would show a phantom empty player when nothing runs, and
+    // every real player twice when one does.
+    readonly property var players: Mpris.players
+        ? Mpris.players.values.filter(p => !String(p.dbusName).endsWith(".playerctld"))
+        : []
 
     readonly property var player: {
         const list = root.players;
@@ -54,6 +60,13 @@ Singleton {
 
     readonly property bool available: !!root.player
     readonly property bool playing: root.available && root.player.isPlaying
+
+    // Is there something to show in the bar? A player existing is not enough:
+    // a browser keeps an MPRIS player for every tab that ever had a media
+    // session, stopped and with no track, long after the music ended. Only a
+    // loaded track that is playing or paused counts.
+    readonly property bool shown: root.available && root.title !== ""
+        && root.player.playbackState !== MprisPlaybackState.Stopped
 
     onPlayingChanged: {
         if (root.playing && root.player)

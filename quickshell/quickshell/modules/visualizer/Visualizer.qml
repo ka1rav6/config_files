@@ -152,11 +152,13 @@ Scope {
             color: "transparent"
 
             // "mirror" is a free-floating band lifted clear of the bottom edge;
-            // "bars" grow out of the edge and must touch it.
-            anchors { bottom: true; left: true; right: true }
-            implicitHeight: Settings.visualizer.height
-            margins.bottom: Settings.visualizer.style === "mirror"
-                ? Settings.visualizer.offset : 0
+            // "bars" grow out of the edge and must touch it. "ring" sits round
+            // the middle of the screen, so it takes the whole output (still
+            // click-through, still below every window).
+            readonly property bool fullscreen: Settings.visualizer.style === "ring"
+            anchors { bottom: true; left: true; right: true; top: panel.fullscreen }
+            implicitHeight: panel.fullscreen ? 0 : Settings.visualizer.height
+            margins.bottom: field.floating ? Settings.visualizer.offset : 0
 
             WlrLayershell.layer: WlrLayer.Bottom
             WlrLayershell.namespace: "qs-visualizer"
@@ -172,7 +174,19 @@ Scope {
                 anchors.fill: parent
 
                 readonly property int count: Cava.levels.length
-                readonly property bool mirror: Settings.visualizer.style === "mirror"
+                readonly property string style: Settings.visualizer.style
+                readonly property bool mirror: style === "mirror"
+                readonly property bool ring: style === "ring"
+                // Styles that float above the bottom edge by `offset`, rather
+                // than growing out of the edge itself.
+                readonly property bool floating: style === "mirror" || style === "dots"
+                // "center": the spectrum mirrored about the middle of the
+                // screen -- bass in the centre, treble out at both edges.
+                readonly property bool center: style === "center"
+
+                // Ring geometry: bars stand on a circle round the screen centre.
+                readonly property real ringRadius: Settings.visualizer.ringRadius
+                readonly property real ringReach: Math.min(Settings.visualizer.height, field.height / 2 - ringRadius - 8)
 
                 // Derive the bar width from the output so the row spans it
                 // exactly, whatever the band count or monitor.
@@ -199,40 +213,57 @@ Scope {
                     }
                 }
 
+                // -----------------------------------------------------------
+                // STYLES
+                //   mirror   waveform about a centre line (pills up and down)
+                //   bars     classic spectrum out of the bottom edge
+                //   center   bars, spectrum mirrored about the screen's middle
+                //   peaks    bars with a cap that hangs at the peak and falls
+                //   dots     one dot per band riding the level -- a dotted wave
+                //   line     hairline stems with a round head (lollipops)
+                //   ring     bars standing on a circle round the screen centre
+                //
+                // All of them are this one Repeater of Rectangles, for the
+                // reason in the header: no Canvas, no Shape re-tessellated per
+                // frame. Each style is a different geometry for the same
+                // items, plus one optional cap item, so switching style costs
+                // no more than the bars ever did.
+                // -----------------------------------------------------------
                 Repeater {
                     model: field.count
 
-                    Rectangle {
+                    Item {
+                        id: band
+
                         required property int index
 
                         // The level for this band. Read once into a property so
-                        // the two geometry bindings below share one lookup.
-                        readonly property real level: Cava.levels[index] || 0
+                        // the geometry bindings below share one lookup. In
+                        // "center" each half of the screen shows every other
+                        // band, bass outermost-in, so the row is symmetric.
+                        readonly property int source: {
+                            if (!field.center) return index;
+                            const half = Math.ceil(field.count / 2);
+                            return index < half ? (half - 1 - index) * 2
+                                                : Math.min(field.count - 1, (index - half) * 2 + 1);
+                        }
+                        readonly property real level: Cava.levels[band.source] || 0
 
-                        // Half-height for mirror, full height for bars.
-                        readonly property real extent: field.mirror
-                            ? Math.max(field.barWidth / 2, level * field.height / 2)
-                            : Math.max(2, level * field.height)
-
-                        x: field.originX + index * (field.barWidth + field.gap)
-                        width: field.barWidth
-
-                        height: field.mirror ? extent * 2 : extent
-                        y: field.mirror ? (field.height / 2 - extent) : (field.height - extent)
-
-                        // Full pill in mirror mode -- a bar floating in the
-                        // middle of the screen has no edge to grow out of.
-                        // Bars mode keeps the configured radius so they stay
-                        // attached to the screen edge.
-                        radius: field.mirror
-                            ? field.barWidth / 2
-                            : Math.min(Settings.visualizer.radius, field.barWidth / 2)
+                        // Peak hold for "peaks": jumps up with the level, then
+                        // falls a little each time a new frame arrives. Driven by
+                        // the levels themselves, so it needs no timer and stops
+                        // with them.
+                        property real peak: 0
+                        onLevelChanged: {
+                            if (field.style !== "peaks") return;
+                            band.peak = band.level >= band.peak ? band.level : Math.max(band.level, band.peak - 0.012);
+                        }
 
                         // The gradient across the row, resolved from the index
                         // rather than recomputed per frame -- this binding only
                         // re-evaluates when the theme or the band count change,
                         // never when the level does.
-                        color: {
+                        readonly property color tint: {
                             const t = field.count > 1 ? index / (field.count - 1) : 0;
                             const from = t < 0.5 ? Theme.accent : Theme.accent2;
                             const to = t < 0.5 ? Theme.accent2 : Theme.accent3;
@@ -243,7 +274,69 @@ Scope {
                                            1);
                         }
 
+                        x: field.ring ? field.width / 2 : field.originX + index * (field.barWidth + field.gap)
+                        y: field.ring ? field.height / 2 : 0
+                        width: field.ring ? 0 : field.barWidth
+                        height: field.ring ? 0 : field.height
                         opacity: Settings.visualizer.barOpacity
+
+                        // The ring turns each band to its own angle about the
+                        // screen centre (this item sits exactly on it).
+                        rotation: field.ring && field.count > 0 ? index * 360 / field.count : 0
+
+                        // ---- main mark -------------------------------------
+                        Rectangle {
+                            id: mark
+
+                            readonly property real w: field.ring
+                                ? Math.max(2, (2 * Math.PI * field.ringRadius / Math.max(1, field.count)) * 0.55)
+                                : field.style === "line" ? Math.max(1, Math.min(2, field.barWidth * 0.35))
+                                : field.style === "dots" ? Math.max(3, field.barWidth)
+                                : field.barWidth
+
+                            // Half-height for mirror, full height otherwise.
+                            readonly property real extent: field.mirror
+                                ? Math.max(field.barWidth / 2, band.level * field.height / 2)
+                                : field.ring ? Math.max(2, band.level * field.ringReach)
+                                : Math.max(2, band.level * field.height)
+
+                            width: mark.w
+                            x: field.ring ? -mark.w / 2 : (band.width - mark.w) / 2
+                            height: field.style === "dots" ? mark.w
+                                  : field.mirror ? mark.extent * 2
+                                  : mark.extent
+                            y: field.ring ? -field.ringRadius - mark.extent
+                             : field.mirror ? (band.height / 2 - mark.extent)
+                             : field.style === "dots" ? Math.min(band.height - mark.w, band.height - mark.extent)
+                             : (band.height - mark.extent)
+
+                            // Full pill wherever the bar has no edge to grow out
+                            // of; bars keep the configured radius so they stay
+                            // attached to the screen edge.
+                            radius: field.mirror || field.ring || field.style === "dots" || field.style === "line"
+                                ? mark.w / 2
+                                : Math.min(Settings.visualizer.radius, mark.w / 2)
+
+                            color: band.tint
+                        }
+
+                        // ---- cap: the falling peak, or the lollipop head ----
+                        Rectangle {
+                            readonly property bool wanted: field.style === "peaks" || field.style === "line"
+                            readonly property real size: field.style === "line"
+                                ? Math.max(4, Math.min(8, field.barWidth * 1.4))
+                                : Math.max(2, field.barWidth / 3)
+
+                            visible: wanted
+                            width: field.style === "line" ? size : field.barWidth
+                            height: size
+                            radius: field.style === "line" ? size / 2 : Math.min(2, size / 2)
+                            x: (band.width - width) / 2
+                            y: field.style === "line"
+                                ? Math.max(0, band.height - mark.extent - size / 2)
+                                : Math.max(0, band.height - band.peak * band.height - size - 3)
+                            color: band.tint
+                        }
 
                         // Deliberately NO Behavior on height or y. The levels
                         // arrive at 60 Hz already smoothed (asymmetric fall, in

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -109,6 +110,11 @@ Scope {
     property bool scrim: false
 
     property bool closeOnClickOutside: true
+
+    // For "top-center": the x (in the screen's own coordinates) to hang the
+    // card under, or -1 for the middle. Set by services/BarHover.qml so a
+    // hover dropdown sits under the bar pill that opened it.
+    property real hangX: -1
 
     property Component content: null
 
@@ -254,6 +260,14 @@ Scope {
                         || root.placement === "bottom"
                         || root.placement === "top-center")
                     ? parent.horizontalCenter : undefined
+                // A top-center dropdown can hang under a particular point of
+                // the bar (the media pill, the clock) instead of the exact
+                // middle; kept on screen either way.
+                anchors.horizontalCenterOffset: root.placement === "top-center" && root.hangX >= 0
+                    ? Math.max(-(parent.width - card.width) / 2 + Appearance.screenMargin,
+                               Math.min((parent.width - card.width) / 2 - Appearance.screenMargin,
+                                        root.hangX - parent.width / 2))
+                    : 0
                 // A short edge panel is centred on its edge, so it sits over the
                 // edge trigger (which is centred too) instead of above it.
                 anchors.verticalCenter: (root.placement === "center"
@@ -323,9 +337,11 @@ Scope {
                 // Edge panels slide the WHOLE way in, from just past their own
                 // width off screen, so they read as coming out of the edge you
                 // touched rather than appearing beside it.
-                transform: Translate {
+                transform: [Translate {
                     y: root.open || root.edgePlacement ? 0
-                        : root.placement === "bottom" ? 18 : -18
+                        : root.placement === "bottom" ? 18
+                        : card.dropPlacement && Settings.appearance.slideDropdowns ? -card.dropDistance * 0.6
+                        : -18
                     x: (root.open || !root.edgePlacement ? 0 : card.offscreen) + card.enter * card.offscreen
 
                     Behavior on x {
@@ -343,6 +359,62 @@ Scope {
                             easing.type: root.open ? Appearance.easeEnter : Appearance.easeExit
                         }
                     }
+                }, Translate {
+                    // The drop entrance (below). Its own Translate, so the
+                    // Behaviors above never see it and cannot smear it.
+                    y: -card.drop * card.dropDistance
+                }]
+
+                // --- drop entrance ---------------------------------------
+                // Panels that hang from the top (the clock's dashboard, the
+                // notification center) are built already open too, so on
+                // their first open the `open`-driven Behaviors above had
+                // nothing to animate from and they simply appeared. This is
+                // the same one-shot idea as the edge entrance: `drop` starts at
+                // 1 -- lifted up toward the bar and transparent -- and runs to
+                // 0, so the card slides down out of the bar. Settings >
+                // Appearance > "Slide dropdowns from the bar" turns it off.
+                readonly property bool dropPlacement: root.placement === "top-center"
+                    || root.placement === "top-right" || root.placement === "top-left"
+                readonly property real dropDistance: Math.min(140, 28 + card.height * 0.22)
+                property real drop: card.dropPlacement && Settings.appearance.slideDropdowns
+                    && !Appearance.motionless ? 1 : 0
+
+                // While dropping, everything above the card's resting top edge
+                // is masked away, so it slides out from UNDER the bar instead
+                // of across it. The layer exists only for those ~0.3 s.
+                layer.enabled: card.drop > 0
+                layer.effect: MultiEffect {
+                    maskEnabled: true
+                    maskSource: dropMask
+                    maskThresholdMin: 0.5
+                    maskSpreadAtMin: 0.1
+                }
+
+                Item {
+                    id: dropMask
+
+                    width: card.width
+                    height: card.height
+                    visible: false
+                    layer.enabled: card.drop > 0
+
+                    Rectangle {
+                        y: card.drop * card.dropDistance
+                        width: parent.width
+                        height: parent.height
+                        color: "white"
+                    }
+                }
+
+                NumberAnimation {
+                    id: dropAnim
+
+                    target: card
+                    property: "drop"
+                    to: 0
+                    duration: Math.round(Appearance.durationSlow * 1.2)
+                    easing.type: Appearance.easeEnter
                 }
 
                 // --- edge entrance -------------------------------------
@@ -368,7 +440,10 @@ Scope {
                     easing.type: Appearance.easeEnter
                 }
 
-                Component.onCompleted: if (card.enter > 0) enterAnim.start()
+                Component.onCompleted: {
+                    if (card.enter > 0) enterAnim.start();
+                    if (card.drop > 0) dropAnim.start();
+                }
 
                 // --- peek: hover-out hides, a press pins ----------------
                 HoverHandler {

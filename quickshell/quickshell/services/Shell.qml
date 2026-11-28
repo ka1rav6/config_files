@@ -74,6 +74,7 @@ Singleton {
         if (!panel) return false;
         root.closeAll(name);
         panel.peek = false;     // a deliberate open pins a peeking panel
+        if (!panel.open) panel.hangX = -1;   // not opened from a bar pill
         panel.show();
         return true;
     }
@@ -140,6 +141,27 @@ Singleton {
         const panel = root.panels[name];
         if (!panel || root.anyOpen) return false;
         panel.targetScreen = screen || null;
+        panel.peek = true;
+        panel.show();
+        return true;
+    }
+
+    // Open a panel because a bar pill was hovered (services/BarHover.qml).
+    // Like peek(), it never closes a panel you opened on purpose; unlike
+    // peek(), sliding from one pill to the next swaps one hover dropdown for
+    // the other, because that is what moving along the bar means.
+    function hoverOpen(name, screen, hangX) {
+        const panel = root.panels[name];
+        if (!panel || panel.open) return false;
+        for (const k in root.panels) {
+            const other = root.panels[k];
+            if (!other.open) continue;
+            if (!other.peek) return false;     // a deliberate panel is up: leave it
+            other.hide();
+        }
+        panel.targetScreen = screen || null;
+        if (panel.dropdown !== undefined) panel.dropdown = true;
+        panel.hangX = hangX === undefined ? -1 : hangX;
         panel.peek = true;
         panel.show();
         return true;

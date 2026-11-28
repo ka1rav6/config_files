@@ -75,6 +75,21 @@ Singleton {
     readonly property bool saver: root.profile === "saver"
     readonly property bool visual: root.profile === "visual"
 
+    // The system's own power profile (power-profiles-daemon) in Power Saver,
+    // WHILE ON BATTERY. On AC it is not battery saver: this machine sits in
+    // power-saver plugged in, and treating that as saver turned the cursor
+    // effects and Hyprland's animations off with the charger connected.
+    readonly property bool systemSaver: root.onBattery && PowerProfiles.profile === PowerProfile.PowerSaver
+
+    // Either kind of battery saver.
+    readonly property bool batterySaver: root.saver || root.systemSaver
+
+    // Battery saver means NO animation, not shorter ones: motionScale drops to
+    // 0, Hyprland's own animations are switched off (services/AnimationPolicy),
+    // and the cursor effects are unloaded. Opt out with
+    // performance.saverStopsAnimations in Settings > Performance.
+    readonly property bool stopAnimations: Settings.performance.saverStopsAnimations && root.batterySaver
+
     // True while an expensive foreground app should be left alone.
     readonly property bool gameMode: Settings.performance.gameMode && root.fullscreenActive
 
@@ -139,6 +154,8 @@ Singleton {
             return 0;               // explicit reduced-motion, honoured always
         if (root.gameMode)
             return 0;               // never animate over a game
+        if (root.stopAnimations)
+            return 0;               // battery saver: no motion at all
         // Saver shortens motion rather than removing it -- but SCALES the
         // user's setting instead of replacing it. Returning a flat 0.6 threw
         // away an explicit preference for slower motion (motion = 2, which

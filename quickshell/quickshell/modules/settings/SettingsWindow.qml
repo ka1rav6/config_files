@@ -68,6 +68,7 @@ Panel {
             { id: "windows",     label: "Windows",     icon: "monitor" },
             { id: "components",  label: "Components",  icon: "widgets" },
             { id: "visualizer",  label: "Visualizer",  icon: "visualizer" },
+            { id: "cursor",      label: "Cursor",      icon: "cursor" },
             { id: "performance", label: "Performance", icon: "performance" },
             { id: "system",      label: "System",      icon: "settings" },
             { id: "about",       label: "About",       icon: "info" }
@@ -467,6 +468,7 @@ Panel {
                     case "windows": return windowsPage;
                     case "components": return componentsPage;
                     case "visualizer": return visualizerPage;
+                    case "cursor": return cursorPage;
                     case "performance": return performancePage;
                     case "system": return systemPage;
                     case "about": return aboutPage;
@@ -503,6 +505,7 @@ Panel {
         Component { id: windowsPage;     SettingsWindows {} }
         Component { id: componentsPage;  SettingsComponents {} }
         Component { id: visualizerPage;  SettingsVisualizer {} }
+        Component { id: cursorPage;      SettingsCursor {} }
         Component { id: performancePage; SettingsPerformance {} }
         Component { id: systemPage;      SettingsSystem {} }
         Component { id: aboutPage;       SettingsAbout {} }

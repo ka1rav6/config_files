@@ -397,6 +397,40 @@ Column {
                 }
             }
         }
+
+        SettingRow {
+            width: parent.width
+            label: "Slide dropdowns from the bar"
+            description: "The dashboard, notifications and the bar's hover dropdowns slide down out of the bar, and back up into it."
+            Toggle {
+                checked: Settings.appearance.slideDropdowns
+                onToggled: (v) => Settings.appearance.slideDropdowns = v
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            label: "Open dropdowns on hover"
+            description: !Pointer.available
+                ? "Needs the qs-pointer Hyprland plugin, which is not loaded."
+                : "Rest the pointer on the bar's media pill, clock or bell to drop its panel. Clicking still works as before."
+            Toggle {
+                checked: Settings.bar.hover
+                onToggled: (v) => Settings.bar.hover = v
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            label: "Battery saver stops animations"
+            description: Performance.stopAnimations
+                ? "Battery saver is on right now, so every animation is off. Settings › Performance has the details."
+                : "In Battery Saver on battery, animations stop completely: the shell's, Hyprland's windows and workspaces, and the cursor effects."
+            Toggle {
+                checked: Settings.performance.saverStopsAnimations
+                onToggled: (v) => Settings.performance.saverStopsAnimations = v
+            }
+        }
     }
 
     // --- type --------------------------------------------------------------

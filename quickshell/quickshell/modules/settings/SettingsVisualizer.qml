@@ -137,11 +137,12 @@ Column {
         SettingRow {
             width: parent.width
             label: "Style"
-            description: "Mirror is a waveform about a centre line; bars grow out of the screen edge."
-            Row {
+            description: "Also switchable from Super + D › Media, or `quickshell ipc call visualizer next`."
+            Flow {
+                width: 330
                 spacing: Appearance.xs
                 Repeater {
-                    model: [{ id: "mirror", label: "Waveform" }, { id: "bars", label: "Bars" }]
+                    model: Settings.visualizerStyles
                     Button {
                         required property var modelData
                         text: modelData.label
@@ -154,7 +155,7 @@ Column {
 
         SettingRow {
             width: parent.width
-            visible: Settings.visualizer.style === "mirror"
+            visible: Settings.visualizer.style === "mirror" || Settings.visualizer.style === "dots"
             label: "Distance from the bottom"
             description: "How far the waveform floats above the screen edge."
             Row {
@@ -170,6 +171,28 @@ Column {
                     width: 200
                     value: Settings.visualizer.offset / 700
                     onMoved: (v) => Settings.visualizer.offset = Math.round(v * 700)
+                }
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            visible: Settings.visualizer.style === "ring"
+            label: "Ring size"
+            description: "Radius of the circle the bars stand on, round the middle of the screen."
+            Row {
+                spacing: Appearance.sm
+                Text {
+                    text: Settings.visualizer.ringRadius + " px"
+                    color: Theme.muted
+                    font.family: Appearance.fontMono
+                    font.pixelSize: Appearance.fontSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Slider {
+                    width: 200
+                    value: (Settings.visualizer.ringRadius - 80) / 420
+                    onMoved: (v) => Settings.visualizer.ringRadius = Math.round(80 + v * 420)
                 }
             }
         }

@@ -402,6 +402,13 @@ Column {
         }
     }
 
+    // --- visualizers ---------------------------------------------------------------
+    // On/off and style for the desktop visualizer, and the ring round the
+    // pointer. Settings only -- see parts/VisualizerCard.qml.
+    VisualizerCard {
+        width: parent.width
+    }
+
     // --- equalizer -----------------------------------------------------------------
     EqualizerCard {
         width: parent.width

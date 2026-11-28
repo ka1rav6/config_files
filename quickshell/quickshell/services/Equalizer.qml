@@ -140,7 +140,36 @@ Singleton {
         ? (root.targetNode.description || root.targetNode.nickname || root.targetNode.name) : ""
 
     function isHardwareSink(n) {
-        return !!n && n.isSink && !n.isStream && n.name !== root.sinkName;
+        return !!n && n.isSink && !n.isStream && n.name !== root.sinkName
+            && root.deadSinks.indexOf(n.name) < 0;
+    }
+
+    // Outputs with nothing plugged in (an HDMI port with no monitor, or a
+    // monitor without speakers): PipeWire still lists them as sinks, and the
+    // first-real-output fallback in pickTarget() used to land on one, routing
+    // everything into silence. Asked of pactl just before every (re)start,
+    // since it is the one that reports port availability.
+    property var deadSinks: []
+
+    Process {
+        id: deadProbe
+        command: ["pactl", "-f", "json", "list", "sinks"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let dead = [];
+                try {
+                    for (const sink of JSON.parse(this.text)) {
+                        const port = (sink.ports || []).find(p => p.name === sink.active_port);
+                        if (port && port.availability === "not available") dead.push(sink.name);
+                    }
+                } catch (e) {
+                    dead = [];
+                }
+                root.deadSinks = dead;
+                root.startNow();
+            }
+        }
+        onExited: (code) => { if (code !== 0) root.startNow(); }
     }
 
     // Where the EQ should play right now: the current default, unless the
@@ -168,7 +197,13 @@ Singleton {
 
     Component.onCompleted: if (root.shouldRun) root.start()
 
+    // Find out which outputs are actually connected, then start.
     function start() {
+        if (!deadProbe.running) deadProbe.running = true;
+    }
+
+    function startNow() {
+        if (!root.shouldRun) return;
         root.targetName = root.pickTarget();
         if (root.targetName === "") return;
         configFile.setText(root.config(root.targetName));
@@ -269,7 +304,14 @@ Singleton {
     Process {
         id: eqProcess
 
-        command: ["pipewire", "-c", root.configPath]
+        // A previous shell's filter survives `just qs-reload` (it is not
+        // killed with its parent) and keeps its "Equalizer" sink -- nine of
+        // them piled up once, the default pointing at a stale one aimed at a
+        // dead HDMI port. So any filter on this config not owned by us is
+        // stopped first; `exec` then makes pipewire this Process's own child.
+        command: ["sh", "-c",
+            "pkill -f \"^(/usr/bin/)?pipewire -c " + root.configPath + "$\"; exec pipewire -c \"$0\"",
+            root.configPath]
 
         // The filter dying on its own (PipeWire restarted underneath it, say)
         // must not leave the default pointing at nothing.

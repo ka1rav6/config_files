@@ -19,8 +19,15 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1")
 hl.env("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
-hl.env("XCURSOR_THEME", "Yaru")
-hl.env("XCURSOR_SIZE", "24")
+-- Cursor: Yaru at 24 unless Quickshell's Settings > Cursor has picked another.
+-- That page writes ~/.config/hypr/cursor.lua (`return { theme =, size = }`);
+-- a missing or broken file just means the default below.
+local cursor_ok, cursor = pcall(dofile, home .. "/.config/hypr/cursor.lua")
+if not cursor_ok or type(cursor) ~= "table" then
+    cursor = {}
+end
+hl.env("XCURSOR_THEME", cursor.theme or "Yaru")
+hl.env("XCURSOR_SIZE", tostring(cursor.size or 24))
 hl.env("_JAVA_AWT_WM_NONREPARENTING", "1")
 
 -- Pre-spawned scratchpads.
@@ -456,5 +463,13 @@ hl.on("hyprland.start", function()
     -- Reconnecting an already-paired device needs no agent, so headphones,
     -- mice and keyboards all come back on their own exactly as before.
     start_kdeconnect()
+    -- qs-pointer: the small Hyprland plugin that tells Quickshell where the
+    -- pointer is (cursor effects, hover dropdowns over the bar). load.sh
+    -- rebuilds it after a Hyprland update and proves every new build in a
+    -- throwaway nested Hyprland before loading it here, because a plugin built
+    -- with the wrong compiler can take the compositor down (it did, once). If
+    -- it fails, the shell runs as before with those effects off. Background:
+    -- a rebuild takes ~10 s and must not hold up the rest of login.
+    hl.exec_cmd(home .. "/.config/hypr/plugins/qs-pointer/load.sh >/dev/null 2>&1")
     start_quickshell()
 end)

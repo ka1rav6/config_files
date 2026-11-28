@@ -320,6 +320,55 @@ window#waybar {
     margin: 3px 2px;
 }
 
+/* --- Now playing (custom/media) and the notification bell -----------------------
+   The same material as #clock and #battery (@panel-bg, 11px radius, 4px 3px
+   margin), so they read as two more pills of the same bar, not additions.
+
+   FIXED WIDTHS. min-width here + the 18-character title cap in Quickshell keep both pills a
+   constant size whatever is playing or however many notifications there are.
+   That stops the centre of the bar shuffling, and it is what lets Quickshell
+   place the hover zones that drop the now-playing and notification panels
+   (services/BarHover.qml reads the same numbers as bar.mediaWidth /
+   bar.bellWidth in Settings). Change them together.
+
+   Paused dims to @muted; playing keeps @text, with the status glyph in @mint.
+   ------------------------------------------------------------------------ */
+#custom-media {
+    background-color: @panel-bg;
+    border-radius: 11px;
+    margin: 4px 3px;
+    padding: 0 12px;
+    min-width: 146px;
+    color: @text;
+}
+
+#custom-media.paused {
+    color: @muted;
+}
+
+#custom-media:hover,
+#custom-notifications:hover {
+    background-color: @panel-hover;
+}
+
+#custom-notifications {
+    background-color: @panel-bg;
+    border-radius: 11px;
+    margin: 4px 3px;
+    padding: 0 10px;
+    min-width: 30px;
+    font-size: 13px;
+    color: @muted;
+}
+
+#custom-notifications.unread {
+    color: @mint;
+}
+
+#custom-notifications.dnd {
+    color: @amber;
+}
+
 /* --- Standalone right-hand modules --------------------------------------- */
 #clock,
 #battery {

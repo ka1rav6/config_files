@@ -104,12 +104,94 @@ Panel {
                         id: row
 
                         required property var modelData
+                        required property int index
 
                         width: parent.width
                         implicitHeight: rowBody.implicitHeight + Appearance.sm * 2
-                        height: implicitHeight
+                        // `collapse` closes the gap after a row leaves, so the
+                        // rows below glide up instead of jumping.
+                        height: implicitHeight * row.collapse
                         radius: Appearance.radiusInner
                         color: mouse.containsMouse ? Theme.hover : Theme.wash(Theme.text, 0.04)
+                        clip: row.collapse < 1
+
+                        // --- motion -----------------------------------------
+                        // enter: 1 -> 0 once, staggered down the list, so the
+                        //        panel fills in row by row as it drops open.
+                        // slide: horizontal offset -- the swipe while dragging,
+                        //        then the exit to the right.
+                        property real enter: Appearance.motionless ? 0 : 1
+                        property real slide: 0
+                        property real collapse: 1
+                        property bool leaving: false
+
+                        opacity: (1 - row.enter) * Math.max(0, 1 - Math.abs(row.slide) / row.width)
+                        transform: Translate { x: row.enter * 36 + row.slide }
+
+                        SequentialAnimation {
+                            id: entrance
+                            PauseAnimation { duration: Appearance.duration(60 + Math.min(row.index, 8) * 35) }
+                            NumberAnimation {
+                                target: row
+                                property: "enter"
+                                to: 0
+                                duration: Appearance.durationSlow
+                                easing.type: Appearance.easeEnter
+                            }
+                        }
+                        Component.onCompleted: if (row.enter > 0) entrance.start()
+
+                        // Slide out, close the gap, then forget it. Untracked
+                        // rather than dismissed: clearing a row hours later is
+                        // bookkeeping here, not a message to the application.
+                        function forget() {
+                            if (row.leaving) return;
+                            row.leaving = true;
+                            if (Appearance.motionless) { row.modelData.tracked = false; return; }
+                            exit.start();
+                        }
+
+                        SequentialAnimation {
+                            id: exit
+                            NumberAnimation {
+                                target: row
+                                property: "slide"
+                                to: row.width
+                                duration: Appearance.durationNormal
+                                easing.type: Appearance.easeExit
+                            }
+                            NumberAnimation {
+                                target: row
+                                property: "collapse"
+                                to: 0
+                                duration: Appearance.durationNormal
+                                easing.type: Appearance.easeStandard
+                            }
+                            ScriptAction { script: row.modelData.tracked = false }
+                        }
+
+                        NumberAnimation {
+                            id: snapBack
+                            target: row
+                            property: "slide"
+                            to: 0
+                            duration: Appearance.durationNormal
+                            easing.type: Appearance.easeEmphasised
+                        }
+
+                        // Swipe right to forget; let go early and it springs back.
+                        DragHandler {
+                            id: swipe
+                            target: null
+                            yAxis.enabled: false
+                            enabled: !row.leaving
+                            onTranslationChanged: if (active) row.slide = Math.max(0, translation.x)
+                            onActiveChanged: {
+                                if (active) return;
+                                if (row.slide > row.width * 0.35) row.forget();
+                                else snapBack.start();
+                            }
+                        }
 
                         Behavior on color {
                             enabled: !Appearance.motionless
@@ -167,10 +249,7 @@ Panel {
                             anchors.topMargin: Appearance.xs
                             variant: "ghost"
                             icon: "close"
-                            // Forget this one. Untracked rather than dismissed:
-                            // clearing a row hours later is bookkeeping here,
-                            // not a message to the application.
-                            onClicked: row.modelData.tracked = false
+                            onClicked: row.forget()
                         }
 
                         MouseArea {

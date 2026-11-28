@@ -216,6 +216,7 @@ for _, component in ipairs({
     "settings",        -- the full settings window, Commands page included
     "launcher",        -- application launcher
     "dashboard",       -- calendar / system overview
+    "media",           -- now-playing dropdown from the bar (modules/media)
     "dock",            -- application dock
     "power",           -- power menu
     "calendar",        -- calendar popup

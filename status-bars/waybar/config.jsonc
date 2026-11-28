@@ -46,6 +46,7 @@
     ],
 
     "modules-center": [
+        "custom/media",
         "clock"
     ],
 
@@ -79,7 +80,8 @@
         "custom/record",
         "custom/kdeconnect",
         "group/status",
-        "battery"
+        "battery",
+        "custom/notifications"
     ],
 
     // Recording indicator  —  present only while recording.
@@ -378,6 +380,35 @@
     // CENTER
     // ========================================================================
 
+    // Now playing  —  drawn by Quickshell, signalled on SIGRTMIN+11 (the same
+    // no-polling shape as the bell). It used to be waybar's own mpris module,
+    // which showed any player that merely existed -- a browser keeps one per
+    // tab that ever played anything -- and could stick on a track long after
+    // its player had gone. Quickshell's Media.shown is the rule now: a loaded
+    // track that is playing or paused, and nothing else. Empty text hides it.
+    //
+    // FIXED WIDTH, ON PURPOSE. The title is capped at 18 characters (in
+    // shell.qml, `media` bar()) and #custom-media has a matching min-width in
+    // style.css, so the pill is always the same size. That keeps the bar from
+    // shuffling as titles change, and it is what lets Quickshell know exactly
+    // where the pill is: hovering it drops the now-playing panel out of the
+    // bar (see ~/.config/quickshell/services/BarHover.qml). Change the width
+    // in style.css and bar.mediaWidth in Settings together.
+    //
+    // Click: play/pause. Scroll: next/previous. Middle-click: open the panel.
+    // All go through Quickshell so they act on the player the pill shows.
+    "custom/media": {
+        "exec": "quickshell ipc call media bar 2>/dev/null",
+        "return-type": "json",
+        "interval": "once",
+        "signal": 11,
+        "escape": true,
+        "on-click": "quickshell ipc call media playPause",
+        "on-click-middle": "quickshell ipc call media toggle",
+        "on-scroll-up": "quickshell ipc call media previous",
+        "on-scroll-down": "quickshell ipc call media next"
+    },
+
     "clock": {
         // strftime inside {: }. Currently "Fri, 11 Sep  02:53".
         "format": "󰥔  {:%a, %d %b  %H:%M}",
@@ -461,6 +492,22 @@
         "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
         "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
         "tooltip-format": "Volume {volume}%\nClick for the Control Center · right-click to mute · middle-click for pavucontrol"
+    },
+
+    // Notification bell  —  the count and do-not-disturb state come from
+    // Quickshell, which is the notification daemon. "interval": "once" plus
+    // "signal" is the same no-polling shape as custom/record: Quickshell sends
+    // SIGRTMIN+10 whenever the count or DND changes (services/BarHover.qml).
+    // Keep 10 clear of record's 9. Hover drops the notification panel; click
+    // toggles it. If Quickshell is down the command prints nothing and the
+    // bell disappears rather than lying.
+    "custom/notifications": {
+        "exec": "quickshell ipc call notifications bar 2>/dev/null",
+        "return-type": "json",
+        "interval": "once",
+        "signal": 10,
+        "on-click": "quickshell ipc call notifications toggle",
+        "on-click-right": "quickshell ipc call notifications dnd toggle"
     },
 
     "battery": {

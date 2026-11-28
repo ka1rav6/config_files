@@ -96,6 +96,12 @@ qs-restart: qs-reload
 qs-status:
 	@quickshell ipc call shell status 2>/dev/null || echo "quickshell is not running"
 
+# The qs-pointer Hyprland plugin (cursor effects, bar hover dropdowns): rebuild
+# if Hyprland changed, prove it in a throwaway nested Hyprland, load it, and
+# show what it is doing. Login does this by itself; this is for checking.
+qs-pointer:
+	@~/.config/hypr/plugins/qs-pointer/load.sh && hyprctl qspointer status
+
 # Useful when wiring a new bind in ~/.config/hypr/bindings.lua.
 
 # List every IPC target the shell exposes to keybindings

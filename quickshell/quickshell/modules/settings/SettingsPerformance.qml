@@ -124,6 +124,16 @@ Column {
 
         SettingRow {
             width: parent.width
+            label: "Battery saver stops animations"
+            description: "In Battery Saver (this shell's, or the system's Power Saver profile while on battery): no shell animations, Hyprland window and workspace animations off, cursor effects off. Everything comes back when it ends."
+            Toggle {
+                checked: Settings.performance.saverStopsAnimations
+                onToggled: (v) => Settings.performance.saverStopsAnimations = v
+            }
+        }
+
+        SettingRow {
+            width: parent.width
             label: "Game mode"
             description: "Suspends the visualizer, blur and widget updates while a window is fullscreen. Stops shell work rather than merely hiding pixels."
             Toggle {
@@ -143,6 +153,7 @@ Column {
             description: "Visualizer " + (Performance.allowVisualizer ? "allowed" : "suppressed")
                 + " · blur " + (Performance.allowBlur ? "on" : "off")
                 + " · motion " + Performance.motionScale.toFixed(1) + "x"
+                + (Performance.systemSaver ? " · system Power Saver on" : "")
                 + " · widget refresh " + (Performance.pollInterval / 1000) + "s"
                 + (Performance.gameMode ? " · fullscreen detected" : "")
         }

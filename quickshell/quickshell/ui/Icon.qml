@@ -147,6 +147,7 @@ Text {
         "temperature": "\udb81\udd0f",   // md-thermometer  U+F050F
         "info":        "\udb80\udefd",   // md-information_outline  U+F02FD
         "visualizer":  "\udb80\udd28",   // md-chart_bar  U+F0128
+        "cursor":      "\udb80\uddbf",   // md-cursor_default  U+F01BF
         "user":        "\udb80\udc04",   // md-account  U+F0004
         "shield":      "\udb81\udd65",   // md-shield_check  U+F0565
         "download":    "\udb80\uddda",   // md-download  U+F01DA
