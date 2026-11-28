@@ -1,5 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "model": "ollama/friday-7b:latest",
   "provider": {
     "openrouter": {
       "options": {
@@ -13,8 +14,37 @@
         "baseURL": "http://localhost:11434/v1"
       },
       "models": {
-        "qwen2.5-instruct-igpu": {
-          "name": "Qwen2.5 7B Instruct (iGPU)"
+        "friday-7b:latest": {
+          "name": "Friday 7B (local)",
+          "tool_call": true,
+          "limit": {
+            "context": 24576,
+            "output": 4096
+          }
+        },
+        "friday-3b:latest": {
+          "name": "Friday 3B (local)",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 4096
+          }
+        },
+        "qwen2.5:7b": {
+          "name": "Qwen2.5 7B (local)",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 4096
+          }
+        },
+        "qwen2.5:3b": {
+          "name": "Qwen2.5 3B (local)",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 4096
+          }
         }
       }
     }

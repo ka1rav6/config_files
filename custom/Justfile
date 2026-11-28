@@ -523,3 +523,6 @@ ram-check:
 
 re-wireplumber:
     systemctl --user restart wireplumber
+
+start-docker:
+    sudo systemctl start docker

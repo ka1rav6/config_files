@@ -125,7 +125,7 @@ hl.gesture({
 hl.gesture({
     fingers = 3,
     direction = "pinch",
-    action = exec("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),
+    action = exec(scripts .. "mute-output.sh"),
 })
 
 -- Four fingers. Three is where the muscle memory is, so four gets the things
