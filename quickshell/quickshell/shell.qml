@@ -967,6 +967,17 @@ ShellRoot {
     }
 
     IpcHandler {
+        target: "cursor"
+
+        // Flip between the pulsing Circle cursor and the cursor in use before.
+        function toggleCircle(): string {
+            CursorTheme.toggleCircle();
+            return CursorTheme.circle ? "circle" : "normal";
+        }
+        function status(): string { return CursorTheme.resolved; }
+    }
+
+    IpcHandler {
         target: "power"
 
         function toggle(): string { return Shell.toggle("power") ? "ok" : "unavailable"; }

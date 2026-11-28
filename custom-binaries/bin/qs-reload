@@ -97,6 +97,14 @@ fi
 
 # -n is belt-and-braces: if something else raced us to a launch, exit rather
 # than run two shells.  -d detaches so this script can return.
+# Cursor settings come from the session, not from whichever terminal ran this:
+# Settings > Cursor changes them live, a terminal opened earlier still has the
+# old ones, and Qt reads them once, at start.
+while IFS='=' read -r key value; do
+    case "$key" in
+        XCURSOR_THEME|XCURSOR_SIZE) export "$key=$value" ;;
+    esac
+done < <(systemctl --user show-environment 2>/dev/null || true)
 quickshell -c default -n -d >/dev/null 2>&1
 
 # Confirm it actually came up. A config with a syntax error exits immediately,

@@ -13,8 +13,14 @@ import qs
 //   ""            leave the login default alone (XCURSOR_THEME in autostart.lua)
 //   "accent:<Style>"  generated in the theme accent (scripts/cursor-gen.py) and
 //                 regenerated whenever the accent changes. Styles: Fluent (a dot
-//                 that morphs into each shape, with a press bounce), Dot, Ring,
+//                 that morphs into each shape, with a press bounce), Circle
+//                 (always the same dot, pulsing on every click), Dot, Ring,
 //                 Arrow.
+//
+// THE CIRCLE TOGGLE
+//   toggleCircle() flips between accent:Circle and whatever was in use before
+//   (kept in Settings.cursor.normalTheme), from Settings › Cursor or
+//   `quickshell ipc call cursor toggleCircle`.
 //   <dir name>    any installed XCursor theme
 //
 // APPLYING
@@ -25,6 +31,13 @@ import qs
 //                         with it (XCURSOR_THEME/SIZE for apps, XWayland too)
 //   Already-running XWayland apps keep their old cursor until restarted; that
 //   is X11, not something this can reach.
+//
+// WHERE THEMES MUST LIVE
+//   Ubuntu's libXcursor, which Hyprland draws with, searches only ~/.icons,
+//   /usr/share/icons and /usr/share/pixmaps -- never ~/.local/share/icons. A
+//   theme found only there is silently drawn as the built-in arrow.
+//   ~/.icons is therefore a symlink to ~/.local/share/icons, which
+//   cursor-gen.py re-creates if it goes missing.
 //
 // Nothing here runs unless the setting is changed or is non-default, so a user
 // who never opens the Cursor page is never touched.
@@ -57,11 +70,24 @@ Singleton {
     // The theme Hyprland should actually be running.
     readonly property string speed: Settings.cursor.speed || "normal"
     readonly property bool fluent: root.isAccent && root.accentStyle === "Fluent"
-    readonly property string resolved: root.isAccent ? "QS-" + root.accentStyle + "-" + root.colorHex + (root.fluent ? "-" + root.speed : "")
+    readonly property bool circle: root.choice === "accent:Circle"
+    // Styles with a click animation (pop_<shape> cursors) and a speed.
+    readonly property bool animated: root.fluent || root.circle
+    readonly property string resolved: root.isAccent ? "QS-" + root.accentStyle + "-" + root.colorHex + (root.animated ? "-" + root.speed : "")
         : root.choice !== "" ? root.choice
         : root.fallback
 
-    readonly property var accentStyles: ["Fluent", "Dot", "Ring", "Arrow"]
+    readonly property var accentStyles: ["Fluent", "Circle", "Dot", "Ring", "Arrow"]
+
+    function toggleCircle() {
+        if (root.circle) {
+            const back = Settings.cursor.normalTheme;
+            Settings.cursor.theme = back === "accent:Circle" ? "" : back;
+        } else {
+            Settings.cursor.normalTheme = Settings.cursor.theme;
+            Settings.cursor.theme = "accent:Circle";
+        }
+    }
 
     // Previews of the accent styles in the current accent (cursor-gen.py
     // preview), keyed by style.
@@ -232,7 +258,7 @@ Singleton {
         target: Settings.cursor
         function onThemeChanged() { root.apply(); }
         function onSizeChanged() { root.apply(); }
-        function onSpeedChanged() { if (root.fluent) root.apply(); }
+        function onSpeedChanged() { if (root.animated) root.apply(); }
         function onColorChanged() { if (root.isAccent) root.engaged = true; }
         function onHideAfterChanged() { root.engaged = true; root.pushHide(); }
     }
@@ -251,12 +277,13 @@ Singleton {
         }
     }
 
-    // Press bounce: the plugin swaps in the Fluent theme's pop_<shape> cursor on
-    // a click. Only Fluent has those, and it is an animation, so not in saver.
+    // Press bounce: the plugin swaps in the theme's pop_<shape> cursor on a
+    // click. Only Fluent and Circle have those, and it is an animation, so not
+    // in saver.
     Binding {
         target: Pointer
         property: "wantPop"
-        value: root.fluent && Settings.cursor.press && !Performance.stopAnimations && !Performance.gameMode
+        value: root.animated && Settings.cursor.press && !Performance.stopAnimations && !Performance.gameMode
     }
 
     Component.onCompleted: {

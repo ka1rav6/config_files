@@ -77,6 +77,22 @@ Column {
             : CursorTheme.generating ? "Building the accent cursor…"
             : "Using " + (CursorTheme.isAccent ? "Accent " + CursorTheme.accentStyle + ", in the theme accent" : Settings.cursor.theme)
 
+        // The quick switch: the pulsing circle, or back to whatever was in use.
+        SettingRow {
+            width: parent.width
+            label: "Circle cursor"
+            description: CursorTheme.circle
+                ? "Always a dot, whatever it is over, and it pulses bigger and smaller on every click. Turn off to go back to "
+                  + (Settings.cursor.normalTheme === "" || Settings.cursor.normalTheme === "accent:Circle" ? "the login default"
+                     : Settings.cursor.normalTheme.startsWith("accent:") ? "Accent " + Settings.cursor.normalTheme.slice(7)
+                     : Settings.cursor.normalTheme) + "."
+                : "Always a dot, whatever it is over, and it pulses bigger and smaller on every click."
+            Toggle {
+                checked: CursorTheme.circle
+                onToggled: (v) => { if (v !== CursorTheme.circle) CursorTheme.toggleCircle(); }
+            }
+        }
+
         // Families
         Flow {
             width: parent.width
@@ -154,6 +170,7 @@ Column {
                         horizontalAlignment: Text.AlignHCenter
                         elide: Text.ElideRight
                         text: tile.modelData.variant === "Fluent" ? "Fluent · animated"
+                            : tile.modelData.variant === "Circle" ? "Circle · pulses"
                             : (tile.modelData.variant || tile.modelData.name)
                         color: tile.selected ? Theme.text : Theme.muted
                         font.family: Appearance.font
@@ -292,13 +309,15 @@ Column {
     // ---------------------------------------------------------------------
     SettingsGroup {
         width: parent.width
-        visible: CursorTheme.fluent
+        visible: CursorTheme.animated
         title: "ANIMATION"
-        subtitle: "Fluent morphs from the dot into each shape: a soft highlight over links, a bar over text, arrows when resizing."
+        subtitle: CursorTheme.circle
+            ? "Circle stays a dot everywhere; a click makes it swell, dip smaller and settle."
+            : "Fluent morphs from the dot into each shape: a soft highlight over links, a bar over text, arrows when resizing."
 
         SettingRow {
             width: parent.width
-            label: "Morph speed"
+            label: CursorTheme.circle ? "Pulse speed" : "Morph speed"
             Choice {
                 options: [{ id: "fast", label: "Fast" }, { id: "normal", label: "Normal" }, { id: "slow", label: "Slow" }]
                 current: Settings.cursor.speed
@@ -308,8 +327,9 @@ Column {
 
         SettingRow {
             width: parent.width
-            label: "Press bounce"
-            description: "The cursor swells and settles each time you click."
+            label: CursorTheme.circle ? "Click pulse" : "Press bounce"
+            description: CursorTheme.circle ? "The dot grows and shrinks each time you click; off keeps it still."
+                                            : "The cursor swells and settles each time you click."
             Toggle {
                 checked: Settings.cursor.press
                 onToggled: (v) => Settings.cursor.press = v

@@ -102,12 +102,12 @@
     {
       "id": "auto",
       "label": "Wallpaper",
-      "desc": "matugen tonal-spot from wallhaven-28dqwx.jpg",
-      "bg": "#0f1416",
-      "surface": "#1b2023",
-      "text": "#bfc4c7",
-      "a1": "#5da7c1",
-      "a2": "#999ac0",
+      "desc": "matugen tonal-spot from city-wallhaven-6lpmmw.jpg",
+      "bg": "#15130c",
+      "surface": "#212017",
+      "text": "#c8c3b6",
+      "a1": "#a99f4d",
+      "a2": "#7ea68f",
       "a3": "#ff7063"
     }
   ]

@@ -5,7 +5,8 @@ Usage:
   cursor-gen.py STYLE '#rrggbb' [SPEED]     build; prints the theme name
   cursor-gen.py preview OUTDIR '#rrggbb'    PNG previews of every style
 
-STYLE is Fluent, Dot, Ring or Arrow. SPEED (Fluent only) is fast, normal or slow.
+STYLE is Fluent, Circle, Dot, Ring or Arrow. SPEED (Fluent and Circle) is fast,
+normal or slow.
 
 Builds ~/.local/share/icons/QS-<Style>-<hex>[-<speed>]. The colour (and speed)
 are part of the name because Hyprland will not reload a theme under a name it
@@ -19,6 +20,10 @@ THE STYLES
           animation whenever the shape changes, which is what plays the morph).
           pop_<name> copies hold a short swell-and-settle that the qs-pointer
           Hyprland plugin plays on a click ("press bounce").
+  Circle  ALWAYS the same round dot -- over links, text, resize edges, everything
+          -- with the centre as the hotspot. Its pop_<name> copies are a
+          springy pulse (swells, dips smaller, settles) that the plugin plays
+          on every click.
   Dot     a still dot; links get a ring round it, text an I-beam
   Ring    a hollow ring; links get a filled dot
   Arrow   a classic arrow pointer, in the accent, clicking at its tip
@@ -43,6 +48,9 @@ SPEEDS = {"fast": 10, "normal": 16, "slow": 28}   # ms per morph frame
 MORPH_FRAMES = 8
 POP_FRAMES = 10
 SPIN_FRAMES = 12
+CIRCLE_D = 0.30              # Circle: diameter as a fraction of the cursor size
+CIRCLE_POP_FRAMES = 16
+CIRCLE_SPEEDS = {"fast": 12, "normal": 18, "slow": 28}   # ms per pulse frame
 
 # --- which cursor names get which shape ---------------------------------------
 GROUPS = {
@@ -188,6 +196,24 @@ def pop_frame(size, accent, shape, f):
     return blob(size, accent, b[0] * k, b[1] * k, b[2], b[3], b[4] if len(b) > 4 else None, 1, b[5] if len(b) > 5 else 0)
 
 
+# --- Circle: one dot for every shape, pulsing on a click -------------------------
+def circle(size, accent, k=1.0):
+    """The dot, scaled by k (1 = rest)."""
+    img = canvas(size)
+    d = ImageDraw.Draw(img)
+    s = size * SS
+    c, r, rim = s / 2, s * CIRCLE_D / 2 * k, max(SS * 1.5, s * 0.03)
+    d.ellipse((c - r - rim, c - r - rim, c + r + rim, c + r + rim), fill=EDGE + (150,))
+    d.ellipse((c - r, c - r, c + r, c + r), fill=accent + (255,))
+    return finish(img, size)
+
+
+def circle_pulse(x):
+    """Scale at x in 0..1 of the click pulse: a damped spring that swells to
+    ~1.6x, dips to ~0.7x, overshoots a touch and lands back on exactly 1."""
+    return 1 + 0.85 * math.exp(-2.2 * x) * math.sin(3 * math.pi * x)
+
+
 # --- still styles (Dot, Ring, Arrow) -------------------------------------------
 def still(kind, style, size, accent):
     img = canvas(size)
@@ -331,6 +357,17 @@ def files_for(style, accent, speed):
                 first = morph(group)
             out.append((names, xcursor(first)))
             out.append((["pop_" + n for n in names], xcursor(bounce(group))))
+    elif style == "Circle":
+        delay = CIRCLE_SPEEDS.get(speed, 18)
+        n = CIRCLE_POP_FRAMES
+        rest = xcursor(lambda size: [(circle(size, accent), 0, 0.5, 0.5)])
+        pulse = xcursor(lambda size: [(circle(size, accent, circle_pulse(f / (n - 1))),
+                                       HOLD if f == n - 1 else delay, 0.5, 0.5)
+                                      for f in range(n)])
+        # Every name, "wait" included, is the same dot: it never changes shape.
+        everything = [name for names in GROUPS.values() for name in names]
+        out.append((everything, rest))
+        out.append((["pop_" + name for name in everything], pulse))
     else:
         for group, names in GROUPS.items():
             if group == "wait":
@@ -342,11 +379,31 @@ def files_for(style, accent, speed):
     return out
 
 
+def ensure_reachable(name):
+    """Make ~/.local/share/icons/<name> findable through ~/.icons.
+
+    Ubuntu's libXcursor (what Hyprland draws its cursor with) searches only
+    ~/.icons:/usr/share/icons:/usr/share/pixmaps, and reads that once, at
+    start. libwayland-cursor (Qt, Chrome) skips ~/.local/share/icons unless
+    XDG_DATA_HOME is set. Themes only under ~/.local/share/icons therefore fall
+    back to the plain arrow there. ~/.icons is searched by all of them, and
+    re-checked on every theme load, so this works without a restart."""
+    legacy = Path.home() / ".icons"
+    if not legacy.exists() and not legacy.is_symlink():
+        legacy.symlink_to(ICONS)                    # the whole directory
+    elif legacy.is_dir() and legacy.resolve() != ICONS.resolve():
+        link = legacy / name                        # a real ~/.icons: per theme
+        if not link.exists():
+            if link.is_symlink():
+                link.unlink()
+            link.symlink_to(ICONS / name)
+
+
 def build(style, color, speed):
     accent = rgb(color)
     set_edge(accent)
     hexname = color.lstrip("#").lower()[:6]
-    name = f"QS-{style}-{hexname}" + (f"-{speed}" if style == "Fluent" else "")
+    name = f"QS-{style}-{hexname}" + (f"-{speed}" if style in ("Fluent", "Circle") else "")
     dest = ICONS / name
     if not (dest / "cursors" / "default").exists():
         tmp = ICONS / f".{name}.new"
@@ -362,6 +419,7 @@ def build(style, color, speed):
     for old in ICONS.glob(f"QS-{style}-*"):
         if old.name != name:
             shutil.rmtree(old, ignore_errors=True)
+    ensure_reachable(name)
     print(name)
 
 
@@ -372,11 +430,14 @@ def preview(outdir, color):
     out = Path(outdir)
     out.mkdir(parents=True, exist_ok=True)
     hexname = color.lstrip("#").lower()[:6]
-    for style in ("Fluent", "Dot", "Ring", "Arrow"):
+    for style in ("Fluent", "Circle", "Dot", "Ring", "Arrow"):
         dest = out / f"accent-{style}-{hexname}.png"
         if dest.exists():
             continue
-        if style == "Fluent":
+        if style == "Circle":
+            # rest, swelled, dipped: the click pulse at a glance
+            imgs = [circle(48, accent, k) for k in (1.0, 1.6, 0.7)]
+        elif style == "Fluent":
             imgs = [fluent_frame(48, accent, k, MORPH_FRAMES - 1) for k in ("pointer", "hand", "text")]
         else:
             imgs = [still(k, style, 48, accent) for k in ("pointer", "hand", "text")]
@@ -391,7 +452,7 @@ def main():
     if len(sys.argv) >= 4 and sys.argv[1] == "preview":
         preview(sys.argv[2], sys.argv[3])
         return
-    if len(sys.argv) < 3 or sys.argv[1] not in ("Fluent", "Dot", "Ring", "Arrow"):
+    if len(sys.argv) < 3 or sys.argv[1] not in ("Fluent", "Circle", "Dot", "Ring", "Arrow"):
         print(__doc__, file=sys.stderr)
         sys.exit(2)
     build(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "normal")

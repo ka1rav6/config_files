@@ -556,9 +556,12 @@ Singleton {
                 // Directory name under an icons dir; "" = leave the login
                 // default (XCURSOR_THEME in autostart.lua) alone.
                 property string theme: ""
+                // What the Circle toggle goes back to (the theme in use when
+                // it was switched on).
+                property string normalTheme: ""
                 property int size: 24
-                // Fluent only: how fast it morphs between shapes -- "fast",
-                // "normal" or "slow" -- and whether it swells on a click.
+                // Fluent and Circle: how fast it morphs / pulses -- "fast",
+                // "normal" or "slow" -- and whether it reacts to a click.
                 property string speed: "normal"
                 property bool press: true
                 // Hide the pointer after this many idle seconds; 0 = never.
