@@ -30,11 +30,9 @@
 //                                        Meant for a pure-white theme, which
 //                                        Quickshell generates for it. Cursors a
 //                                        client draws itself are left as they are.
-//                                        Quickshell's cursor-effects layer
-//                                        (namespace "qs-cursorfx": trail, click
-//                                        effect, ring) is inverted with it, so a
-//                                        white trail turns black over a white page
-//                                        just like the pointer.
+//                                        The cursor-effects layer (trail, click
+//                                        effect, ring) is NOT inverted: that hook
+//                                        crashed Hyprland (see PLUGIN_INIT).
 //   hyprctl qspointer status             what is on, for debugging
 //
 // Built and loaded by ./load.sh at login, which rebuilds it whenever Hyprland
@@ -373,7 +371,14 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE h) {
     nameHook    = hook("setCursorFromName", (void*)&onName);
     surfaceHook = hook("setCursorSurface", (void*)&onSurface);
     swHook      = hook("renderSoftwareCursorsFor", (void*)&onSwCursors, "CPointerManager::");
-    layerHook   = hook("renderLayer", (void*)&onLayer, "IHyprRenderer::");
+    // NOT HOOKED: inverting the qs-cursorfx layer through renderLayer crashed
+    // the live session (2026-11-28) -- random SEGVs in frame/animation/monitor
+    // code right after login, i.e. memory corruption. renderLayer can run while
+    // a render pass is being drawn, so adding pass elements there is unsafe.
+    // The nested selftest never caught it: it has no qs-cursorfx layer.
+    // Do not re-enable without a selftest that renders that layer.
+    (void)&onLayer;
+    layerHook = nullptr;
 
     ctl = HyprlandAPI::registerHyprCtlCommand(handle, {"qspointer", IPC::Socket1::COMMAND_MATCH_PREFIX, [](const IPC::Socket1::SRequest& req) {
         return IPC::Socket1::SResponse{command(req.command)};
